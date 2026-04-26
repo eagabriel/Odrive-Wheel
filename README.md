@@ -1,6 +1,6 @@
 # ODrive FFB Wheel — MKS Mini Firmware
 
-Custom firmware for ODrive v0.5.6 running on **MKS Mini ODrive S** hardware
+Custom firmware for ODrive v0.5.6 running on **MKS XDrive Mini** hardware
 (STM32F405 clone), adding full **HID Force Feedback** support to use the motor
 as a sim racing wheel.
 
