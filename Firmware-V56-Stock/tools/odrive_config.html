@@ -1,0 +1,2742 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>ODrive Config — MKS Mini</title>
+<style>
+  :root {
+    --bg: #1e1e1e; --fg: #e8e8e8; --accent: #4fc3f7; --muted: #888;
+    --card: #2a2a2a; --border: #3a3a3a; --ok: #66bb6a; --err: #ef5350;
+    --warn: #ffa726; --btn: #3a3a3a; --btn-hover: #4a4a4a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); font-size: 13px;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 16px; color: var(--accent); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button {
+    background: var(--btn); color: var(--fg); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  }
+  button:hover:not(:disabled) { background: var(--btn-hover); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  button.danger { background: var(--err); color: #fff; border-color: var(--err); }
+  button.ok { background: var(--ok); color: #000; border-color: var(--ok); }
+  #status { font-family: monospace; color: var(--muted); margin-left: auto; }
+  #status.connected { color: var(--ok); }
+  #status.error { color: var(--err); }
+  nav#tabs {
+    display: flex; background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 0 20px; gap: 4px;
+  }
+  nav#tabs button {
+    border: none; background: transparent; border-bottom: 2px solid transparent;
+    padding: 10px 16px; color: var(--muted); border-radius: 0;
+  }
+  nav#tabs button.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+  }
+  main#content {
+    flex: 1; overflow: auto; padding: 20px; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 8px 20px; align-content: start;
+  }
+  .group {
+    grid-column: 1 / -1; margin-top: 12px; font-weight: bold;
+    color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 4px;
+  }
+  .field {
+    display: contents;
+  }
+  .field label {
+    padding: 6px 0; font-family: monospace; font-size: 12px;
+    align-self: center; color: var(--fg); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .field label .type { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .field .value {
+    display: flex; gap: 4px; align-items: center;
+  }
+  .field input[type="text"], .field input[type="number"], .field select {
+    flex: 1; background: #151515; color: var(--fg);
+    border: 1px solid var(--border); padding: 4px 6px; border-radius: 3px;
+    font-family: monospace; font-size: 12px; min-width: 0;
+  }
+  .field input[type="checkbox"] { width: 18px; height: 18px; }
+  .field input.changed { border-color: var(--warn); background: #2a1a00; }
+  .field input.synced { border-color: var(--ok); }
+  .field button { padding: 3px 8px; font-size: 11px; }
+  /* Console agora vive numa aba dedicada (id "console-tab") */
+  #panel-console-tab.tab-panel.active { display: flex; flex-direction: column; }
+  .console-toolbar { grid-column: 1 / -1; display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .console-box {
+    grid-column: 1 / -1; flex: 1;
+    overflow: auto; background: #111;
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 12px;
+    font-family: monospace; font-size: 12px;
+    min-height: 400px;
+  }
+  #log { margin: 0; white-space: pre-wrap; }
+  #log .tx { color: var(--accent); }
+  #log .rx { color: var(--ok); }
+  #log .err { color: var(--err); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: contents; }
+  .hint { grid-column: 1 / -1; color: var(--muted); font-size: 11px; margin-top: -4px; }
+
+  /* Debug tab specifics */
+  .debug-section { grid-column: 1 / -1; background: var(--card); border: 1px solid var(--border);
+                   border-radius: 6px; padding: 12px 16px; margin-bottom: 4px; }
+  .debug-section h3 { margin: 0 0 8px; color: var(--accent); font-size: 14px; }
+  .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                 gap: 8px; }
+  .action-grid button { padding: 10px 8px; text-align: left; }
+  .action-grid button .sub { display: block; color: var(--muted); font-size: 10px; font-family: monospace; }
+  .action-grid button.warn { background: #3a2a1a; border-color: var(--warn); }
+  .action-grid button.danger { background: #3a1a1a; border-color: var(--err); }
+  .live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+               gap: 6px 12px; font-family: monospace; font-size: 12px; }
+  .live-kv { display: flex; justify-content: space-between; padding: 4px 8px; background: #151515;
+             border-radius: 3px; gap: 8px; }
+  .live-kv .k { color: var(--muted); }
+  .live-kv .v { color: var(--fg); text-align: right; }
+  .live-kv .v.ok { color: var(--ok); }
+  .live-kv .v.err { color: var(--err); }
+  .live-kv .v.warn { color: var(--warn); }
+  .err-row { display: grid; grid-template-columns: 220px 140px 1fr auto;
+             gap: 8px; padding: 4px 8px; background: #151515; border-radius: 3px;
+             margin-bottom: 2px; font-family: monospace; font-size: 12px; align-items: center; }
+  .err-row .k { color: var(--muted); }
+  .err-row .hex { text-align: right; }
+  .err-row .hex.ok { color: var(--ok); }
+  .err-row .hex.err { color: var(--err); }
+  .err-row .bits { color: var(--warn); font-size: 11px; }
+  .setpoint-row { display: grid; grid-template-columns: 180px 1fr 90px 80px;
+                  gap: 8px; padding: 4px 0; align-items: center; }
+  .setpoint-row label { color: var(--muted); font-family: monospace; font-size: 12px; }
+  .setpoint-row input { background: #151515; color: var(--fg); border: 1px solid var(--border);
+                        padding: 4px 6px; border-radius: 3px; font-family: monospace; }
+  .poll-ctl { display: flex; gap: 8px; align-items: center; }
+  .poll-ctl input[type="number"] { width: 70px; background: #151515; color: var(--fg);
+                                    border: 1px solid var(--border); padding: 4px; border-radius: 3px; }
+  .poll-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+              background: var(--muted); margin-right: 6px; }
+  .poll-dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 data-i18n="header.title">ODrive Config — MKS Mini</h1>
+  <div class="controls">
+    <button id="btn-connect" class="primary" data-i18n="btn.connect">Conectar</button>
+    <button id="btn-read-all" disabled data-i18n-title="btn.read_all.title" style="font-size:16px;padding:6px 10px;line-height:1">↻</button>
+    <button id="btn-save" class="ok" disabled data-i18n-title="btn.save_odrive.title">Save ODrive</button>
+    <button id="btn-save-ffb" class="ok" disabled data-i18n="btn.save_ffb" data-i18n-title="btn.save_ffb.title">Salvar FFB (sys.save!)</button>
+    <button id="btn-erase" class="danger" disabled data-i18n="btn.erase">Apagar config (se)</button>
+    <button id="btn-reboot" disabled data-i18n="btn.reboot">Reboot (sr)</button>
+    <button id="btn-export" disabled data-i18n="btn.export">Exportar JSON</button>
+    <button id="btn-import" disabled data-i18n="btn.import">Importar JSON</button>
+    <input type="file" id="file-import" accept=".json" style="display:none">
+    <span id="status" data-i18n="status.disconnected">Desconectado</span>
+    <select id="lang-select" style="background:var(--btn);color:var(--fg);border:1px solid var(--border);padding:4px 8px;border-radius:4px;cursor:pointer">
+      <option value="pt">🇧🇷 Português</option>
+      <option value="en">🇬🇧 English</option>
+    </select>
+  </div>
+</header>
+
+<nav id="tabs"></nav>
+<main id="content"></main>
+
+
+<script>
+/* =========================================================================
+   i18n — sistema de tradução pt/en. Persiste no localStorage.
+   Uso: t('key')           → string traduzida
+        applyI18n()        → atualiza DOM
+        setLang('pt'|'en') → muda idioma e re-renderiza
+   ========================================================================= */
+const I18N = {
+  pt: {
+    'header.title': 'ODrive Config — MKS Mini',
+    'btn.connect': 'Conectar',
+    'btn.disconnect': 'Desconectar',
+    'btn.read_all.title': 'Ler todos os campos do device (ODrive + FFB)',
+    'btn.save_odrive.title': 'Grava campos alterados na RAM, desarma o motor (IDLE), e persiste na NVM via ss. Motor precisa ser re-armado depois',
+    'btn.save_ffb': 'Salvar FFB',
+    'btn.save_ffb.title': 'Persiste params FFB (axis/gains/filtros) na EEPROM emulada — independente do ss da ODrive',
+    'btn.erase': 'Apagar config (se)',
+    'btn.reboot': 'Reboot (sr)',
+    'btn.export': 'Exportar JSON',
+    'btn.import': 'Importar JSON',
+    'status.disconnected': 'Desconectado',
+    'status.connected': 'Conectado',
+    // Tabs
+    'tab.odrv': 'ODrive',
+    'tab.axis0': 'Axis 0 Geral',
+    'tab.motor': 'Motor',
+    'tab.encoder': 'Encoder',
+    'tab.controller': 'Controller',
+    'tab.debug': 'Debug / Status',
+    'tab.ffb-wheel': 'FFB Wheel',
+    'tab.ffb-effects': 'FFB Effects',
+    'tab.ffb-filters': 'FFB Filters',
+    'tab.ffb-live': 'FFB Live',
+    'tab.console-tab': 'Console',
+    // Groups (ODrive)
+    'group.power_brake': 'Alimentação / Brake',
+    'group.comm': 'Comunicação',
+    'group.gpio_modes': 'GPIO Modes',
+    'group.gpio_mapping': 'GPIO PWM/Analog Mapping (min/max)',
+    // Groups (Axis 0)
+    'group.startup': 'Startup Sequence',
+    'group.op_mode': 'Modo de operação',
+    'group.cal_lockin': 'Calibration Lockin',
+    'group.gen_lockin': 'General Lockin',
+    'group.sensorless': 'Sensorless Ramp',
+    'group.can': 'CAN',
+    // Groups (Motor)
+    'group.motor_type': 'Tipo / calibração',
+    'group.motor_limits': 'Limites',
+    'group.motor_temp': 'Temperatura',
+    'group.motor_ff': 'Feed-forward',
+    'group.motor_acim': 'ACIM (induction only)',
+    // Groups (Encoder)
+    'group.enc_mode': 'Modo / resolução',
+    'group.enc_index': 'Index / offset',
+    'group.enc_cal': 'Calibração',
+    'group.enc_hall': 'Hall',
+    'group.enc_pins': 'Pinos',
+    // Groups (Controller)
+    'group.ctrl_mode': 'Modo de controle',
+    'group.ctrl_pid': 'Ganhos (PID)',
+    'group.ctrl_vel': 'Limites de velocidade',
+    'group.ctrl_circ': 'Posição circular',
+    'group.ctrl_homing': 'Homing / mirror',
+    'group.ctrl_power': 'Power monitoring',
+    'group.ctrl_anticog': 'Anticogging',
+    // Groups (FFB Wheel)
+    'group.ffb_force_scale': 'Escala de força',
+    'group.ffb_axis_effects': 'Axis effects sempre-ativos (somam ao FFB do jogo)',
+    'group.ffb_slew': 'Slew rate / curva',
+    // Groups (FFB Effects)
+    'group.ffb_master': 'Master gain',
+    'group.ffb_per_effect': 'Per-effect gains (0..255)',
+    // Groups (FFB Filters)
+    'group.ffb_filt_cf': 'Constant Force (HID streaming)',
+    'group.ffb_filt_fr': 'Friction',
+    'group.ffb_filt_da': 'Damper',
+    'group.ffb_filt_in': 'Inertia',
+    // Debug tab
+    'dbg.refresh_all':         '↻ Atualizar tudo',
+    'dbg.refresh_all_hint':    'Lê info + erros + monitor live de uma vez. Atalho: tecla R quando aba Debug ativa.',
+    'dbg.info_title':          'Info do Device',
+    'dbg.read_info':           'Ler Info',
+    'dbg.actions_title':       'Ações (state machine / NVM)',
+    'dbg.errors_title':        'Erros',
+    'dbg.errors_decoded':      '(decodificados)',
+    'dbg.live_monitor':        'Monitor ao vivo',
+    'dbg.auto_refresh':        'Auto-refresh',
+    'dbg.read_now':             'Ler agora',
+    'dbg.chart_title':         'Gráfico ao vivo',
+    'dbg.chart_subtitle':      '(janela 60s — vbus / ibus / motor.Iq / I brake)',
+    'dbg.chart_hint':          'Capacidade da janela = 60s ÷ intervalo de auto-refresh. Ex: 500ms → 120 pontos. Eixos auto-escalam baseado no min/max amostrados.',
+    'dbg.clear_history':       'Limpar histórico',
+    // FFB Live tab
+    'ffb.auto_poll':           'Auto-poll',
+    'ffb.update_now':          'Atualizar agora',
+    'ffb.reset_peaks':         'Reset peaks',
+    'ffb.poll_hint':           'Intervalos < 100ms podem sobrecarregar a CDC. 200-500ms é o sweet spot.',
+    'ffb.state_title':         'Estado FFB',
+    'ffb.kv_active':           'ffb_active',
+    'ffb.kv_eff':              'efeitos ativos',
+    'ffb.kv_pos':              'posição (graus)',
+    'ffb.kv_spd':              'velocidade (deg/s)',
+    'ffb.kv_trq':              'torque pendente (Nm)',
+    'ffb.kv_lt':               'last torque (int32)',
+    'ffb.counters_title':      'Contadores HID OUT',
+    'ffb.counters_subtitle':   '(reports recebidos do jogo)',
+    'ffb.kv_hout':             'total HID OUT',
+    'ffb.kv_setef':            'setEffectTorque calls',
+    'ffb.kv_ctrl':             'CTRL (enable/disable)',
+    'ffb.kv_newef':            'NEWEFFECT (criar)',
+    'ffb.kv_setefr':           'SETEFFECT (configurar)',
+    'ffb.kv_efop':             'EFOP (start/stop)',
+    'ffb.kv_cond':             'CONDITION (spring/damper)',
+    'ffb.kv_cnst':             'CONSTANT (constant force)',
+    'ffb.kv_prdc':             'PERIODIC (sine/triangle)',
+    'ffb.effects_title':       'Efeitos ativos',
+    'ffb.effects_subtitle':    '(até 3 mostrados, idx=-1 → vazio)',
+    'ffb.kv_slot':             'slot',
+    'ffb.kv_state':            'state',
+    'ffb.kv_type':             'type',
+    'ffb.kv_magnitude':        'magnitude',
+    'ffb.kv_axmag':            'axisMag[0]',
+    'ffb.kv_gain':             'gain',
+    'ffb.kv_egg':              'global gain (master)',
+    'ffb.mag_title':           'Effect 0 magnitude — análise de dinâmica',
+    'ffb.mag_reset':           'Reset janela',
+    'ffb.kv_mag_n':            'samples na janela',
+    'ffb.kv_mag_min':          'mag MIN',
+    'ffb.kv_mag_max':          'mag MAX',
+    'ffb.kv_mag_range':        'range (max − min)',
+    'ffb.kv_mag_avg':          'média',
+    'ffb.kv_mag_jump':         'delta máximo (entre samples)',
+    'ffb.mag_hint':            'Range pequeno (< 1000) com média alta = mola constante. Range grande (> 10000) = dinâmicas chegando. Delta máximo alto = transientes (curbs/slip) chegam. Delta consistentemente baixo = tudo suave / filtrado.',
+    'ffb.peaks_title':         'Picos de barramento DC',
+    'ffb.peaks_subtitle':      '(min/max desde último Reset)',
+    'ffb.kv_ibmin':            'Ibus min (regen pico)',
+    'ffb.kv_ibmax':            'Ibus max (consumo pico)',
+    'ffb.kv_mibmin':           'Motor I_bus min',
+    'ffb.kv_mibmax':           'Motor I_bus max',
+    'ffb.kv_vbmin':            'Vbus min (sag)',
+    'ffb.kv_vbmax':            'Vbus max (regen rise)',
+    'ffb.chart_title':         'Gráfico ao vivo',
+    'ffb.chart_subtitle':      '(janela 60s — torque pendente / posição encoder)',
+    'ffb.chart_hint':          'Capacidade da janela = 60s ÷ intervalo do auto-poll FFB. Ex: 200ms → 300 pontos. Eixos auto-escalam baseado no min/max amostrados.',
+    // Console tab
+    'console.clear':           'Limpar',
+    'console.pause':           '⏸ Pausar',
+    'console.resume':          '▶ Continuar',
+    // Action buttons
+    'act.save_nvm':            'Salvar NVM',
+    'act.erase_reboot':        'Apagar + Reboot',
+    'act.erase_confirm':       'Apaga config + reboot. Confirma?',
+    'act.reboot':              'Reboot',
+    'act.clear_errors':        'Limpar Erros',
+    // Save ODrive flow status
+    'save.writing_changes':    'Gravando alterações...',
+    'save.disarming':          'Desarmando motor...',
+    'save.persisting':         'Salvando NVM...',
+    'save.rebooting':          'Reboot em curso (~3s)',
+  },
+  en: {
+    'header.title': 'ODrive Config — MKS Mini',
+    'btn.connect': 'Connect',
+    'btn.disconnect': 'Disconnect',
+    'btn.read_all.title': 'Read all device fields (ODrive + FFB)',
+    'btn.save_odrive.title': 'Writes changed fields to RAM, sets motor to IDLE, then persists to NVM via ss. Motor needs to be re-armed after',
+    'btn.save_ffb': 'Save FFB',
+    'btn.save_ffb.title': 'Persists FFB params (axis/gains/filters) to emulated EEPROM — independent from ODrive ss',
+    'btn.erase': 'Erase config (se)',
+    'btn.reboot': 'Reboot (sr)',
+    'btn.export': 'Export JSON',
+    'btn.import': 'Import JSON',
+    'status.disconnected': 'Disconnected',
+    'status.connected': 'Connected',
+    'tab.odrv': 'ODrive',
+    'tab.axis0': 'Axis 0 General',
+    'tab.motor': 'Motor',
+    'tab.encoder': 'Encoder',
+    'tab.controller': 'Controller',
+    'tab.debug': 'Debug / Status',
+    'tab.ffb-wheel': 'FFB Wheel',
+    'tab.ffb-effects': 'FFB Effects',
+    'tab.ffb-filters': 'FFB Filters',
+    'tab.ffb-live': 'FFB Live',
+    'tab.console-tab': 'Console',
+    'group.power_brake': 'Power / Brake',
+    'group.comm': 'Communication',
+    'group.gpio_modes': 'GPIO Modes',
+    'group.gpio_mapping': 'GPIO PWM/Analog Mapping (min/max)',
+    'group.startup': 'Startup Sequence',
+    'group.op_mode': 'Operating mode',
+    'group.cal_lockin': 'Calibration Lockin',
+    'group.gen_lockin': 'General Lockin',
+    'group.sensorless': 'Sensorless Ramp',
+    'group.can': 'CAN',
+    'group.motor_type': 'Type / calibration',
+    'group.motor_limits': 'Limits',
+    'group.motor_temp': 'Temperature',
+    'group.motor_ff': 'Feed-forward',
+    'group.motor_acim': 'ACIM (induction only)',
+    'group.enc_mode': 'Mode / resolution',
+    'group.enc_index': 'Index / offset',
+    'group.enc_cal': 'Calibration',
+    'group.enc_hall': 'Hall',
+    'group.enc_pins': 'Pins',
+    'group.ctrl_mode': 'Control mode',
+    'group.ctrl_pid': 'PID gains',
+    'group.ctrl_vel': 'Velocity limits',
+    'group.ctrl_circ': 'Circular position',
+    'group.ctrl_homing': 'Homing / mirror',
+    'group.ctrl_power': 'Power monitoring',
+    'group.ctrl_anticog': 'Anticogging',
+    'group.ffb_force_scale': 'Force scaling',
+    'group.ffb_axis_effects': 'Always-on axis effects (added to game FFB)',
+    'group.ffb_slew': 'Slew rate / curve',
+    'group.ffb_master': 'Master gain',
+    'group.ffb_per_effect': 'Per-effect gains (0..255)',
+    'group.ffb_filt_cf': 'Constant Force (HID streaming)',
+    'group.ffb_filt_fr': 'Friction',
+    'group.ffb_filt_da': 'Damper',
+    'group.ffb_filt_in': 'Inertia',
+    // Debug tab
+    'dbg.refresh_all':         '↻ Refresh all',
+    'dbg.refresh_all_hint':    'Reads info + errors + live monitor at once. Shortcut: R key when Debug tab active.',
+    'dbg.info_title':          'Device Info',
+    'dbg.read_info':           'Read Info',
+    'dbg.actions_title':       'Actions (state machine / NVM)',
+    'dbg.errors_title':        'Errors',
+    'dbg.errors_decoded':      '(decoded)',
+    'dbg.live_monitor':        'Live monitor',
+    'dbg.auto_refresh':        'Auto-refresh',
+    'dbg.read_now':             'Read now',
+    'dbg.chart_title':         'Live chart',
+    'dbg.chart_subtitle':      '(60s window — vbus / ibus / motor.Iq / I brake)',
+    'dbg.chart_hint':          'Window capacity = 60s ÷ auto-refresh interval. E.g. 500ms → 120 points. Axes auto-scale based on sampled min/max.',
+    'dbg.clear_history':       'Clear history',
+    // FFB Live tab
+    'ffb.auto_poll':           'Auto-poll',
+    'ffb.update_now':          'Update now',
+    'ffb.reset_peaks':         'Reset peaks',
+    'ffb.poll_hint':           'Intervals < 100ms may overload CDC. 200-500ms is the sweet spot.',
+    'ffb.state_title':         'FFB State',
+    'ffb.kv_active':           'ffb_active',
+    'ffb.kv_eff':              'active effects',
+    'ffb.kv_pos':              'position (deg)',
+    'ffb.kv_spd':              'velocity (deg/s)',
+    'ffb.kv_trq':              'pending torque (Nm)',
+    'ffb.kv_lt':               'last torque (int32)',
+    'ffb.counters_title':      'HID OUT counters',
+    'ffb.counters_subtitle':   '(reports received from game)',
+    'ffb.kv_hout':             'total HID OUT',
+    'ffb.kv_setef':            'setEffectTorque calls',
+    'ffb.kv_ctrl':             'CTRL (enable/disable)',
+    'ffb.kv_newef':            'NEWEFFECT (create)',
+    'ffb.kv_setefr':           'SETEFFECT (configure)',
+    'ffb.kv_efop':             'EFOP (start/stop)',
+    'ffb.kv_cond':             'CONDITION (spring/damper)',
+    'ffb.kv_cnst':             'CONSTANT (constant force)',
+    'ffb.kv_prdc':             'PERIODIC (sine/triangle)',
+    'ffb.effects_title':       'Active effects',
+    'ffb.effects_subtitle':    '(up to 3 shown, idx=-1 → empty)',
+    'ffb.kv_slot':             'slot',
+    'ffb.kv_state':            'state',
+    'ffb.kv_type':             'type',
+    'ffb.kv_magnitude':        'magnitude',
+    'ffb.kv_axmag':            'axisMag[0]',
+    'ffb.kv_gain':             'gain',
+    'ffb.kv_egg':              'global gain (master)',
+    'ffb.mag_title':           'Effect 0 magnitude — dynamics analysis',
+    'ffb.mag_reset':           'Reset window',
+    'ffb.kv_mag_n':            'samples in window',
+    'ffb.kv_mag_min':          'mag MIN',
+    'ffb.kv_mag_max':          'mag MAX',
+    'ffb.kv_mag_range':        'range (max − min)',
+    'ffb.kv_mag_avg':          'average',
+    'ffb.kv_mag_jump':         'max delta (between samples)',
+    'ffb.mag_hint':            'Small range (< 1000) with high average = constant spring. Large range (> 10000) = dynamics arriving. High max delta = transients (curbs/slip) arrive. Consistently low delta = everything smooth / filtered.',
+    'ffb.peaks_title':         'DC bus peaks',
+    'ffb.peaks_subtitle':      '(min/max since last Reset)',
+    'ffb.kv_ibmin':            'Ibus min (regen peak)',
+    'ffb.kv_ibmax':            'Ibus max (consumption peak)',
+    'ffb.kv_mibmin':           'Motor I_bus min',
+    'ffb.kv_mibmax':           'Motor I_bus max',
+    'ffb.kv_vbmin':            'Vbus min (sag)',
+    'ffb.kv_vbmax':            'Vbus max (regen rise)',
+    'ffb.chart_title':         'Live chart',
+    'ffb.chart_subtitle':      '(60s window — pending torque / encoder position)',
+    'ffb.chart_hint':          'Window capacity = 60s ÷ FFB auto-poll interval. E.g. 200ms → 300 points. Axes auto-scale based on sampled min/max.',
+    // Console tab
+    'console.clear':           'Clear',
+    'console.pause':           '⏸ Pause',
+    'console.resume':          '▶ Resume',
+    // Action buttons
+    'act.save_nvm':            'Save NVM',
+    'act.erase_reboot':        'Erase + Reboot',
+    'act.erase_confirm':       'Erases config + reboot. Confirm?',
+    'act.reboot':              'Reboot',
+    'act.clear_errors':        'Clear Errors',
+    // Save ODrive flow status
+    'save.writing_changes':    'Writing changes...',
+    'save.disarming':          'Disarming motor...',
+    'save.persisting':         'Saving NVM...',
+    'save.rebooting':          'Rebooting (~3s)',
+  }
+};
+
+/* Field descriptions — tooltips por path. Concisos (1-2 frases) explicando
+   função e efeito. Path = prefix sem ponto final + nome do campo. */
+const FIELD_DESC = {
+  pt: {
+    // ODrive — Alimentação / Brake
+    'config.brake_resistance':              'Valor do resistor de freio em ohms. Bata com o resistor físico — erro aqui faz brake calcular PWM errado.',
+    'config.enable_brake_resistor':         'Habilita o circuito de brake. Sem isto, regen vai pra fonte e pode disparar OVP.',
+    'config.dc_bus_undervoltage_trip_level':'Tensão mínima do bus DC. Abaixo disso ODrive desarma com erro UNDER_VOLTAGE.',
+    'config.dc_bus_overvoltage_trip_level': 'Tensão máxima do bus DC. Acima disso ODrive desarma. Setar entre fonte+5V e cap rating.',
+    'config.enable_dc_bus_overvoltage_ramp':'Ativa rampa proporcional de brake baseada em tensão (preventivo antes do trip).',
+    'config.dc_bus_overvoltage_ramp_start': 'Tensão onde o brake começa a aumentar duty proporcional. Ex: 25V.',
+    'config.dc_bus_overvoltage_ramp_end':   'Tensão onde brake satura em 100%. Ex: 27V (deve ser < trip).',
+    'config.dc_max_positive_current':       'Corrente máxima consumida da fonte (A). Limita carga na PSU.',
+    'config.dc_max_negative_current':       'Corrente máxima retornada à fonte (A, negativo). Pra fonte chaveada use -0.5 a -1.',
+    'config.max_regen_current':             'THRESHOLD de ativação do brake (A). 0 = brake ativa sempre. Valor alto = brake só ativa em regen forte. Cuidado: nome enganoso.',
+    // ODrive — Comunicação
+    'config.enable_can_a':                  'Habilita CAN no canal A. Útil pra controle externo via ODriveCAN.',
+    'config.enable_i2c_a':                  'Habilita I2C (raramente usado em wheel).',
+    'config.enable_uart_a':                 'Habilita UART A. Pode usar pra debug ASCII em vez de USB.',
+    'config.enable_uart_b':                 'Habilita UART B (depende do hw).',
+    'config.enable_uart_c':                 'Habilita UART C (depende do hw).',
+    'config.uart0_protocol':                'Protocolo do UART 0: ASCII, Fibre, Stdout, etc.',
+    'config.uart1_protocol':                'Protocolo do UART 1.',
+    'config.uart2_protocol':                'Protocolo do UART 2.',
+    'config.uart_a_baudrate':               'Baudrate do UART A em bps. 115200 padrão.',
+    'config.uart_b_baudrate':               'Baudrate do UART B.',
+    'config.uart_c_baudrate':               'Baudrate do UART C.',
+    'config.usb_cdc_protocol':              'Protocolo da CDC USB. Usar ASCII ou ASCII_AND_STDOUT.',
+    // ODrive — GPIO
+    'config.error_gpio_pin':                'Pino que vai high quando erro acontece (0 = desabilitado).',
+    // Axis 0 — Startup
+    'axis0.config.startup_motor_calibration':         'Roda motor cal automaticamente no boot.',
+    'axis0.config.startup_encoder_index_search':      'Procura index Z do encoder no boot (precisa use_index=true).',
+    'axis0.config.startup_encoder_offset_calibration':'Roda enc offset cal no boot.',
+    'axis0.config.startup_closed_loop_control':       'Vai pra CLOSED_LOOP automaticamente após cal. Mantém volante motorizado sem intervenção.',
+    'axis0.config.startup_homing':                    'Roda homing no boot (raro em wheel).',
+    // Axis 0 — Modo
+    'axis0.config.enable_sensorless_mode':            'Modo sem encoder (usa estimação). Não usar em wheel.',
+    'axis0.config.enable_step_dir':                   'Aceita comandos via step/direction (modo CNC). Não em wheel.',
+    'axis0.config.step_dir_always_on':                'Mantém step/dir ativo mesmo sem cal.',
+    'axis0.config.step_gpio_pin':                     'Pino do sinal step.',
+    'axis0.config.dir_gpio_pin':                      'Pino do sinal direction.',
+    'axis0.config.enable_watchdog':                   'Watchdog que desarma se host não enviar update por X segundos.',
+    'axis0.config.watchdog_timeout':                  'Timeout do watchdog em segundos.',
+    // Calibration / general lockin
+    'axis0.config.calibration_lockin.current':        'Corrente usada pra travar rotor durante cal (A).',
+    'axis0.config.calibration_lockin.ramp_time':      'Tempo de rampa pra subir corrente (s).',
+    'axis0.config.calibration_lockin.ramp_distance':  'Distância angular durante rampa (rad).',
+    'axis0.config.calibration_lockin.accel':          'Aceleração durante lockin (rad/s²).',
+    'axis0.config.calibration_lockin.vel':            'Velocidade alvo do lockin (rad/s).',
+    'axis0.config.general_lockin.current':            'Corrente do general lockin (modo open-loop).',
+    'axis0.config.general_lockin.ramp_time':          'Rampa de tempo.',
+    'axis0.config.general_lockin.ramp_distance':      'Distância da rampa.',
+    'axis0.config.general_lockin.accel':              'Aceleração.',
+    'axis0.config.general_lockin.vel':                'Velocidade alvo.',
+    'axis0.config.general_lockin.finish_distance':    'Distância pra terminar.',
+    'axis0.config.general_lockin.finish_on_distance': 'Termina quando atinge distance.',
+    'axis0.config.general_lockin.finish_on_enc_idx':  'Termina quando passa index Z.',
+    'axis0.config.general_lockin.finish_on_vel':      'Termina quando atinge vel.',
+    // CAN
+    'axis0.config.can.node_id':                       'ID do nó CAN (0-63).',
+    'axis0.config.can.is_extended':                   'CAN extended (29-bit) vs standard (11-bit).',
+    'axis0.config.can.heartbeat_rate_ms':             'Taxa de heartbeat em ms.',
+    'axis0.config.can.encoder_rate_ms':               'Taxa de encoder report em ms.',
+    'axis0.config.can.iq_rate_ms':                    'Taxa de Iq em ms.',
+    // Motor
+    'axis0.motor.config.motor_type':           'Tipo de motor: HIGH_CURRENT (BLDC normal), GIMBAL (alta resistência), ACIM (indução).',
+    'axis0.motor.config.pole_pairs':           'Pares de polos do motor. Conta os imãs e divide por 2.',
+    'axis0.motor.config.torque_constant':      'Nm/A. Calculável: 8.27 / motor_kv. Usado pra converter input_torque em corrente.',
+    'axis0.motor.config.pre_calibrated':       'True = pula motor cal no boot, usa phase_resistance/inductance armazenados.',
+    'axis0.motor.config.phase_resistance':     'Resistência de fase em ohms. Medido por motor_calibration.',
+    'axis0.motor.config.phase_inductance':     'Indutância de fase em H. Medido por motor_calibration.',
+    'axis0.motor.config.calibration_current':  'Corrente usada durante motor cal (A). 10A é seguro pra maioria.',
+    'axis0.motor.config.resistance_calib_max_voltage':'Tensão máxima durante cal de R (V). Limita ruído.',
+    'axis0.motor.config.requested_current_range':     'Range do ADC de corrente. Deve ser ≥ current_lim + current_lim_margin.',
+    'axis0.motor.config.current_control_bandwidth':   'Banda do PI de corrente em Hz. 100-1000. Maior = resposta mais rápida.',
+    'axis0.motor.config.dc_calib_tau':                'Constante de tempo da calibração DC (s).',
+    'axis0.motor.config.current_lim':                 'Corrente máxima do motor (A). Limita torque máximo.',
+    'axis0.motor.config.current_lim_margin':          'Margem entre current_lim e trip de hardware (A). Tolera transientes.',
+    'axis0.motor.config.torque_lim':                  'Limite duro de torque (Nm). Inf = só limita pelo current_lim.',
+    'axis0.motor.config.I_bus_hard_min':              'Limite duro de corrente DC negativa do motor (A). Limita regen.',
+    'axis0.motor.config.I_bus_hard_max':              'Limite duro de corrente DC positiva do motor (A). Limita consumo.',
+    'axis0.motor.config.I_leak_max':                  'Corrente de leak máxima permitida.',
+    'axis0.motor.config.inverter_temp_limit_lower':   'Temperatura onde corrente começa a ser reduzida.',
+    'axis0.motor.config.inverter_temp_limit_upper':   'Temperatura onde ODrive desarma.',
+    // Encoder
+    'axis0.encoder.config.mode':                  'Tipo de encoder: incremental, hall, SPI absoluto, sin/cos, etc.',
+    'axis0.encoder.config.cpr':                   'Counts per revolution (4× pulses pra encoder em quadratura).',
+    'axis0.encoder.config.direction':             'Direção do encoder (1 ou -1). Define se sentido horário é positivo.',
+    'axis0.encoder.config.bandwidth':             'Banda do PLL de estimativa (Hz). Encoder ABZ típico: 100-500.',
+    'axis0.encoder.config.pre_calibrated':        'True = pula offset cal no boot. Use após calibrar e salvar.',
+    'axis0.encoder.config.phase_offset':          'Offset entre encoder zero e phase A do motor (counts).',
+    'axis0.encoder.config.phase_offset_float':    'Offset em radianos (resolução fina).',
+    'axis0.encoder.config.enable_phase_interpolation':'Interpolação de fase entre counts. Reduz cogging.',
+    'axis0.encoder.config.use_index':             'Usa pulso index Z do encoder pra zerar.',
+    'axis0.encoder.config.use_index_offset':      'Aplica offset relativo ao index.',
+    'axis0.encoder.config.index_offset':          'Offset em turns aplicado quando index é encontrado.',
+    'axis0.encoder.config.find_idx_on_lockin_only':'Procura index só durante lockin (mais robusto).',
+    'axis0.encoder.config.calib_range':           'Tolerância de erro durante cal (turns).',
+    'axis0.encoder.config.calib_scan_distance':   'Distância angular scan na cal (rad).',
+    'axis0.encoder.config.calib_scan_omega':      'Velocidade do scan (rad/s).',
+    // Controller
+    'axis0.controller.config.control_mode':       'TORQUE / VELOCITY / POSITION. Pra FFB use TORQUE.',
+    'axis0.controller.config.input_mode':         'PASSTHROUGH (direto), VEL_RAMP, POS_FILTER, TRAP_TRAJ. Pra FFB use PASSTHROUGH.',
+    'axis0.controller.config.input_filter_bandwidth':'Banda do filtro do input em Hz. Só ativa em POS_FILTER mode.',
+    'axis0.controller.config.torque_ramp_rate':   'Slew rate de torque em Nm/s. Só ativo em TORQUE_RAMP input mode.',
+    'axis0.controller.config.vel_ramp_rate':      'Slew rate de velocidade.',
+    'axis0.controller.config.pos_gain':           'Ganho proporcional de posição. Posição = pos_setpoint + pos_gain * erro.',
+    'axis0.controller.config.vel_gain':           'Ganho proporcional de velocidade.',
+    'axis0.controller.config.vel_integrator_gain':'Ganho integrativo de velocidade.',
+    'axis0.controller.config.vel_integrator_limit':'Limite anti-windup do integrador.',
+    'axis0.controller.config.inertia':            'Massa estimada da carga (kg·m²). Pra feed-forward.',
+    'axis0.controller.config.enable_gain_scheduling':'Reduz ganhos em baixa velocidade.',
+    'axis0.controller.config.gain_scheduling_width':'Largura do gain scheduling.',
+    'axis0.controller.config.enable_vel_limit':   'Limita velocidade. Em torque mode também (se enable_torque_mode_vel_limit).',
+    'axis0.controller.config.enable_torque_mode_vel_limit':'Aplica vel_limit em torque mode. Pra FFB recomendo False.',
+    'axis0.controller.config.vel_limit':          'Velocidade máxima em turns/s. Pra wheel use 10+ pra não bater em manobras.',
+    'axis0.controller.config.vel_limit_tolerance':'Multiplicador antes de erro overspeed disparar (1.2 = 20% margem).',
+    'axis0.controller.config.enable_overspeed_error':'Dispara erro se vel passar limite × tolerance.',
+    'axis0.controller.config.electrical_power_bandwidth':'Filtro do estimador de potência elétrica (Hz). Menor = ignora picos.',
+    'axis0.controller.config.mechanical_power_bandwidth':'Filtro do estimador de potência mecânica (Hz).',
+    'axis0.controller.config.spinout_electrical_power_threshold':'Threshold de potência elétrica pra spinout (W). Sobe pra 50 se FFB intenso disparar.',
+    'axis0.controller.config.spinout_mechanical_power_threshold':'Threshold de potência mecânica negativa (W). -50 é seguro.',
+    // FFB Wheel
+    'axis.range':         'Rotação total do volante em graus (lock-to-lock). Default 900.',
+    'axis.maxtorque':     'Torque máximo entregue ao motor em Nm. Sobe pra usar mais do motor; cuidado com mãos.',
+    'axis.fxratio':       'Multiplicador final 0..1. Reduz force overall preservando dinâmicas. Default 0.80.',
+    'axis.idlespring':    'Mola centralizadora SÓ quando jogo desligado (FFB inativo). 0=desativado.',
+    'axis.axisdamper':    'Damper SEMPRE ativo, somado ao FFB do jogo. Adiciona "peso" ao volante.',
+    'axis.axisinertia':   'Inertia SEMPRE ativa, baseada em aceleração. Sensação de "massa".',
+    'axis.axisfriction':  'Friction SEMPRE ativa. Atrito constante quando volante gira.',
+    'axis.esgain':        'Batente eletrônico (0-255). Aplica torque crescente quando volante passa ±range/2. 0=desativado, 127=médio, 255=duro como bumper.',
+    'axis.maxtorquerate': 'Slew limiter em counts/ms. 0=off. Sobe pra suavizar transientes; CUIDADO mata dinâmicas.',
+    'axis.expo':          'Curva exponencial de resposta. 0=linear. Positivo=centro morto, negativo=centro sensível.',
+    'axis.exposcale':     'Divisor pro expo. Default 100.',
+    // FFB Effects
+    'fx.master':   'Master gain. Multiplica TODOS os efeitos (0..255). 255=máximo.',
+    'fx.spring':   'Gain do efeito Spring (mola). 0..255. Default 64.',
+    'fx.damper':   'Gain do efeito Damper. 0..255. Default 64.',
+    'fx.friction': 'Gain do efeito Friction. 0..255. Default 254.',
+    'fx.inertia':  'Gain do efeito Inertia. 0..255. Default 127.',
+    // FFB Filters
+    'fx.filterCfFreq': 'Cutoff do biquad lowpass do Constant Force em Hz. 1-500. Default 500 (passa quase tudo).',
+    'fx.filterCfQ':    'Q-factor do biquad CF (×0.01). Default 70 ≈ Butterworth.',
+    'fx.filterFrFreq': 'Cutoff do filtro Friction. Default 50.',
+    'fx.filterFrQ':    'Q do filtro Friction. Default 20.',
+    'fx.filterDaFreq': 'Cutoff do filtro Damper. Default 30.',
+    'fx.filterDaQ':    'Q do filtro Damper. Default 40.',
+    'fx.filterInFreq': 'Cutoff do filtro Inertia. Default 15 (agressivo, sinal de aceleração é ruidoso).',
+    'fx.filterInQ':    'Q do filtro Inertia. Default 20.',
+  },
+  en: {
+    'config.brake_resistance':              'Brake resistor value in ohms. Must match physical resistor — wrong value causes incorrect PWM duty.',
+    'config.enable_brake_resistor':         'Enables brake circuit. Without this, regen flows to PSU and can trigger OVP.',
+    'config.dc_bus_undervoltage_trip_level':'Minimum DC bus voltage. Below this ODrive disarms with UNDER_VOLTAGE error.',
+    'config.dc_bus_overvoltage_trip_level': 'Maximum DC bus voltage. Above this ODrive disarms. Set between PSU+5V and cap rating.',
+    'config.enable_dc_bus_overvoltage_ramp':'Enables proportional brake duty based on voltage (preventive before trip).',
+    'config.dc_bus_overvoltage_ramp_start': 'Voltage where brake starts ramping duty. Ex: 25V.',
+    'config.dc_bus_overvoltage_ramp_end':   'Voltage where brake saturates at 100%. Ex: 27V (must be < trip).',
+    'config.dc_max_positive_current':       'Max current drawn from PSU (A). Limits PSU load.',
+    'config.dc_max_negative_current':       'Max current returned to PSU (A, negative). For switching PSU use -0.5 to -1.',
+    'config.max_regen_current':             'Brake activation THRESHOLD (A). 0 = brake always active. High = brake only on heavy regen. Misleading name!',
+    'config.enable_can_a':                  'Enables CAN on channel A. For external control via ODriveCAN.',
+    'config.enable_i2c_a':                  'Enables I2C (rarely used in wheel).',
+    'config.enable_uart_a':                 'Enables UART A. Can use for ASCII debug instead of USB.',
+    'config.enable_uart_b':                 'Enables UART B (hw dependent).',
+    'config.enable_uart_c':                 'Enables UART C (hw dependent).',
+    'config.uart0_protocol':                'UART 0 protocol: ASCII, Fibre, Stdout, etc.',
+    'config.uart1_protocol':                'UART 1 protocol.',
+    'config.uart2_protocol':                'UART 2 protocol.',
+    'config.uart_a_baudrate':               'UART A baudrate in bps. 115200 default.',
+    'config.uart_b_baudrate':               'UART B baudrate.',
+    'config.uart_c_baudrate':               'UART C baudrate.',
+    'config.usb_cdc_protocol':              'USB CDC protocol. Use ASCII or ASCII_AND_STDOUT.',
+    'config.error_gpio_pin':                'Pin that goes high on error (0 = disabled).',
+    'axis0.config.startup_motor_calibration':         'Runs motor cal automatically at boot.',
+    'axis0.config.startup_encoder_index_search':      'Searches encoder Z index at boot (needs use_index=true).',
+    'axis0.config.startup_encoder_offset_calibration':'Runs encoder offset cal at boot.',
+    'axis0.config.startup_closed_loop_control':       'Auto-enters CLOSED_LOOP after cal. Keeps wheel motorized without intervention.',
+    'axis0.config.startup_homing':                    'Runs homing at boot (rare in wheel).',
+    'axis0.config.enable_sensorless_mode':            'Mode without encoder (uses estimation). Not for wheel.',
+    'axis0.config.enable_step_dir':                   'Accepts step/dir commands (CNC mode). Not for wheel.',
+    'axis0.config.step_dir_always_on':                'Keeps step/dir active without cal.',
+    'axis0.config.step_gpio_pin':                     'Step signal pin.',
+    'axis0.config.dir_gpio_pin':                      'Direction signal pin.',
+    'axis0.config.enable_watchdog':                   'Watchdog that disarms if host stops sending updates.',
+    'axis0.config.watchdog_timeout':                  'Watchdog timeout in seconds.',
+    'axis0.config.calibration_lockin.current':        'Current used to lock rotor during cal (A).',
+    'axis0.config.calibration_lockin.ramp_time':      'Current ramp-up time (s).',
+    'axis0.config.calibration_lockin.ramp_distance':  'Angular distance during ramp (rad).',
+    'axis0.config.calibration_lockin.accel':          'Acceleration during lockin (rad/s²).',
+    'axis0.config.calibration_lockin.vel':            'Lockin target velocity (rad/s).',
+    'axis0.config.general_lockin.current':            'General lockin current (open-loop mode).',
+    'axis0.config.general_lockin.ramp_time':          'Time ramp.',
+    'axis0.config.general_lockin.ramp_distance':      'Ramp distance.',
+    'axis0.config.general_lockin.accel':              'Acceleration.',
+    'axis0.config.general_lockin.vel':                'Target velocity.',
+    'axis0.config.general_lockin.finish_distance':    'Finish distance.',
+    'axis0.config.general_lockin.finish_on_distance': 'Finish when distance reached.',
+    'axis0.config.general_lockin.finish_on_enc_idx':  'Finish when Z index passed.',
+    'axis0.config.general_lockin.finish_on_vel':      'Finish when velocity reached.',
+    'axis0.config.can.node_id':                       'CAN node ID (0-63).',
+    'axis0.config.can.is_extended':                   'Extended CAN (29-bit) vs standard (11-bit).',
+    'axis0.config.can.heartbeat_rate_ms':             'Heartbeat rate in ms.',
+    'axis0.config.can.encoder_rate_ms':               'Encoder report rate in ms.',
+    'axis0.config.can.iq_rate_ms':                    'Iq rate in ms.',
+    'axis0.motor.config.motor_type':           'Motor type: HIGH_CURRENT (normal BLDC), GIMBAL (high resistance), ACIM (induction).',
+    'axis0.motor.config.pole_pairs':           'Motor pole pairs. Count magnets, divide by 2.',
+    'axis0.motor.config.torque_constant':      'Nm/A. Calc: 8.27 / motor_kv. Used to convert input_torque to current.',
+    'axis0.motor.config.pre_calibrated':       'True = skips motor cal at boot, uses stored phase_resistance/inductance.',
+    'axis0.motor.config.phase_resistance':     'Phase resistance in ohms. Measured by motor_calibration.',
+    'axis0.motor.config.phase_inductance':     'Phase inductance in H. Measured by motor_calibration.',
+    'axis0.motor.config.calibration_current':  'Current used during motor cal (A). 10A safe for most.',
+    'axis0.motor.config.resistance_calib_max_voltage':'Max voltage during R cal (V). Limits noise.',
+    'axis0.motor.config.requested_current_range':     'Current ADC range. Must be ≥ current_lim + current_lim_margin.',
+    'axis0.motor.config.current_control_bandwidth':   'Current PI loop bandwidth in Hz. 100-1000. Higher = faster response.',
+    'axis0.motor.config.dc_calib_tau':                'DC calibration time constant (s).',
+    'axis0.motor.config.current_lim':                 'Max motor current (A). Limits max torque.',
+    'axis0.motor.config.current_lim_margin':          'Margin between current_lim and hw trip (A). Tolerates transients.',
+    'axis0.motor.config.torque_lim':                  'Hard torque limit (Nm). Inf = only limited by current_lim.',
+    'axis0.motor.config.I_bus_hard_min':              'Hard limit on motor negative DC current (A). Limits regen.',
+    'axis0.motor.config.I_bus_hard_max':              'Hard limit on motor positive DC current (A). Limits consumption.',
+    'axis0.motor.config.I_leak_max':                  'Max allowed leak current.',
+    'axis0.motor.config.inverter_temp_limit_lower':   'Temp where current begins to be reduced.',
+    'axis0.motor.config.inverter_temp_limit_upper':   'Temp where ODrive disarms.',
+    'axis0.encoder.config.mode':                  'Encoder type: incremental, hall, SPI absolute, sin/cos, etc.',
+    'axis0.encoder.config.cpr':                   'Counts per revolution (4× pulses for quadrature encoder).',
+    'axis0.encoder.config.direction':             'Encoder direction (1 or -1). Defines whether clockwise is positive.',
+    'axis0.encoder.config.bandwidth':             'PLL estimator bandwidth (Hz). Typical ABZ encoder: 100-500.',
+    'axis0.encoder.config.pre_calibrated':        'True = skips offset cal at boot. Use after calibrating and saving.',
+    'axis0.encoder.config.phase_offset':          'Offset between encoder zero and motor phase A (counts).',
+    'axis0.encoder.config.phase_offset_float':    'Offset in radians (fine resolution).',
+    'axis0.encoder.config.enable_phase_interpolation':'Phase interpolation between counts. Reduces cogging.',
+    'axis0.encoder.config.use_index':             'Uses encoder Z index pulse to zero.',
+    'axis0.encoder.config.use_index_offset':      'Applies offset relative to index.',
+    'axis0.encoder.config.index_offset':          'Offset in turns applied when index is found.',
+    'axis0.encoder.config.find_idx_on_lockin_only':'Searches index only during lockin (more robust).',
+    'axis0.encoder.config.calib_range':           'Error tolerance during cal (turns).',
+    'axis0.encoder.config.calib_scan_distance':   'Angular scan distance during cal (rad).',
+    'axis0.encoder.config.calib_scan_omega':      'Scan velocity (rad/s).',
+    'axis0.controller.config.control_mode':       'TORQUE / VELOCITY / POSITION. For FFB use TORQUE.',
+    'axis0.controller.config.input_mode':         'PASSTHROUGH (direct), VEL_RAMP, POS_FILTER, TRAP_TRAJ. For FFB use PASSTHROUGH.',
+    'axis0.controller.config.input_filter_bandwidth':'Input filter bandwidth in Hz. Only active in POS_FILTER mode.',
+    'axis0.controller.config.torque_ramp_rate':   'Torque slew rate in Nm/s. Only active in TORQUE_RAMP input mode.',
+    'axis0.controller.config.vel_ramp_rate':      'Velocity slew rate.',
+    'axis0.controller.config.pos_gain':           'Position proportional gain.',
+    'axis0.controller.config.vel_gain':           'Velocity proportional gain.',
+    'axis0.controller.config.vel_integrator_gain':'Velocity integral gain.',
+    'axis0.controller.config.vel_integrator_limit':'Integrator anti-windup limit.',
+    'axis0.controller.config.inertia':            'Estimated load mass (kg·m²). For feed-forward.',
+    'axis0.controller.config.enable_gain_scheduling':'Reduces gains at low velocity.',
+    'axis0.controller.config.gain_scheduling_width':'Gain scheduling width.',
+    'axis0.controller.config.enable_vel_limit':   'Limits velocity. Also in torque mode (if enable_torque_mode_vel_limit).',
+    'axis0.controller.config.enable_torque_mode_vel_limit':'Applies vel_limit in torque mode. For FFB recommend False.',
+    'axis0.controller.config.vel_limit':          'Max velocity in turns/s. For wheel use 10+ to handle aggressive maneuvers.',
+    'axis0.controller.config.vel_limit_tolerance':'Multiplier before overspeed error fires (1.2 = 20% margin).',
+    'axis0.controller.config.enable_overspeed_error':'Fires error if vel exceeds limit × tolerance.',
+    'axis0.controller.config.electrical_power_bandwidth':'Electrical power estimator filter (Hz). Lower = ignores spikes.',
+    'axis0.controller.config.mechanical_power_bandwidth':'Mechanical power estimator filter (Hz).',
+    'axis0.controller.config.spinout_electrical_power_threshold':'Spinout electrical power threshold (W). Raise to 50 if intense FFB triggers it.',
+    'axis0.controller.config.spinout_mechanical_power_threshold':'Spinout negative mechanical power threshold (W). -50 is safe.',
+    'axis.range':         'Total wheel rotation in degrees (lock-to-lock). Default 900.',
+    'axis.maxtorque':     'Max torque delivered to motor in Nm. Raise to use more of motor; mind your hands.',
+    'axis.fxratio':       'Final multiplier 0..1. Scales force overall while preserving dynamics. Default 0.80.',
+    'axis.idlespring':    'Centering spring ONLY when game is off (FFB inactive). 0=disabled.',
+    'axis.axisdamper':    'Damper ALWAYS active, added to game FFB. Adds "weight" to wheel.',
+    'axis.axisinertia':   'Inertia ALWAYS active, based on acceleration. "Mass" feel.',
+    'axis.axisfriction':  'Friction ALWAYS active. Constant friction when wheel turns.',
+    'axis.esgain':        'Electronic endstop (0-255). Applies growing torque when wheel passes ±range/2. 0=disabled, 127=medium, 255=hard bumper.',
+    'axis.maxtorquerate': 'Slew limiter in counts/ms. 0=off. Raise to smooth transients; CAREFUL kills dynamics.',
+    'axis.expo':          'Exponential response curve. 0=linear. Positive=dead center, negative=sensitive center.',
+    'axis.exposcale':     'Expo divisor. Default 100.',
+    'fx.master':   'Master gain. Multiplies ALL effects (0..255). 255=max.',
+    'fx.spring':   'Spring effect gain. 0..255. Default 64.',
+    'fx.damper':   'Damper effect gain. 0..255. Default 64.',
+    'fx.friction': 'Friction effect gain. 0..255. Default 254.',
+    'fx.inertia':  'Inertia effect gain. 0..255. Default 127.',
+    'fx.filterCfFreq': 'Constant Force biquad lowpass cutoff in Hz. 1-500. Default 500 (almost passthrough).',
+    'fx.filterCfQ':    'CF biquad Q-factor (×0.01). Default 70 ≈ Butterworth.',
+    'fx.filterFrFreq': 'Friction filter cutoff. Default 50.',
+    'fx.filterFrQ':    'Friction filter Q. Default 20.',
+    'fx.filterDaFreq': 'Damper filter cutoff. Default 30.',
+    'fx.filterDaQ':    'Damper filter Q. Default 40.',
+    'fx.filterInFreq': 'Inertia filter cutoff. Default 15 (aggressive, accel signal is noisy).',
+    'fx.filterInQ':    'Inertia filter Q. Default 20.',
+  }
+};
+
+let currentLang = (function() {
+  const saved = localStorage.getItem('odrive-lang');
+  if (saved === 'pt' || saved === 'en') return saved;
+  return navigator.language && navigator.language.startsWith('pt') ? 'pt' : 'en';
+})();
+
+function t(key) {
+  return I18N[currentLang]?.[key] ?? I18N.en[key] ?? key;
+}
+function fieldDesc(path) {
+  return FIELD_DESC[currentLang]?.[path] ?? FIELD_DESC.en?.[path] ?? '';
+}
+function applyI18n() {
+  // Atualiza o atributo lang no html
+  document.documentElement.lang = currentLang === 'pt' ? 'pt-br' : 'en';
+  document.title = t('header.title');
+  // Walk DOM atualizando elementos com data-i18n e data-i18n-title
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+  // Atualiza tabs (label dos botões)
+  document.querySelectorAll('nav#tabs button[data-tab]').forEach(btn => {
+    btn.textContent = t('tab.' + btn.dataset.tab);
+  });
+  // Atualiza groups (recriados a cada applyI18n via re-render)
+  document.querySelectorAll('.group[data-i18n-key]').forEach(el => {
+    el.textContent = t(el.dataset.i18nKey);
+  });
+  // Atualiza tooltips dos labels de campos com base em FIELD_DESC
+  document.querySelectorAll('.field label[data-field-path]').forEach(el => {
+    const desc = fieldDesc(el.dataset.fieldPath);
+    if (desc) el.title = desc;
+  });
+  // Status — preservar classe atual
+  const status = document.getElementById('status');
+  if (status && !status.classList.contains('connected') && !status.classList.contains('error')) {
+    status.textContent = t('status.disconnected');
+  }
+  // Botão connect/disconnect
+  const btnConn = document.getElementById('btn-connect');
+  if (btnConn) {
+    const isConn = btnConn.textContent.toLowerCase().includes('desconect') ||
+                   btnConn.textContent.toLowerCase().includes('disconn');
+    btnConn.textContent = t(isConn ? 'btn.disconnect' : 'btn.connect');
+  }
+}
+function setLang(lang) {
+  if (lang !== 'pt' && lang !== 'en') return;
+  currentLang = lang;
+  localStorage.setItem('odrive-lang', lang);
+  applyI18n();
+}
+
+/* Mapeia o texto literal do grupo (em pt-br como originalmente escrito no
+   SCHEMA) pra chave i18n. Permite manter o SCHEMA legível em pt enquanto
+   o sistema traduz na renderização. */
+const GROUP_KEY_MAP = {
+  // ODrive
+  'Alimentação / Brake':                  'group.power_brake',
+  'Comunicação':                           'group.comm',
+  'GPIO Modes':                            'group.gpio_modes',
+  'GPIO PWM/Analog Mapping (min/max)':    'group.gpio_mapping',
+  // Axis 0
+  'Startup Sequence':                      'group.startup',
+  'Modo de operação':                      'group.op_mode',
+  'Calibration Lockin':                    'group.cal_lockin',
+  'General Lockin':                        'group.gen_lockin',
+  'Sensorless Ramp':                       'group.sensorless',
+  'CAN':                                   'group.can',
+  // Motor
+  'Tipo / calibração':                     'group.motor_type',
+  'Limites':                               'group.motor_limits',
+  'Temperatura':                           'group.motor_temp',
+  'Feed-forward':                          'group.motor_ff',
+  'ACIM (induction only)':                 'group.motor_acim',
+  // Encoder
+  'Modo / resolução':                      'group.enc_mode',
+  'Index / offset':                        'group.enc_index',
+  'Calibração':                            'group.enc_cal',
+  'Hall':                                  'group.enc_hall',
+  'Pinos':                                 'group.enc_pins',
+  // Controller
+  'Modo de controle':                      'group.ctrl_mode',
+  'Ganhos (PID)':                          'group.ctrl_pid',
+  'Limites de velocidade':                 'group.ctrl_vel',
+  'Posição circular':                      'group.ctrl_circ',
+  'Homing / mirror':                       'group.ctrl_homing',
+  'Power monitoring':                      'group.ctrl_power',
+  'Anticogging':                           'group.ctrl_anticog',
+  // FFB Wheel
+  'Escala de força':                                              'group.ffb_force_scale',
+  'Axis effects sempre-ativos (somam ao FFB do jogo)':            'group.ffb_axis_effects',
+  'Slew rate / curva':                                            'group.ffb_slew',
+  // FFB Effects
+  'Master gain':                           'group.ffb_master',
+  'Per-effect gains (0..255)':             'group.ffb_per_effect',
+  // FFB Filters
+  'Constant Force (HID streaming)':        'group.ffb_filt_cf',
+  'Friction':                              'group.ffb_filt_fr',
+  'Damper':                                'group.ffb_filt_da',
+  'Inertia':                               'group.ffb_filt_in',
+};
+
+/* =========================================================================
+   ODrive ASCII property schema — aba label, prefixo, campos com tipo.
+   Tipos: float, int, bool, enum{options}, endpoint_ref (read-only display).
+   ========================================================================= */
+
+const ENUM_MOTOR_TYPE  = { 0: 'HIGH_CURRENT', 2: 'GIMBAL', 3: 'ACIM' };
+const ENUM_CTRL_MODE   = { 0: 'VOLTAGE', 1: 'TORQUE', 2: 'VELOCITY', 3: 'POSITION' };
+const ENUM_INPUT_MODE  = {
+  0: 'INACTIVE', 1: 'PASSTHROUGH', 2: 'VEL_RAMP', 3: 'POS_FILTER',
+  4: 'MIX_CHANNELS', 5: 'TRAP_TRAJ', 6: 'TORQUE_RAMP', 7: 'MIRROR', 8: 'TUNING'
+};
+const ENUM_STREAM_PROTO = {
+  0: 'NONE', 1: 'FIBRE', 2: 'ASCII', 3: 'ASCII_AND_STDOUT', 4: 'STDOUT'
+};
+const ENUM_ENCODER_MODE = {
+  0: 'INCREMENTAL', 1: 'HALL', 2: 'SINCOS',
+  256: 'SPI_ABS_CUI', 257: 'SPI_ABS_AMS', 258: 'SPI_ABS_AEAT',
+  259: 'SPI_ABS_RLS', 260: 'SPI_ABS_MA732'
+};
+const ENUM_GPIO_MODE = {
+  0: 'DIGITAL', 1: 'DIGITAL_PULL_UP', 2: 'DIGITAL_PULL_DOWN',
+  3: 'ANALOG_IN', 4: 'UART_A', 5: 'UART_B', 6: 'UART_C',
+  7: 'CAN_A', 8: 'I2C_A', 9: 'SPI_A', 10: 'PWM',
+  11: 'ENC0', 12: 'ENC1', 13: 'ENC2', 14: 'MECH_BRAKE', 15: 'STATUS'
+};
+
+const f = (name, type, opts) => ({ name, type, opts });
+const F = (name) => f(name, 'float');
+const I = (name) => f(name, 'int');
+const B = (name) => f(name, 'bool');
+const E = (name, opts) => f(name, 'enum', opts);
+const RO = (name, type) => ({ name, type, readonly: true });
+
+const SCHEMA = [
+  {
+    id: 'odrv', label: 'ODrive', prefix: 'config.',
+    fields: [
+      { group: 'Alimentação / Brake' },
+      F('brake_resistance'),
+      B('enable_brake_resistor'),
+      F('dc_bus_undervoltage_trip_level'),
+      F('dc_bus_overvoltage_trip_level'),
+      B('enable_dc_bus_overvoltage_ramp'),
+      F('dc_bus_overvoltage_ramp_start'),
+      F('dc_bus_overvoltage_ramp_end'),
+      F('dc_max_positive_current'),
+      F('dc_max_negative_current'),
+      F('max_regen_current'),
+
+      { group: 'Comunicação' },
+      B('enable_can_a'),
+      B('enable_i2c_a'),
+      B('enable_uart_a'),
+      B('enable_uart_b'),
+      B('enable_uart_c'),
+      E('uart0_protocol', ENUM_STREAM_PROTO),
+      E('uart1_protocol', ENUM_STREAM_PROTO),
+      E('uart2_protocol', ENUM_STREAM_PROTO),
+      I('uart_a_baudrate'),
+      I('uart_b_baudrate'),
+      I('uart_c_baudrate'),
+      E('usb_cdc_protocol', ENUM_STREAM_PROTO),
+
+      { group: 'GPIO Modes' },
+      I('error_gpio_pin'),
+      E('gpio1_mode', ENUM_GPIO_MODE),
+      E('gpio2_mode', ENUM_GPIO_MODE),
+      E('gpio3_mode', ENUM_GPIO_MODE),
+      E('gpio4_mode', ENUM_GPIO_MODE),
+      E('gpio5_mode', ENUM_GPIO_MODE),
+      E('gpio6_mode', ENUM_GPIO_MODE),
+      E('gpio7_mode', ENUM_GPIO_MODE),
+      E('gpio8_mode', ENUM_GPIO_MODE),
+      E('gpio9_mode', ENUM_GPIO_MODE),
+      E('gpio10_mode', ENUM_GPIO_MODE),
+      E('gpio11_mode', ENUM_GPIO_MODE),
+      E('gpio12_mode', ENUM_GPIO_MODE),
+      E('gpio13_mode', ENUM_GPIO_MODE),
+      E('gpio14_mode', ENUM_GPIO_MODE),
+      E('gpio15_mode', ENUM_GPIO_MODE),
+      E('gpio16_mode', ENUM_GPIO_MODE),
+
+      { group: 'GPIO PWM/Analog Mapping (min/max)' },
+      F('gpio1_pwm_mapping.min'),
+      F('gpio1_pwm_mapping.max'),
+      F('gpio2_pwm_mapping.min'),
+      F('gpio2_pwm_mapping.max'),
+      F('gpio3_pwm_mapping.min'),
+      F('gpio3_pwm_mapping.max'),
+      F('gpio3_analog_mapping.min'),
+      F('gpio3_analog_mapping.max'),
+      F('gpio4_pwm_mapping.min'),
+      F('gpio4_pwm_mapping.max'),
+      F('gpio4_analog_mapping.min'),
+      F('gpio4_analog_mapping.max'),
+    ]
+  },
+  {
+    id: 'axis0', label: 'Axis 0 Geral', prefix: 'axis0.config.',
+    fields: [
+      { group: 'Startup Sequence' },
+      B('startup_motor_calibration'),
+      B('startup_encoder_index_search'),
+      B('startup_encoder_offset_calibration'),
+      B('startup_closed_loop_control'),
+      B('startup_homing'),
+
+      { group: 'Modo de operação' },
+      B('enable_sensorless_mode'),
+      B('enable_step_dir'),
+      B('step_dir_always_on'),
+      I('step_gpio_pin'),
+      I('dir_gpio_pin'),
+      B('enable_watchdog'),
+      F('watchdog_timeout'),
+
+      { group: 'Calibration Lockin' },
+      F('calibration_lockin.current'),
+      F('calibration_lockin.ramp_time'),
+      F('calibration_lockin.ramp_distance'),
+      F('calibration_lockin.accel'),
+      F('calibration_lockin.vel'),
+
+      { group: 'General Lockin' },
+      F('general_lockin.current'),
+      F('general_lockin.ramp_time'),
+      F('general_lockin.ramp_distance'),
+      F('general_lockin.accel'),
+      F('general_lockin.vel'),
+      F('general_lockin.finish_distance'),
+      B('general_lockin.finish_on_distance'),
+      B('general_lockin.finish_on_enc_idx'),
+      B('general_lockin.finish_on_vel'),
+
+      { group: 'Sensorless Ramp' },
+      F('sensorless_ramp.current'),
+      F('sensorless_ramp.ramp_time'),
+      F('sensorless_ramp.ramp_distance'),
+      F('sensorless_ramp.accel'),
+      F('sensorless_ramp.vel'),
+      F('sensorless_ramp.finish_distance'),
+      B('sensorless_ramp.finish_on_distance'),
+      B('sensorless_ramp.finish_on_enc_idx'),
+      B('sensorless_ramp.finish_on_vel'),
+
+      { group: 'CAN' },
+      I('can.node_id'),
+      B('can.is_extended'),
+      I('can.heartbeat_rate_ms'),
+      I('can.encoder_rate_ms'),
+      I('can.iq_rate_ms'),
+      I('can.motor_error_rate_ms'),
+      I('can.encoder_error_rate_ms'),
+      I('can.controller_error_rate_ms'),
+      I('can.sensorless_error_rate_ms'),
+      I('can.sensorless_rate_ms'),
+      I('can.bus_vi_rate_ms'),
+      I('can.encoder_count_rate_ms'),
+    ]
+  },
+  {
+    id: 'motor', label: 'Motor', prefix: 'axis0.motor.config.',
+    fields: [
+      { group: 'Tipo / calibração' },
+      E('motor_type', ENUM_MOTOR_TYPE),
+      I('pole_pairs'),
+      F('torque_constant'),
+      B('pre_calibrated'),
+      F('phase_resistance'),
+      F('phase_inductance'),
+      F('calibration_current'),
+      F('resistance_calib_max_voltage'),
+      F('requested_current_range'),
+      F('current_control_bandwidth'),
+      F('dc_calib_tau'),
+
+      { group: 'Limites' },
+      F('current_lim'),
+      F('current_lim_margin'),
+      F('torque_lim'),
+      F('I_bus_hard_min'),
+      F('I_bus_hard_max'),
+      F('I_leak_max'),
+
+      { group: 'Temperatura' },
+      F('inverter_temp_limit_lower'),
+      F('inverter_temp_limit_upper'),
+
+      { group: 'Feed-forward' },
+      B('R_wL_FF_enable'),
+      B('bEMF_FF_enable'),
+
+      { group: 'ACIM (induction only)' },
+      F('acim_gain_min_flux'),
+      B('acim_autoflux_enable'),
+      F('acim_autoflux_min_Id'),
+      F('acim_autoflux_attack_gain'),
+      F('acim_autoflux_decay_gain'),
+    ]
+  },
+  {
+    id: 'encoder', label: 'Encoder', prefix: 'axis0.encoder.config.',
+    fields: [
+      { group: 'Modo / resolução' },
+      E('mode', ENUM_ENCODER_MODE),
+      I('cpr'),
+      I('direction'),
+      F('bandwidth'),
+      B('pre_calibrated'),
+      I('phase_offset'),
+      F('phase_offset_float'),
+      B('enable_phase_interpolation'),
+
+      { group: 'Index / offset' },
+      B('use_index'),
+      B('use_index_offset'),
+      F('index_offset'),
+      B('find_idx_on_lockin_only'),
+
+      { group: 'Calibração' },
+      F('calib_range'),
+      F('calib_scan_distance'),
+      F('calib_scan_omega'),
+
+      { group: 'Hall' },
+      I('hall_polarity'),
+      B('hall_polarity_calibrated'),
+      B('ignore_illegal_hall_state'),
+
+      { group: 'Pinos' },
+      I('abs_spi_cs_gpio_pin'),
+      I('sincos_gpio_pin_sin'),
+      I('sincos_gpio_pin_cos'),
+    ]
+  },
+  {
+    id: 'controller', label: 'Controller', prefix: 'axis0.controller.config.',
+    fields: [
+      { group: 'Modo de controle' },
+      E('control_mode', ENUM_CTRL_MODE),
+      E('input_mode', ENUM_INPUT_MODE),
+      F('input_filter_bandwidth'),
+      F('torque_ramp_rate'),
+      F('vel_ramp_rate'),
+
+      { group: 'Ganhos (PID)' },
+      F('pos_gain'),
+      F('vel_gain'),
+      F('vel_integrator_gain'),
+      F('vel_integrator_limit'),
+      F('inertia'),
+      B('enable_gain_scheduling'),
+      F('gain_scheduling_width'),
+
+      { group: 'Limites de velocidade' },
+      B('enable_vel_limit'),
+      B('enable_torque_mode_vel_limit'),
+      F('vel_limit'),
+      F('vel_limit_tolerance'),
+      B('enable_overspeed_error'),
+
+      { group: 'Posição circular' },
+      B('circular_setpoints'),
+      F('circular_setpoint_range'),
+      I('steps_per_circular_range'),
+
+      { group: 'Homing / mirror' },
+      F('homing_speed'),
+      I('load_encoder_axis'),
+      I('axis_to_mirror'),
+      F('mirror_ratio'),
+      F('torque_mirror_ratio'),
+
+      { group: 'Power monitoring' },
+      F('electrical_power_bandwidth'),
+      F('mechanical_power_bandwidth'),
+      F('spinout_electrical_power_threshold'),
+      F('spinout_mechanical_power_threshold'),
+
+      { group: 'Anticogging' },
+      B('anticogging.anticogging_enabled'),
+      B('anticogging.calib_anticogging'),
+      B('anticogging.pre_calibrated'),
+      F('anticogging.cogging_ratio'),
+      F('anticogging.calib_pos_threshold'),
+      F('anticogging.calib_vel_threshold'),
+      I('anticogging.index'),
+    ]
+  },
+  {
+    id: 'debug', label: 'Debug / Status', prefix: '', custom: true,
+  },
+  {
+    id: 'ffb-wheel', label: 'FFB Wheel', prefix: 'axis.', protocol: 'offb',
+    fields: [
+      { group: 'Escala de força' },
+      F('range'),         // graus rotação total (default 900)
+      F('maxtorque'),     // Nm cap (default 5.0, max recomendado 17 pelo motor)
+      F('fxratio'),       // 0..1 — multiplicador final (default 0.80)
+
+      { group: 'Axis effects sempre-ativos (somam ao FFB do jogo)' },
+      I('idlespring'),    // mola centralizadora quando FFB OFF (0-255, default 0)
+      I('axisdamper'),    // damper sempre ativo (0-255, default 0)
+      I('axisinertia'),   // inertia sempre ativa (0-255, default 0)
+      I('axisfriction'),  // friction sempre ativa (0-255, default 0)
+      I('esgain'),        // batente eletrônico nos limites do range (0-255, default 0)
+
+      { group: 'Slew rate / curva' },
+      I('maxtorquerate'), // limite de mudança de torque por ms (0=off)
+      I('expo'),          // curva exponencial de resposta (-32767..32767, 0=linear)
+      I('exposcale'),     // divisor pro expo (1-255, default 100)
+    ]
+  },
+  {
+    id: 'ffb-effects', label: 'FFB Effects', prefix: 'fx.', protocol: 'offb',
+    fields: [
+      { group: 'Master gain' },
+      I('master'),      // 0..255 — multiplica TODOS os efeitos (default 255)
+
+      { group: 'Per-effect gains (0..255)' },
+      I('spring'),      // default 64
+      I('damper'),      // default 64
+      I('friction'),    // default 254
+      I('inertia'),     // default 127
+    ]
+  },
+  {
+    id: 'ffb-filters', label: 'FFB Filters', prefix: 'fx.', protocol: 'offb',
+    fields: [
+      { group: 'Constant Force (HID streaming)' },
+      I('filterCfFreq'),    // 1..500 Hz, default 500 (quase passa direto)
+      I('filterCfQ'),       // 1..500 (×0.01), default 70 ≈ Butterworth
+
+      { group: 'Friction' },
+      I('filterFrFreq'),    // default 50
+      I('filterFrQ'),       // default 20
+
+      { group: 'Damper' },
+      I('filterDaFreq'),    // default 30
+      I('filterDaQ'),       // default 40
+
+      { group: 'Inertia' },
+      I('filterInFreq'),    // default 15
+      I('filterInQ'),       // default 20
+    ]
+  },
+  {
+    id: 'ffb-live', label: 'FFB Live', prefix: '', custom: true,
+  },
+  {
+    id: 'console-tab', label: 'Console', prefix: '', custom: true,
+  }
+];
+
+/* =========================================================================
+   Enums pra display legível de estado
+   ========================================================================= */
+const ENUM_AXIS_STATE = {
+  0: 'UNDEFINED',
+  1: 'IDLE',
+  2: 'STARTUP_SEQUENCE',
+  3: 'FULL_CALIBRATION_SEQUENCE',
+  4: 'MOTOR_CALIBRATION',
+  5: 'SENSORLESS_CONTROL',
+  6: 'ENCODER_INDEX_SEARCH',
+  7: 'ENCODER_OFFSET_CALIBRATION',
+  8: 'CLOSED_LOOP_CONTROL',
+  9: 'LOCKIN_SPIN',
+  10: 'ENCODER_DIR_FIND',
+  11: 'HOMING',
+  12: 'ENCODER_HALL_POLARITY_CALIBRATION',
+  13: 'ENCODER_HALL_PHASE_CALIBRATION'
+};
+
+// Error bit decoders — nome do bit por valor. Parciais (cobertura dos mais comuns).
+const ERR_BITS_ODRIVE = {
+  0x00000001: 'CONTROL_ITERATION_MISSED',
+  0x00000002: 'DC_BUS_UNDER_VOLTAGE',
+  0x00000004: 'DC_BUS_OVER_VOLTAGE',
+  0x00000008: 'DC_BUS_OVER_REGEN_CURRENT',
+  0x00000010: 'DC_BUS_OVER_CURRENT',
+  0x00000020: 'BRAKE_DEADTIME_VIOLATION',
+  0x00000040: 'BRAKE_DUTY_CYCLE_NAN',
+  0x00000080: 'INVALID_BRAKE_RESISTANCE'
+};
+const ERR_BITS_AXIS = {
+  0x00000001: 'INVALID_STATE',
+  0x00000040: 'MOTOR_FAILED',
+  0x00000080: 'SENSORLESS_ESTIMATOR_FAILED',
+  0x00000100: 'ENCODER_FAILED',
+  0x00000200: 'CONTROLLER_FAILED',
+  0x00000800: 'WATCHDOG_TIMER_EXPIRED',
+  0x00001000: 'MIN_ENDSTOP_PRESSED',
+  0x00002000: 'MAX_ENDSTOP_PRESSED',
+  0x00004000: 'ESTOP_REQUESTED',
+  0x00020000: 'HOMING_WITHOUT_ENDSTOP',
+  0x00040000: 'OVER_TEMP',
+  0x00080000: 'UNKNOWN_POSITION'
+};
+const ERR_BITS_MOTOR = {
+  0x00000001: 'PHASE_RESISTANCE_OUT_OF_RANGE',
+  0x00000002: 'PHASE_INDUCTANCE_OUT_OF_RANGE',
+  0x00000008: 'DRV_FAULT',
+  0x00000010: 'CONTROL_DEADLINE_MISSED',
+  0x00000080: 'MODULATION_MAGNITUDE',
+  0x00000400: 'CURRENT_SENSE_SATURATION',
+  0x00001000: 'CURRENT_LIMIT_VIOLATION',
+  0x00010000: 'MODULATION_IS_NAN',
+  0x00020000: 'MOTOR_THERMISTOR_OVER_TEMP',
+  0x00040000: 'FET_THERMISTOR_OVER_TEMP',
+  0x00080000: 'TIMER_UPDATE_MISSED',
+  0x00100000: 'CURRENT_MEASUREMENT_UNAVAILABLE',
+  0x00200000: 'CONTROLLER_FAILED',
+  0x00400000: 'I_BUS_OUT_OF_RANGE',
+  0x00800000: 'BRAKE_RESISTOR_DISARMED',
+  0x01000000: 'SYSTEM_LEVEL',
+  0x02000000: 'BAD_TIMING',
+  0x04000000: 'UNKNOWN_PHASE_ESTIMATE',
+  0x08000000: 'UNKNOWN_PHASE_VEL',
+  0x10000000: 'UNKNOWN_TORQUE',
+  0x20000000: 'UNKNOWN_CURRENT_COMMAND',
+  0x40000000: 'UNKNOWN_CURRENT_MEASUREMENT',
+  0x80000000: 'UNKNOWN_VBUS_VOLTAGE'
+};
+const ERR_BITS_ENCODER = {
+  0x00000001: 'UNSTABLE_GAIN',
+  0x00000002: 'CPR_POLEPAIRS_MISMATCH',
+  0x00000004: 'NO_RESPONSE',
+  0x00000008: 'UNSUPPORTED_ENCODER_MODE',
+  0x00000010: 'ILLEGAL_HALL_STATE',
+  0x00000020: 'INDEX_NOT_FOUND_YET',
+  0x00000040: 'ABS_SPI_TIMEOUT',
+  0x00000080: 'ABS_SPI_COM_FAIL',
+  0x00000100: 'ABS_SPI_NOT_READY',
+  0x00000200: 'HALL_NOT_CALIBRATED_YET'
+};
+const ERR_BITS_CTRL = {
+  0x00000001: 'OVERSPEED',
+  0x00000002: 'INVALID_INPUT_MODE',
+  0x00000004: 'UNSTABLE_GAIN',
+  0x00000008: 'INVALID_MIRROR_AXIS',
+  0x00000010: 'INVALID_LOAD_ENCODER',
+  0x00000020: 'INVALID_ESTIMATE',
+  0x00000040: 'INVALID_CIRCULAR_RANGE',
+  0x00000080: 'SPINOUT_DETECTED'
+};
+
+function decodeErr(hexVal, bitMap) {
+  const v = parseInt(hexVal, 16);
+  if (isNaN(v) || v === 0) return 'OK';
+  const bits = [];
+  for (const [mask, name] of Object.entries(bitMap)) {
+    if (v & parseInt(mask)) bits.push(name);
+  }
+  const unkn = v & ~Object.keys(bitMap).reduce((a, m) => a | parseInt(m), 0);
+  if (unkn) bits.push('(+bits 0x' + unkn.toString(16) + ')');
+  return bits.join(' | ') || '(bits desconhecidos)';
+}
+
+/* =========================================================================
+   Web Serial connection + ASCII request queue
+   ========================================================================= */
+let port = null, reader = null, writer = null;
+let readBuffer = '';
+let pendingReplies = [];  // {resolve, timeout}
+const LOG_MAX = 500;
+let logPaused = false;
+
+function logLine(text, cls) {
+  if (logPaused) return;
+  const pre = document.getElementById('log');
+  if (!pre) return;  // aba Console ainda não foi construída
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = text + '\n';
+  pre.appendChild(span);
+  if (pre.childNodes.length > LOG_MAX) pre.removeChild(pre.firstChild);
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function wireConsoleTab() {
+  const clearBtn = document.getElementById('btn-console-clear');
+  const pauseBtn = document.getElementById('btn-console-pause');
+  if (!clearBtn || !pauseBtn) return;
+  clearBtn.addEventListener('click', () => {
+    const pre = document.getElementById('log');
+    if (pre) pre.innerHTML = '';
+  });
+  pauseBtn.addEventListener('click', () => {
+    logPaused = !logPaused;
+    pauseBtn.dataset.i18n = logPaused ? 'console.resume' : 'console.pause';
+    pauseBtn.textContent = t(logPaused ? 'console.resume' : 'console.pause');
+    pauseBtn.style.background = logPaused ? 'var(--warn)' : '';
+    pauseBtn.style.color = logPaused ? '#000' : '';
+  });
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = cls || '';
+}
+
+async function connect() {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' });
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+    setStatus(t('status.connected'), 'connected');
+    toggleControls(true);
+    logLine('--- conectado ---');
+    readLoop();
+    // Auto-read de todos os campos pra popular UI com estado real do device.
+    // Pequena pausa pra serial estabilizar antes de mandar flood de comandos.
+    setTimeout(() => {
+      logLine('--- auto-readAll após conexão ---');
+      readAll().catch(e => logLine('readAll auto erro: ' + e.message, 'err'));
+    }, 200);
+  } catch (e) {
+    setStatus('Erro: ' + e.message, 'error');
+    logLine('Erro conexão: ' + e.message, 'err');
+  }
+}
+
+async function disconnect() {
+  stopPolling && stopPolling();
+  if (typeof ffbPollStop === 'function') ffbPollStop();
+  try {
+    if (reader) { await reader.cancel(); reader.releaseLock(); reader = null; }
+    if (writer) { writer.releaseLock(); writer = null; }
+    if (port) { await port.close(); port = null; }
+  } catch (e) {}
+  setStatus(t('status.disconnected'));
+  toggleControls(false);
+  const pollChk = document.getElementById('poll-enable');
+  if (pollChk) pollChk.checked = false;
+  const ffbChk = document.getElementById('ffb-poll-enable');
+  if (ffbChk) ffbChk.checked = false;
+}
+
+async function readLoop() {
+  const dec = new TextDecoder();
+  try {
+    while (port && reader) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      readBuffer += dec.decode(value);
+      let idx;
+      while ((idx = readBuffer.indexOf('\n')) >= 0) {
+        const line = readBuffer.slice(0, idx).replace(/\r$/, '');
+        readBuffer = readBuffer.slice(idx + 1);
+        if (line.length) {
+          logLine('← ' + line, 'rx');
+          const p = pendingReplies.shift();
+          if (p) { clearTimeout(p.timeout); p.resolve(line); }
+        }
+      }
+    }
+  } catch (e) {
+    logLine('readLoop erro: ' + e.message, 'err');
+    disconnect();
+  }
+}
+
+async function sendCmd(cmd, expectReply) {
+  if (!writer) throw new Error('not connected');
+  logLine('→ ' + cmd, 'tx');
+  await writer.write(new TextEncoder().encode(cmd + '\n'));
+  if (!expectReply) return null;
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      const idx = pendingReplies.findIndex(p => p.resolve === resolve);
+      if (idx >= 0) pendingReplies.splice(idx, 1);
+      reject(new Error('timeout'));
+    }, 2000);
+    pendingReplies.push({ resolve, timeout });
+  });
+}
+
+async function readProp(path) {
+  try {
+    return await sendCmd('r ' + path, true);
+  } catch (e) {
+    logLine('r ' + path + ' → timeout', 'err');
+    return null;
+  }
+}
+
+async function writeProp(path, value) {
+  await sendCmd('w ' + path + ' ' + value, false);
+}
+
+// OpenFFBoard CmdParser — formato "class.cmd?" ou "class.cmd=value"
+// Reply: "[class.cmd?|VALUE]" ou "[class.cmd=VALUE|VALUE]". Extrai o VALUE
+// de dentro do pipe.
+function _extractOffbValue(reply) {
+  if (!reply) return null;
+  // Aceita tanto [foo.bar?|VAL] quanto [foo.0.bar?|VAL] (com instance)
+  const m = reply.match(/^\[[^|]+\|([\s\S]*)\]$/);
+  return m ? m[1] : reply;
+}
+async function readPropOffb(path) {
+  try {
+    const reply = await sendCmd(path + '?', true);
+    return _extractOffbValue(reply);
+  } catch (e) {
+    logLine(path + '? → timeout', 'err');
+    return null;
+  }
+}
+async function writePropOffb(path, value) {
+  try {
+    const reply = await sendCmd(path + '=' + value, true);
+    return _extractOffbValue(reply);
+  } catch (e) {
+    logLine(path + '=' + value + ' → timeout', 'err');
+    return null;
+  }
+}
+async function execPropOffb(path) {
+  try {
+    const reply = await sendCmd(path + '!', true);
+    return _extractOffbValue(reply);
+  } catch (e) {
+    logLine(path + '! → timeout', 'err');
+    return null;
+  }
+}
+
+/* =========================================================================
+   UI construction
+   ========================================================================= */
+function toggleControls(connected) {
+  const ids = ['btn-read-all', 'btn-save', 'btn-save-ffb',
+               'btn-erase', 'btn-reboot', 'btn-export', 'btn-import'];
+  ids.forEach(i => document.getElementById(i).disabled = !connected);
+  document.getElementById('btn-connect').textContent =
+    connected ? t('btn.disconnect') : t('btn.connect');
+}
+
+function tabId(tabRef) { return 'tab-' + tabRef; }
+
+function buildTabs() {
+  const nav = document.getElementById('tabs');
+  const content = document.getElementById('content');
+  SCHEMA.forEach((tab, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = tab.label;
+    btn.dataset.tab = tab.id;
+    btn.onclick = () => selectTab(tab.id);
+    nav.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel';
+    panel.id = tabId(tab.id);
+
+    // Debug tab — custom UI (actions, live monitor, errors, setpoints)
+    if (tab.custom && tab.id === 'debug') {
+      panel.innerHTML = buildDebugHTML();
+      content.appendChild(panel);
+      return;
+    }
+    // FFB Live tab — custom UI (live FFB state, counters, peaks)
+    if (tab.custom && tab.id === 'ffb-live') {
+      panel.innerHTML = buildFFBLiveHTML();
+      content.appendChild(panel);
+      return;
+    }
+    // Console tab — log de TX/RX e mensagens internas
+    if (tab.custom && tab.id === 'console-tab') {
+      panel.innerHTML = `
+        <div class="console-toolbar">
+          <button id="btn-console-clear" data-i18n="console.clear">Limpar</button>
+          <button id="btn-console-pause" data-paused="0" data-i18n="console.pause">⏸ Pausar</button>
+          <span style="color:var(--muted);font-size:11px;margin-left:auto">
+            <span class="k" style="color:var(--accent)">→</span> TX
+            &nbsp;<span class="k" style="color:var(--ok)">←</span> RX
+            &nbsp;<span class="k" style="color:var(--err)">!</span> erro
+          </span>
+        </div>
+        <pre id="log" class="console-box"></pre>
+      `;
+      content.appendChild(panel);
+      return;
+    }
+
+    tab.fields.forEach(fld => {
+      if (fld.group) {
+        const g = document.createElement('div');
+        g.className = 'group';
+        // Mapeia label → key i18n. Se houver chave registrada usa, senão fallback raw text.
+        const groupKey = GROUP_KEY_MAP[fld.group];
+        if (groupKey) {
+          g.dataset.i18nKey = groupKey;
+          g.textContent = t(groupKey);
+        } else {
+          g.textContent = fld.group;
+        }
+        panel.appendChild(g);
+        return;
+      }
+      const path = tab.prefix + fld.name;
+      const labelEl = document.createElement('label');
+      labelEl.dataset.fieldPath = path;
+      // Tooltip: descrição + path técnico no final
+      const desc = fieldDesc(path);
+      labelEl.title = desc || path;
+      labelEl.innerHTML = fld.name +
+        '<span class="type">(' + fld.type +
+        (fld.opts ? ' ['+Object.keys(fld.opts).length+']' : '') + ')</span>';
+      labelEl.htmlFor = 'in-' + path;
+
+      const valWrap = document.createElement('div');
+      valWrap.className = 'value';
+      let input;
+      if (fld.type === 'bool') {
+        input = document.createElement('input');
+        input.type = 'checkbox';
+      } else if (fld.type === 'enum') {
+        input = document.createElement('select');
+        for (const [k, v] of Object.entries(fld.opts)) {
+          const o = document.createElement('option');
+          o.value = k; o.textContent = k + ' — ' + v;
+          input.appendChild(o);
+        }
+      } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = fld.type;
+      }
+      input.id = 'in-' + path;
+      input.dataset.path = path;
+      input.dataset.type = fld.type;
+      input.dataset.protocol = tab.protocol || 'odrv';
+      input.dataset.currentServerValue = '';
+      input.addEventListener('input', () => markDirty(input));
+      input.addEventListener('change', () => markDirty(input));
+
+      const btnRead = document.createElement('button');
+      btnRead.textContent = '↻';
+      btnRead.title = 'Ler do device';
+      btnRead.onclick = () => readOne(input);
+
+      const btnWrite = document.createElement('button');
+      btnWrite.textContent = '✓';
+      btnWrite.title = 'Gravar no device';
+      btnWrite.onclick = () => writeOne(input);
+
+      valWrap.appendChild(input);
+      valWrap.appendChild(btnRead);
+      valWrap.appendChild(btnWrite);
+      panel.appendChild(labelEl);
+      panel.appendChild(valWrap);
+    });
+
+    content.appendChild(panel);
+  });
+  selectTab(SCHEMA[0].id);
+}
+
+/* =========================================================================
+   Debug / Status tab — actions + live monitor + erros + setpoints
+   ========================================================================= */
+/* =========================================================================
+   FFB Live tab — dashboard ao vivo do estado FFB (Phase 3.10)
+   Poll configurável (default 500ms), pode ser ligado/desligado.
+   Usa diag commands single-letter (d/D/C/T/E/I) + sys.fxtest? combinado.
+   ========================================================================= */
+function buildFFBLiveHTML() {
+  return `
+    <div class="debug-section" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:0;flex-wrap:wrap">
+      <span class="poll-dot" id="ffb-poll-dot"></span>
+      <label><input type="checkbox" id="ffb-poll-enable"> <span data-i18n="ffb.auto_poll">Auto-poll</span></label>
+      <input type="number" id="ffb-poll-interval" value="500" min="50" max="10000" step="50"
+             style="width:80px"> ms
+      <button id="btn-ffb-poll-once" data-i18n="ffb.update_now">Atualizar agora</button>
+      <button id="btn-ffb-reset-peaks" class="warn" data-i18n="ffb.reset_peaks">Reset peaks</button>
+      <span style="color:var(--muted);font-size:11px" data-i18n="ffb.poll_hint">Intervalos &lt; 100ms podem sobrecarregar a CDC. 200-500ms é o sweet spot.</span>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="ffb.state_title">Estado FFB</h3>
+      <div class="live-grid">
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_active">ffb_active</span><span class="v" id="ffb-kv-active">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_eff">effects ativos</span><span class="v" id="ffb-kv-eff">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_pos">posição (graus)</span><span class="v" id="ffb-kv-pos">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_spd">velocidade (deg/s)</span><span class="v" id="ffb-kv-spd">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_trq">torque pendente (Nm)</span><span class="v" id="ffb-kv-trq">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_lt">last torque (int32)</span><span class="v" id="ffb-kv-lt">—</span></div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="ffb.counters_title">Contadores HID OUT</span> <small style="color:var(--muted)" data-i18n="ffb.counters_subtitle">(reports recebidos do jogo)</small></h3>
+      <div class="live-grid">
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_hout">total HID OUT</span><span class="v" id="ffb-kv-hout">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_setef">setEffectTorque calls</span><span class="v" id="ffb-kv-setef">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_ctrl">CTRL (enable/disable)</span><span class="v" id="ffb-kv-ctrl">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_newef">NEWEFFECT (criar)</span><span class="v" id="ffb-kv-newef">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_setefr">SETEFFECT (configurar)</span><span class="v" id="ffb-kv-setefr">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_efop">EFOP (start/stop)</span><span class="v" id="ffb-kv-efop">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_cond">CONDITION (spring/damper)</span><span class="v" id="ffb-kv-cond">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_cnst">CONSTANT (constant force)</span><span class="v" id="ffb-kv-cnst">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_prdc">PERIODIC (sine/triangle)</span><span class="v" id="ffb-kv-prdc">—</span></div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="ffb.effects_title">Efeitos ativos</span> <small style="color:var(--muted)" data-i18n="ffb.effects_subtitle">(até 3 mostrados, idx=-1 → vazio)</small></h3>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px">
+        ${[0,1,2].map(n => `
+          <div style="background:#1a1a1a;border:1px solid var(--border);border-radius:4px;padding:8px">
+            <div style="color:var(--accent);font-weight:bold;margin-bottom:6px;font-size:12px">Effect ${n}</div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_slot">slot</span><span class="v" id="ffb-kv-eidx-${n}">—</span></div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_state">state</span><span class="v" id="ffb-kv-est-${n}">—</span></div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_type">type</span><span class="v" id="ffb-kv-etype-${n}">—</span></div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_magnitude">magnitude</span><span class="v" id="ffb-kv-emag-${n}">—</span></div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_axmag">axisMag[0]</span><span class="v" id="ffb-kv-eax-${n}">—</span></div>
+            <div class="live-kv"><span class="k" data-i18n="ffb.kv_gain">gain</span><span class="v" id="ffb-kv-egain-${n}">—</span></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="live-kv" style="margin-top:8px"><span class="k" data-i18n="ffb.kv_egg">global gain (master)</span><span class="v" id="ffb-kv-egg">—</span></div>
+
+      <div style="margin-top:12px;padding:8px;background:#1a1a1a;border:1px solid var(--border);border-radius:4px">
+        <div style="color:var(--accent);font-weight:bold;margin-bottom:6px;font-size:12px">
+          <span data-i18n="ffb.mag_title">Effect 0 magnitude — análise de dinâmica</span>
+          <button id="btn-ffb-mag-reset" style="margin-left:12px;padding:2px 8px;font-size:10px" data-i18n="ffb.mag_reset">Reset janela</button>
+        </div>
+        <div class="live-grid">
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_n">samples na janela</span><span class="v" id="ffb-kv-mag-n">—</span></div>
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_min">mag MIN</span><span class="v" id="ffb-kv-mag-min">—</span></div>
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_max">mag MAX</span><span class="v" id="ffb-kv-mag-max">—</span></div>
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_range">range (max − min)</span><span class="v" id="ffb-kv-mag-range">—</span></div>
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_avg">média</span><span class="v" id="ffb-kv-mag-avg">—</span></div>
+          <div class="live-kv"><span class="k" data-i18n="ffb.kv_mag_jump">delta máximo (entre samples)</span><span class="v" id="ffb-kv-mag-jump">—</span></div>
+        </div>
+        <div style="color:var(--muted);font-size:10px;margin-top:4px" data-i18n="ffb.mag_hint">Range pequeno (&lt; 1000) com média alta = mola constante. Range grande (&gt; 10000) = dinâmicas chegando. Delta máximo alto = transientes (curbs/slip) chegam. Delta consistentemente baixo = tudo suave / filtrado.</div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="ffb.peaks_title">Picos de barramento DC</span> <small style="color:var(--muted)" data-i18n="ffb.peaks_subtitle">(min/max desde último Reset)</small></h3>
+      <div class="live-grid">
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_ibmin">Ibus min (regen pico)</span><span class="v" id="ffb-kv-ibmin">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_ibmax">Ibus max (consumo pico)</span><span class="v" id="ffb-kv-ibmax">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_mibmin">Motor I_bus min</span><span class="v" id="ffb-kv-mibmin">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_mibmax">Motor I_bus max</span><span class="v" id="ffb-kv-mibmax">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_vbmin">Vbus min (sag)</span><span class="v" id="ffb-kv-vbmin">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.kv_vbmax">Vbus max (regen rise)</span><span class="v" id="ffb-kv-vbmax">—</span></div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="ffb.chart_title">Gráfico ao vivo</span>
+        <small style="color:var(--muted)" data-i18n="ffb.chart_subtitle">(janela 60s — torque pendente / posição encoder)</small>
+        <button id="btn-ffb-chart-clear" style="margin-left:12px;padding:2px 8px;font-size:10px" data-i18n="dbg.clear_history">Limpar histórico</button>
+      </h3>
+      <p style="color:var(--muted);font-size:11px;margin:0 0 8px" data-i18n="ffb.chart_hint">Capacidade da janela = 60s ÷ intervalo do auto-poll FFB. Ex: 200ms → 300 pontos. Eixos auto-escalam baseado no min/max amostrados.</p>
+      <canvas id="ffb-chart" width="800" height="280"
+              style="width:100%;height:280px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px"></canvas>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
+        <label style="color:#ef5350;cursor:pointer">
+          <input type="checkbox" id="ffb-chart-show-trq" checked style="vertical-align:middle">
+          ━ torque (Nm) <span id="ffb-chart-leg-trq">—</span>
+        </label>
+        <label style="color:#ab47bc;cursor:pointer">
+          <input type="checkbox" id="ffb-chart-show-pos" checked style="vertical-align:middle">
+          ━ posição (graus) <span id="ffb-chart-leg-pos">—</span>
+        </label>
+        <span style="margin-left:auto;color:var(--muted)" id="ffb-chart-stats">—</span>
+      </div>
+    </div>
+  `;
+}
+
+// Estado do polling FFB Live
+let ffbPollTimer = null;
+let ffbPollInFlight = false;
+
+// ---------------- Gráfico FFB Live: torque (Nm) e posição (graus), 60s ----------------
+let ffbChartHistory = { trq: [], pos: [] };
+function ffbChartMaxSamples() {
+  const interval = parseInt(document.getElementById('ffb-poll-interval')?.value, 10) || 500;
+  return Math.max(5, Math.ceil(60000 / interval));
+}
+function ffbChartPush(key, val) {
+  if (val === null || val === undefined || isNaN(val)) return;
+  ffbChartHistory[key].push(val);
+  const max = ffbChartMaxSamples();
+  while (ffbChartHistory[key].length > max) ffbChartHistory[key].shift();
+}
+function _ffbMin(arr) { return arr.length === 0 ? 0 : arr.reduce((a,b) => Math.min(a,b), arr[0]); }
+function _ffbMax(arr) { return arr.length === 0 ? 0 : arr.reduce((a,b) => Math.max(a,b), arr[0]); }
+
+function drawFFBChart() {
+  const cv = document.getElementById('ffb-chart');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+    cv.width  = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const padL = 60, padR = 60, padT = 14, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
+
+  // Visibilidade por trace (checkbox)
+  const showT = document.getElementById('ffb-chart-show-trq')?.checked ?? true;
+  const showP = document.getElementById('ffb-chart-show-pos')?.checked ?? true;
+
+  // Auto-scale: torque (Nm) eixo esquerdo, posição (graus) eixo direito.
+  // Traces invisíveis NÃO entram no cálculo de min/max.
+  const tArr = showT ? ffbChartHistory.trq : [];
+  const pArr = showP ? ffbChartHistory.pos : [];
+  let tMin = tArr.length ? _ffbMin(tArr) : -1;
+  let tMax = tArr.length ? _ffbMax(tArr) :  1;
+  let pMin = pArr.length ? _ffbMin(pArr) : -180;
+  let pMax = pArr.length ? _ffbMax(pArr) :  180;
+  const tPad = Math.max((tMax - tMin) * 0.1, 0.2);
+  tMin -= tPad; tMax += tPad;
+  const pPad = Math.max((pMax - pMin) * 0.1, 5);
+  pMin -= pPad; pMax += pPad;
+  if (tMax === tMin) tMax = tMin + 0.5;
+  if (pMax === pMin) pMax = pMin + 10;
+
+  // Linha do zero (torque) — destaca valor central pra ver simetria
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+  if (tMin < 0 && tMax > 0) {
+    const yZero = padT + H - ((0 - tMin) / (tMax - tMin)) * H;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(padL + W, yZero); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Grid
+  ctx.strokeStyle = '#333';
+  ctx.fillStyle = '#888'; ctx.font = '10px monospace';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (H * i) / 4;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
+    const tL = tMax - (tMax - tMin) * i / 4;
+    const pR = pMax - (pMax - pMin) * i / 4;
+    ctx.fillStyle = '#ef5350'; ctx.textAlign = 'right';
+    ctx.fillText(tL.toFixed(2) + 'Nm', padL - 4, y);
+    ctx.fillStyle = '#ab47bc'; ctx.textAlign = 'left';
+    ctx.fillText(pR.toFixed(0) + '°', padL + W + 4, y);
+  }
+  ctx.fillStyle = '#888'; ctx.textAlign = 'left';
+  ctx.fillText('-60s', padL, padT + H + 12);
+  ctx.textAlign = 'right';
+  ctx.fillText('agora', padL + W, padT + H + 12);
+
+  function plotTrace(arr, color, yMin, yMax) {
+    if (arr.length < 2) return;
+    const max = ffbChartMaxSamples();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < arr.length; i++) {
+      const x = padL + W - ((arr.length - 1 - i) * W / (max - 1));
+      const t = (arr[i] - yMin) / (yMax - yMin);
+      const y = padT + H - t * H;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  if (showT) plotTrace(ffbChartHistory.trq, '#ef5350', tMin, tMax);
+  if (showP) plotTrace(ffbChartHistory.pos, '#ab47bc', pMin, pMax);
+
+  const lastT = tArr.length ? tArr[tArr.length-1] : null;
+  const lastP = pArr.length ? pArr[pArr.length-1] : null;
+  const setT = (id, val, unit, dec) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val !== null ? val.toFixed(dec) + unit : '—';
+  };
+  setT('ffb-chart-leg-trq', lastT, ' Nm', 3);
+  setT('ffb-chart-leg-pos', lastP, '°', 1);
+  const stats = document.getElementById('ffb-chart-stats');
+  if (stats) {
+    const interval = parseInt(document.getElementById('ffb-poll-interval')?.value, 10) || 500;
+    stats.textContent = `${tArr.length} samples / ${ffbChartMaxSamples()} max @ ${interval}ms`;
+  }
+}
+// Janela de samples de magnitude do Effect 0 pra análise de dinâmica.
+// Usa array circular limitado pra não crescer indefinidamente.
+let ffbMagSamples = [];
+const FFB_MAG_WINDOW_MAX = 100;  // ~50s a 500ms poll, ~10s a 100ms
+function ffbMagReset() { ffbMagSamples = []; }
+function ffbMagPush(val) {
+  if (val === null || isNaN(val)) return;
+  ffbMagSamples.push(val);
+  if (ffbMagSamples.length > FFB_MAG_WINDOW_MAX) ffbMagSamples.shift();
+}
+function ffbMagStats() {
+  if (ffbMagSamples.length === 0) return null;
+  let min = Infinity, max = -Infinity, sum = 0, maxJump = 0;
+  for (let i = 0; i < ffbMagSamples.length; i++) {
+    const v = ffbMagSamples[i];
+    if (v < min) min = v;
+    if (v > max) max = v;
+    sum += v;
+    if (i > 0) {
+      const jump = Math.abs(v - ffbMagSamples[i-1]);
+      if (jump > maxJump) maxJump = jump;
+    }
+  }
+  return {
+    n: ffbMagSamples.length,
+    min, max,
+    range: max - min,
+    avg: sum / ffbMagSamples.length,
+    maxJump
+  };
+}
+
+// Helpers de regex pra parsear cada diag command
+function _setKV(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function _parseKVPairs(line, regex) {
+  // Aceita "k1=v1 k2=v2 k3=v3" — retorna {k1:v1, k2:v2, ...}
+  const out = {};
+  if (!line) return out;
+  let m;
+  while ((m = regex.exec(line)) !== null) out[m[1]] = m[2];
+  return out;
+}
+
+async function pollFFBLiveOnce() {
+  if (!writer || ffbPollInFlight) return;
+  ffbPollInFlight = true;
+  const dot = document.getElementById('ffb-poll-dot');
+  if (dot) dot.classList.add('on');
+  try {
+    // 'd' → ffb=N eff=N hout=N setEf=N
+    const dr = await sendCmd('d', true).catch(() => null);
+    if (dr) {
+      const m = dr.match(/ffb=(\d+)\s+eff=(\d+)\s+hout=(\d+)\s+setEf=(\d+)/);
+      if (m) {
+        _setKV('ffb-kv-active', m[1] === '1' ? '✓ ATIVO' : '✗ inativo');
+        _setKV('ffb-kv-eff',    m[2]);
+        _setKV('ffb-kv-hout',   m[3]);
+        _setKV('ffb-kv-setef',  m[4]);
+      }
+    }
+    // 'D' → ctrl=N newef=N setef=N efop=N
+    const Dr = await sendCmd('D', true).catch(() => null);
+    if (Dr) {
+      const m = Dr.match(/ctrl=(\d+)\s+newef=(\d+)\s+setef=(\d+)\s+efop=(\d+)/);
+      if (m) {
+        _setKV('ffb-kv-ctrl',   m[1]);
+        _setKV('ffb-kv-newef',  m[2]);
+        _setKV('ffb-kv-setefr', m[3]);
+        _setKV('ffb-kv-efop',   m[4]);
+      }
+    }
+    // 'C' → cond=N cnst=N prdc=N
+    const Cr = await sendCmd('C', true).catch(() => null);
+    if (Cr) {
+      const m = Cr.match(/cond=(\d+)\s+cnst=(\d+)\s+prdc=(\d+)/);
+      if (m) {
+        _setKV('ffb-kv-cond', m[1]);
+        _setKV('ffb-kv-cnst', m[2]);
+        _setKV('ffb-kv-prdc', m[3]);
+      }
+    }
+    // 'T' → lt=N nm=X.XXXX
+    const Tr = await sendCmd('T', true).catch(() => null);
+    if (Tr) {
+      const m = Tr.match(/lt=(-?\d+)\s+nm=(-?\d+\.\d+)/);
+      if (m) {
+        _setKV('ffb-kv-lt',  m[1]);
+        _setKV('ffb-kv-trq', m[2] + ' Nm');
+        // Captura pra gráfico
+        ffbChartPush('trq', parseFloat(m[2]));
+      }
+    }
+    // 'E0', 'E1', 'E2' → cada um retorna idx=N st=N t=N mag=N ax=X.XX g=N GG=N
+    // pro N-ésimo efeito ativo (skip N efeitos com state=0).
+    const TYPES = {0:'NONE',1:'CONSTANT',2:'RAMP',3:'SQUARE',4:'SINE',5:'TRIANGLE',
+                   6:'SAWTOOTHUP',7:'SAWTOOTHDOWN',8:'SPRING',9:'DAMPER',
+                   10:'INERTIA',11:'FRICTION',12:'CUSTOM'};
+    const STATES = {0:'INACTIVE',1:'PLAYING'};
+    let lastGG = null;
+    for (let n = 0; n < 3; n++) {
+      const r = await sendCmd('E' + n, true).catch(() => null);
+      if (!r) {
+        _setKV('ffb-kv-eidx-'+n,  '—');
+        _setKV('ffb-kv-est-'+n,   '—');
+        _setKV('ffb-kv-etype-'+n, '—');
+        _setKV('ffb-kv-emag-'+n,  '—');
+        _setKV('ffb-kv-eax-'+n,   '—');
+        _setKV('ffb-kv-egain-'+n, '—');
+        continue;
+      }
+      const m = r.match(/idx=(-?\d+)\s+st=(\d+)\s+t=(\d+)\s+mag=(-?\d+)\s+ax=(-?\d+\.\d+)\s+g=(\d+)\s+GG=(\d+)/);
+      if (m) {
+        const empty = m[1] === '-1';
+        _setKV('ffb-kv-eidx-'+n,  empty ? '—' : m[1]);
+        _setKV('ffb-kv-est-'+n,   empty ? '—' : (STATES[m[2]] || m[2]));
+        _setKV('ffb-kv-etype-'+n, empty ? '—' : (TYPES[m[3]] || m[3]));
+        _setKV('ffb-kv-emag-'+n,  empty ? '—' : m[4]);
+        _setKV('ffb-kv-eax-'+n,   empty ? '—' : m[5]);
+        _setKV('ffb-kv-egain-'+n, empty ? '—' : m[6]);
+        lastGG = m[7];
+        // Captura mag do Effect 0 pra análise de dinâmica
+        if (n === 0 && !empty) ffbMagPush(parseInt(m[4], 10));
+      }
+    }
+    if (lastGG !== null) _setKV('ffb-kv-egg', lastGG);
+
+    // Atualiza estatísticas da janela de magnitude do Effect 0
+    const stats = ffbMagStats();
+    if (stats) {
+      _setKV('ffb-kv-mag-n',     stats.n);
+      _setKV('ffb-kv-mag-min',   stats.min);
+      _setKV('ffb-kv-mag-max',   stats.max);
+      _setKV('ffb-kv-mag-range', stats.range);
+      _setKV('ffb-kv-mag-avg',   stats.avg.toFixed(0));
+      _setKV('ffb-kv-mag-jump',  stats.maxJump);
+    } else {
+      _setKV('ffb-kv-mag-n', '0');
+    }
+    // 'I' → Ibus=X..Y Mot=X..Y V=X..Y (peaks)
+    const Ir = await sendCmd('I', true).catch(() => null);
+    if (Ir) {
+      const m = Ir.match(/Ibus=(-?\d+\.\d+)\.\.(-?\d+\.\d+)\s+Mot=(-?\d+\.\d+)\.\.(-?\d+\.\d+)\s+V=(-?\d+\.\d+)\.\.(-?\d+\.\d+)/);
+      if (m) {
+        _setKV('ffb-kv-ibmin',  m[1] + ' A');
+        _setKV('ffb-kv-ibmax',  m[2] + ' A');
+        _setKV('ffb-kv-mibmin', m[3] + ' A');
+        _setKV('ffb-kv-mibmax', m[4] + ' A');
+        _setKV('ffb-kv-vbmin',  m[5] + ' V');
+        _setKV('ffb-kv-vbmax',  m[6] + ' V');
+      }
+    }
+    // sys.fxtest? — tem pos/spd em formato amigável que diag não dá
+    const fr = await readPropOffb('sys.fxtest').catch(() => null);
+    if (fr) {
+      const m = fr.match(/ffb=(\d+)\s+pos=(-?\d+\.\d+)\s+spd=(-?\d+\.\d+)\s+trq=(-?\d+\.\d+)\s+fx=(\d+)/);
+      if (m) {
+        _setKV('ffb-kv-pos', m[2] + '°');
+        _setKV('ffb-kv-spd', m[3]);
+        // Captura posição pro gráfico
+        ffbChartPush('pos', parseFloat(m[2]));
+      }
+    }
+    // Renderiza gráfico FFB
+    drawFFBChart();
+  } finally {
+    if (dot) dot.classList.remove('on');
+    ffbPollInFlight = false;
+  }
+}
+
+function ffbPollStart() {
+  if (ffbPollTimer) clearInterval(ffbPollTimer);
+  const interval = parseInt(document.getElementById('ffb-poll-interval').value, 10) || 500;
+  pollFFBLiveOnce();   // imediato
+  ffbPollTimer = setInterval(pollFFBLiveOnce, interval);
+}
+function ffbPollStop() {
+  if (ffbPollTimer) {
+    clearInterval(ffbPollTimer);
+    ffbPollTimer = null;
+  }
+}
+
+function wireFFBLive() {
+  const enable = document.getElementById('ffb-poll-enable');
+  const interval = document.getElementById('ffb-poll-interval');
+  const once = document.getElementById('btn-ffb-poll-once');
+  const resetPeaks = document.getElementById('btn-ffb-reset-peaks');
+  if (!enable) return; // tab not yet built
+
+  enable.addEventListener('change', () => {
+    if (enable.checked) ffbPollStart(); else ffbPollStop();
+  });
+  interval.addEventListener('change', () => {
+    if (enable.checked) ffbPollStart();
+  });
+  once.addEventListener('click', () => pollFFBLiveOnce());
+  resetPeaks.addEventListener('click', async () => {
+    await sendCmd('R', true).catch(() => {});
+    pollFFBLiveOnce();
+  });
+  const magReset = document.getElementById('btn-ffb-mag-reset');
+  if (magReset) magReset.addEventListener('click', () => {
+    ffbMagReset();
+    pollFFBLiveOnce();
+  });
+  const chartClear = document.getElementById('btn-ffb-chart-clear');
+  if (chartClear) chartClear.addEventListener('click', () => {
+    ffbChartHistory = { trq: [], pos: [] };
+    drawFFBChart();
+  });
+  ['ffb-chart-show-trq', 'ffb-chart-show-pos'].forEach(id => {
+    const cb = document.getElementById(id);
+    if (cb) cb.addEventListener('change', drawFFBChart);
+  });
+}
+
+function buildDebugHTML() {
+  return `
+    <div class="debug-section" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:0">
+      <button id="btn-refresh-all" class="primary" style="padding:10px 20px;font-size:14px" data-i18n="dbg.refresh_all">↻ Atualizar tudo</button>
+      <span style="color:var(--muted);font-size:11px" data-i18n="dbg.refresh_all_hint">Lê info + erros + monitor live de uma vez. Atalho: tecla R quando aba Debug ativa.</span>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="dbg.info_title">Info do Device</h3>
+      <div class="live-grid" id="dbg-info">
+        <div class="live-kv"><span class="k">fw_version</span><span class="v" id="kv-fw">—</span></div>
+        <div class="live-kv"><span class="k">hw_version</span><span class="v" id="kv-hw">—</span></div>
+        <div class="live-kv"><span class="k">serial_number</span><span class="v" id="kv-sn">—</span></div>
+        <div class="live-kv"><span class="k">user_config_loaded</span><span class="v" id="kv-ucl">—</span></div>
+      </div>
+      <div style="margin-top:8px"><button id="btn-read-info" data-i18n="dbg.read_info">Ler Info</button></div>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="dbg.actions_title">Ações (state machine / NVM)</h3>
+      <div class="action-grid">
+        <button class="primary" data-act="state" data-val="1">IDLE<span class="sub">w axis0.requested_state 1</span></button>
+        <button class="warn" data-act="state" data-val="4">MOTOR_CALIBRATION<span class="sub">w ... 4 (mede R + L, ~5s)</span></button>
+        <button class="warn" data-act="state" data-val="6">ENCODER_INDEX_SEARCH<span class="sub">w ... 6 (procura índice Z)</span></button>
+        <button class="warn" data-act="state" data-val="7">ENCODER_OFFSET_CALIBRATION<span class="sub">w ... 7 (gira motor, ~10s)</span></button>
+        <button class="warn" data-act="state" data-val="10">ENCODER_DIR_FIND<span class="sub">w ... 10</span></button>
+        <button class="warn" data-act="state" data-val="3">FULL_CALIBRATION<span class="sub">w ... 3 (motor + enc)</span></button>
+        <button data-act="state" data-val="8">CLOSED_LOOP_CONTROL<span class="sub">w ... 8 (ativa ganho)</span></button>
+        <button data-act="state" data-val="9">LOCKIN_SPIN<span class="sub">w ... 9 (open-loop)</span></button>
+        <button data-act="state" data-val="11">HOMING<span class="sub">w ... 11</span></button>
+        <button class="ok" data-act="raw" data-val="ss"><span data-i18n="act.save_nvm">Salvar NVM</span><span class="sub">ss (persiste config)</span></button>
+        <button class="danger" data-act="raw" data-val="se" data-confirm-i18n="act.erase_confirm" data-confirm="Apaga config + reboot. Confirma?"><span data-i18n="act.erase_reboot">Apagar + Reboot</span><span class="sub">se</span></button>
+        <button data-act="raw" data-val="sr"><span data-i18n="act.reboot">Reboot</span><span class="sub">sr</span></button>
+        <button data-act="clear-errors"><span data-i18n="act.clear_errors">Limpar Erros</span><span class="sub">sc</span></button>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="dbg.errors_title">Erros</span> <small style="color:var(--muted)" data-i18n="dbg.errors_decoded">(decodificados)</small></h3>
+      <div id="err-list"></div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="dbg.live_monitor">Monitor ao vivo</span>
+        <span class="poll-ctl" style="margin-left:16px;font-size:12px;font-weight:normal">
+          <span class="poll-dot" id="poll-dot"></span>
+          <label><input type="checkbox" id="poll-enable"> <span data-i18n="dbg.auto_refresh">Auto-refresh</span></label>
+          <input type="number" id="poll-interval" value="500" min="100" max="5000" step="100"> ms
+          <button id="btn-poll-once" data-i18n="dbg.read_now">Ler agora</button>
+        </span>
+      </h3>
+      <div class="live-grid" id="dbg-live">
+        <div class="live-kv"><span class="k">vbus_voltage</span><span class="v" id="kv-vbus">—</span></div>
+        <div class="live-kv"><span class="k">ibus</span><span class="v" id="kv-ibus">—</span></div>
+        <div class="live-kv"><span class="k">brake_resistor_current</span><span class="v" id="kv-ibrake">—</span></div>
+        <div class="live-kv"><span class="k">axis.current_state</span><span class="v" id="kv-state">—</span></div>
+        <div class="live-kv"><span class="k">axis.requested_state</span><span class="v" id="kv-reqstate">—</span></div>
+        <div class="live-kv"><span class="k">motor.is_calibrated</span><span class="v" id="kv-mcal">—</span></div>
+        <div class="live-kv"><span class="k">motor.is_armed</span><span class="v" id="kv-marmed">—</span></div>
+        <div class="live-kv"><span class="k">encoder.is_ready</span><span class="v" id="kv-eready">—</span></div>
+        <div class="live-kv"><span class="k">encoder.index_found</span><span class="v" id="kv-eidx">—</span></div>
+        <div class="live-kv"><span class="k">encoder.pos_estimate</span><span class="v" id="kv-epos">—</span></div>
+        <div class="live-kv"><span class="k">encoder.vel_estimate</span><span class="v" id="kv-evel">—</span></div>
+        <div class="live-kv"><span class="k">encoder.shadow_count</span><span class="v" id="kv-esc">—</span></div>
+        <div class="live-kv"><span class="k">encoder.count_in_cpr</span><span class="v" id="kv-ecpr">—</span></div>
+        <div class="live-kv"><span class="k">encoder.phase</span><span class="v" id="kv-ephase">—</span></div>
+        <div class="live-kv"><span class="k">motor.Iq_measured</span><span class="v" id="kv-iq">—</span></div>
+        <div class="live-kv"><span class="k">motor.Id_measured</span><span class="v" id="kv-id">—</span></div>
+        <div class="live-kv"><span class="k">motor.Iq_setpoint</span><span class="v" id="kv-iqsp">—</span></div>
+        <div class="live-kv"><span class="k">fet_temp (°C)</span><span class="v" id="kv-ftemp">—</span></div>
+        <div class="live-kv"><span class="k">motor_temp (°C)</span><span class="v" id="kv-mtemp">—</span></div>
+        <div class="live-kv"><span class="k">controller.torque_setpoint</span><span class="v" id="kv-tqsp">—</span></div>
+        <div class="live-kv"><span class="k">controller.vel_setpoint</span><span class="v" id="kv-vsp">—</span></div>
+        <div class="live-kv"><span class="k">controller.pos_setpoint</span><span class="v" id="kv-psp">—</span></div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3><span data-i18n="dbg.chart_title">Gráfico ao vivo</span>
+        <small style="color:var(--muted)" data-i18n="dbg.chart_subtitle">(janela 60s — vbus / ibus / motor.Iq)</small>
+        <button id="btn-chart-clear" style="margin-left:12px;padding:2px 8px;font-size:10px" data-i18n="dbg.clear_history">Limpar histórico</button>
+      </h3>
+      <p style="color:var(--muted);font-size:11px;margin:0 0 8px" data-i18n="dbg.chart_hint">Capacidade da janela = 60s ÷ intervalo de auto-refresh. Ex: 500ms → 120 pontos. Eixos auto-escalam baseado no min/max amostrados.</p>
+      <canvas id="dbg-chart" width="800" height="280"
+              style="width:100%;height:280px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px"></canvas>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
+        <label style="color:#4fc3f7;cursor:pointer">
+          <input type="checkbox" id="chart-show-vbus" checked style="vertical-align:middle">
+          ━ vbus (V) <span id="chart-leg-vbus">—</span>
+        </label>
+        <label style="color:#ffa726;cursor:pointer">
+          <input type="checkbox" id="chart-show-ibus" checked style="vertical-align:middle">
+          ━ ibus (A) <span id="chart-leg-ibus">—</span>
+        </label>
+        <label style="color:#66bb6a;cursor:pointer">
+          <input type="checkbox" id="chart-show-iq" checked style="vertical-align:middle">
+          ━ Iq motor (A) <span id="chart-leg-iq">—</span>
+        </label>
+        <label style="color:#ef5350;cursor:pointer">
+          <input type="checkbox" id="chart-show-ibr" checked style="vertical-align:middle">
+          ━ I brake (A) <span id="chart-leg-ibr">—</span>
+        </label>
+        <span style="margin-left:auto;color:var(--muted)" id="chart-stats">—</span>
+      </div>
+    </div>
+  `;
+}
+
+async function refreshAll() {
+  await refreshInfo();
+  await refreshLive();   // já chama refreshErrors no fim
+}
+
+function initDebugTab() {
+  // Botão grande "Atualizar tudo" no topo
+  const btnAll = document.getElementById('btn-refresh-all');
+  if (btnAll) btnAll.onclick = refreshAll;
+
+  // Atalho de teclado R quando a aba Debug está ativa
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      const debugActive = document.querySelector('#tab-debug.active');
+      const editingInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+      if (debugActive && !editingInput && port) {
+        e.preventDefault();
+        refreshAll();
+      }
+    }
+  });
+
+  // Action buttons — agora com auto-refresh do estado/erros após o comando
+  document.querySelectorAll('#tab-debug button[data-act]').forEach(btn => {
+    btn.onclick = async () => {
+      // Confirm com i18n se data-confirm-i18n setado, senão usa data-confirm raw
+      const confirmMsg = btn.dataset.confirmI18n ? t(btn.dataset.confirmI18n) : btn.dataset.confirm;
+      if (confirmMsg && !confirm(confirmMsg)) return;
+      const act = btn.dataset.act;
+      if (act === 'state') {
+        await sendCmd('w axis0.requested_state ' + btn.dataset.val, false);
+        // Espera firmware processar transição (state machine pode demorar
+        // 1-2 ciclos pra entrar/sair de estado), aí faz refresh visual.
+        await new Promise(r => setTimeout(r, 300));
+        await refreshLive();   // atualiza state + errors + tudo mais
+      } else if (act === 'raw') {
+        await sendCmd(btn.dataset.val, false);
+        await new Promise(r => setTimeout(r, 200));
+        await refreshLive();
+      } else if (act === 'clear-errors') {
+        // ODrive v0.5.6 ASCII: comando 'sc' chama odrv.clear_errors() que
+        // (1) zera todos os error fields E (2) re-arma o brake_resistor
+        // se enable_brake_resistor=true. Escrever 0 direto nos campos via
+        // 'w *.error 0' NÃO re-arma o brake — daí o motor.arm() falhava
+        // depois de um regen overcurrent que tinha desarmado o brake.
+        await sendCmd('sc', false);
+        logLine('--- sc (clear_errors + rearm brake) enviado ---');
+        await new Promise(r => setTimeout(r, 200));
+        await refreshErrors();
+        await refreshLive();
+      }
+    };
+  });
+
+  // Wire chart clear button + checkboxes de visibilidade
+  const chartClear = document.getElementById('btn-chart-clear');
+  if (chartClear) chartClear.addEventListener('click', () => {
+    chartHistory = { vbus: [], ibus: [], iq: [], ibr: [] };
+    drawChart();
+  });
+  ['chart-show-vbus', 'chart-show-ibus', 'chart-show-iq', 'chart-show-ibr'].forEach(id => {
+    const cb = document.getElementById(id);
+    if (cb) cb.addEventListener('change', drawChart);
+  });
+
+  document.getElementById('btn-read-info').onclick = refreshInfo;
+  document.getElementById('btn-poll-once').onclick = () => refreshLive();
+  document.getElementById('poll-enable').onchange = togglePolling;
+  document.getElementById('poll-interval').onchange = () => {
+    if (pollTimer) { stopPolling(); startPolling(); }
+  };
+
+  buildErrRows();
+}
+
+function buildErrRows() {
+  const target = document.getElementById('err-list');
+  if (!target) return;
+  const errors = [
+    { id: 'err-odrv',   label: 'odrv.error',              path: 'error',              map: ERR_BITS_ODRIVE },
+    { id: 'err-axis',   label: 'axis0.error',             path: 'axis0.error',        map: ERR_BITS_AXIS },
+    { id: 'err-motor',  label: 'axis0.motor.error',       path: 'axis0.motor.error',  map: ERR_BITS_MOTOR },
+    { id: 'err-enc',    label: 'axis0.encoder.error',     path: 'axis0.encoder.error',map: ERR_BITS_ENCODER },
+    { id: 'err-ctrl',   label: 'axis0.controller.error',  path: 'axis0.controller.error', map: ERR_BITS_CTRL },
+  ];
+  target.innerHTML = '';
+  errors.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'err-row';
+    row.innerHTML = `
+      <span class="k">${e.label}</span>
+      <span class="hex" id="${e.id}-hex">—</span>
+      <span class="bits" id="${e.id}-bits"></span>
+      <button data-err-refresh="${e.path}:${e.id}">↻</button>
+    `;
+    target.appendChild(row);
+  });
+  // Expose map for refresh
+  target._errors = errors;
+  // Wire-up individual refresh buttons
+  target.querySelectorAll('button[data-err-refresh]').forEach(btn => {
+    btn.onclick = async () => {
+      const [path, id] = btn.dataset.errRefresh.split(':');
+      const entry = errors.find(x => x.id === id);
+      if (entry) await refreshOneError(entry);
+    };
+  });
+}
+
+async function refreshOneError(entry) {
+  const raw = await readProp(entry.path);
+  if (raw === null) return;
+  const v = parseInt(raw, 10);
+  const hex = '0x' + (isNaN(v) ? 0 : v).toString(16).toUpperCase().padStart(8, '0');
+  const hexEl = document.getElementById(entry.id + '-hex');
+  const bitsEl = document.getElementById(entry.id + '-bits');
+  hexEl.textContent = hex;
+  hexEl.className = 'hex ' + (v === 0 ? 'ok' : 'err');
+  bitsEl.textContent = v === 0 ? '' : decodeErr(v.toString(16), entry.map);
+}
+
+async function refreshErrors() {
+  const target = document.getElementById('err-list');
+  if (!target || !target._errors) return;
+  for (const e of target._errors) await refreshOneError(e);
+}
+
+async function refreshInfo() {
+  const kvMap = [
+    ['fw', 'fw_version_major', 'fw_version_minor', 'fw_version_revision'],
+    ['hw', 'hw_version_major', 'hw_version_minor', 'hw_version_variant'],
+    ['sn', 'serial_number'],
+    ['ucl', 'user_config_loaded'],
+  ];
+  // fw/hw: tripla, monta string
+  const fwMaj = await readProp('fw_version_major');
+  const fwMin = await readProp('fw_version_minor');
+  const fwRev = await readProp('fw_version_revision');
+  document.getElementById('kv-fw').textContent =
+    [fwMaj, fwMin, fwRev].map(x => x || '?').join('.');
+  const hwMaj = await readProp('hw_version_major');
+  const hwMin = await readProp('hw_version_minor');
+  const hwVar = await readProp('hw_version_variant');
+  document.getElementById('kv-hw').textContent =
+    (hwMaj || '?') + '.' + (hwMin || '?') + '-' + (hwVar || '?') + 'V';
+  const sn = await readProp('serial_number');
+  document.getElementById('kv-sn').textContent = sn || '—';
+  const ucl = await readProp('user_config_loaded');
+  const uclEl = document.getElementById('kv-ucl');
+  uclEl.textContent = ucl || '—';
+  uclEl.className = 'v ' + (ucl === 'True' ? 'ok' : 'warn');
+}
+
+// ---------------- Gráfico Debug/Stats: vbus / ibus / Iq motor / I brake, 1 min ---------
+// Cada amostra é um número (parseFloat). Capacidade depende do intervalo de auto-refresh.
+let chartHistory = { vbus: [], ibus: [], iq: [], ibr: [] };
+function chartMaxSamples() {
+  const interval = parseInt(document.getElementById('poll-interval')?.value, 10) || 500;
+  // Janela fixa de 60s — número de samples = 60000 / intervalo (mín 5)
+  return Math.max(5, Math.ceil(60000 / interval));
+}
+function chartPush(key, val) {
+  if (val === null || val === undefined || isNaN(val)) return;
+  chartHistory[key].push(val);
+  const max = chartMaxSamples();
+  while (chartHistory[key].length > max) chartHistory[key].shift();
+}
+function _trMin(arr) { return arr.length === 0 ? 0 : arr.reduce((a,b) => Math.min(a,b), arr[0]); }
+function _trMax(arr) { return arr.length === 0 ? 0 : arr.reduce((a,b) => Math.max(a,b), arr[0]); }
+
+function drawChart() {
+  const cv = document.getElementById('dbg-chart');
+  if (!cv) return;
+  // Resize canvas pra match CSS pixels (HiDPI-aware)
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+    cv.width  = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // Margens (left pra eixo V, right pra eixo A)
+  const padL = 50, padR = 50, padT = 14, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
+
+  // Visibilidade por trace (checkbox) — afeta scale + plot
+  const showV  = document.getElementById('chart-show-vbus')?.checked ?? true;
+  const showI  = document.getElementById('chart-show-ibus')?.checked ?? true;
+  const showQ  = document.getElementById('chart-show-iq')?.checked   ?? true;
+  const showB  = document.getElementById('chart-show-ibr')?.checked  ?? true;
+
+  // Auto-scale: vbus separado (left axis), ibus+iq+ibrake juntos (right axis).
+  // Traces invisíveis NÃO entram no cálculo de min/max — escala foca no que está visível.
+  const vArr = showV ? chartHistory.vbus : [];
+  const aArr = [
+    ...(showI ? chartHistory.ibus : []),
+    ...(showQ ? chartHistory.iq   : []),
+    ...(showB ? chartHistory.ibr  : [])
+  ];
+  let vMin = vArr.length ? _trMin(vArr) : 0;
+  let vMax = vArr.length ? _trMax(vArr) : 30;
+  let aMin = aArr.length ? _trMin(aArr) : -1;
+  let aMax = aArr.length ? _trMax(aArr) : 1;
+  // Padding visual de 5% e mínimo de range pra não ter linha "achatada"
+  const vPad = Math.max((vMax - vMin) * 0.1, 0.5);
+  vMin -= vPad; vMax += vPad;
+  const aPad = Math.max((aMax - aMin) * 0.1, 0.5);
+  aMin -= aPad; aMax += aPad;
+  if (vMax === vMin) vMax = vMin + 1;
+  if (aMax === aMin) aMax = aMin + 1;
+
+  // Grid + axes labels
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+  ctx.fillStyle = '#888'; ctx.font = '10px monospace';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (H * i) / 4;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
+    const vL = vMax - (vMax - vMin) * i / 4;
+    const vR = aMax - (aMax - aMin) * i / 4;
+    ctx.fillStyle = '#4fc3f7';
+    ctx.fillText(vL.toFixed(1) + 'V', padL - 4, y);
+    ctx.fillStyle = '#ffa726';
+    ctx.textAlign = 'left';
+    ctx.fillText(vR.toFixed(2) + 'A', padL + W + 4, y);
+    ctx.textAlign = 'right';
+  }
+  // X axis: 0s na direita (atual), -60s na esquerda
+  ctx.fillStyle = '#888'; ctx.textAlign = 'left';
+  ctx.fillText('-60s', padL, padT + H + 12);
+  ctx.textAlign = 'right';
+  ctx.fillText('agora', padL + W, padT + H + 12);
+
+  // Plot trace helper — arr de valores, cor, escala y (vMin/vMax)
+  function plotTrace(arr, color, yMin, yMax) {
+    if (arr.length < 2) return;
+    const max = chartMaxSamples();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < arr.length; i++) {
+      // x: alinhado à direita (último ponto = atual)
+      const x = padL + W - ((arr.length - 1 - i) * W / (max - 1));
+      const t = (arr[i] - yMin) / (yMax - yMin);
+      const y = padT + H - t * H;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  if (showV) plotTrace(chartHistory.vbus, '#4fc3f7', vMin, vMax);
+  if (showI) plotTrace(chartHistory.ibus, '#ffa726', aMin, aMax);
+  if (showQ) plotTrace(chartHistory.iq,   '#66bb6a', aMin, aMax);
+  if (showB) plotTrace(chartHistory.ibr,  '#ef5350', aMin, aMax);
+
+  // Legenda com último valor
+  const lastV = vArr.length ? vArr[vArr.length-1] : null;
+  const lastI = chartHistory.ibus.length ? chartHistory.ibus[chartHistory.ibus.length-1] : null;
+  const lastQ = chartHistory.iq.length   ? chartHistory.iq[chartHistory.iq.length-1]     : null;
+  const lastB = chartHistory.ibr.length  ? chartHistory.ibr[chartHistory.ibr.length-1]   : null;
+  const setT = (id, val, unit, dec) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val !== null ? val.toFixed(dec) + unit : '—';
+  };
+  setT('chart-leg-vbus', lastV, ' V', 2);
+  setT('chart-leg-ibus', lastI, ' A', 2);
+  setT('chart-leg-iq',   lastQ, ' A', 2);
+  setT('chart-leg-ibr',  lastB, ' A', 2);
+  const stats = document.getElementById('chart-stats');
+  if (stats) {
+    const interval = parseInt(document.getElementById('poll-interval')?.value, 10) || 500;
+    stats.textContent = `${vArr.length} samples / ${chartMaxSamples()} max @ ${interval}ms`;
+  }
+}
+
+async function refreshLive() {
+  // Bulk read — cada call é síncrona + sequencial (queue pattern)
+  const reads = [
+    ['kv-vbus',    'vbus_voltage',                           (v) => parseFloat(v).toFixed(3) + ' V'],
+    ['kv-ibus',    'ibus',                                   (v) => parseFloat(v).toFixed(3) + ' A'],
+    ['kv-ibrake',  'brake_resistor_current',                 (v) => parseFloat(v).toFixed(3) + ' A'],
+    ['kv-state',   'axis0.current_state',                    (v) => v + ' (' + (ENUM_AXIS_STATE[parseInt(v)] || '?') + ')'],
+    ['kv-reqstate','axis0.requested_state',                  (v) => v + ' (' + (ENUM_AXIS_STATE[parseInt(v)] || '?') + ')'],
+    ['kv-mcal',    'axis0.motor.is_calibrated',              (v) => v],
+    ['kv-marmed',  'axis0.motor.is_armed',                   (v) => v],
+    ['kv-eready',  'axis0.encoder.is_ready',                 (v) => v],
+    ['kv-eidx',    'axis0.encoder.index_found',              (v) => v],
+    ['kv-epos',    'axis0.encoder.pos_estimate',             (v) => parseFloat(v).toFixed(4) + ' turn'],
+    ['kv-evel',    'axis0.encoder.vel_estimate',             (v) => parseFloat(v).toFixed(3) + ' turn/s'],
+    ['kv-esc',     'axis0.encoder.shadow_count',             (v) => v],
+    ['kv-ecpr',    'axis0.encoder.count_in_cpr',             (v) => v],
+    ['kv-ephase',  'axis0.encoder.phase',                    (v) => parseFloat(v).toFixed(4) + ' rad'],
+    ['kv-iq',      'axis0.motor.current_control.Iq_measured',(v) => parseFloat(v).toFixed(3) + ' A'],
+    ['kv-id',      'axis0.motor.current_control.Id_measured',(v) => parseFloat(v).toFixed(3) + ' A'],
+    ['kv-iqsp',    'axis0.motor.current_control.Iq_setpoint',(v) => parseFloat(v).toFixed(3) + ' A'],
+    ['kv-ftemp',   'axis0.motor.fet_thermistor.temperature', (v) => parseFloat(v).toFixed(1) + ' °C'],
+    ['kv-mtemp',   'axis0.motor.motor_thermistor.temperature',(v) => parseFloat(v).toFixed(1) + ' °C'],
+    ['kv-tqsp',    'axis0.controller.torque_setpoint',       (v) => parseFloat(v).toFixed(3)],
+    ['kv-vsp',     'axis0.controller.vel_setpoint',          (v) => parseFloat(v).toFixed(3)],
+    ['kv-psp',     'axis0.controller.pos_setpoint',          (v) => parseFloat(v).toFixed(4)],
+  ];
+  // Capturar valores brutos pra alimentar o gráfico (vbus, ibus, Iq_measured)
+  const chartCapture = {};
+  for (const [id, path, fmt] of reads) {
+    const v = await readProp(path);
+    if (v !== null) {
+      const el = document.getElementById(id);
+      if (el) {
+        try { el.textContent = fmt(v); } catch(e) { el.textContent = v; }
+        if (v === 'True') el.className = 'v ok';
+        else if (v === 'False') el.className = 'v warn';
+        else el.className = 'v';
+      }
+      // Captura raw pra chart
+      if (path === 'vbus_voltage') chartCapture.vbus = parseFloat(v);
+      else if (path === 'ibus')    chartCapture.ibus = parseFloat(v);
+      else if (path === 'brake_resistor_current') chartCapture.ibr = parseFloat(v);
+      else if (path === 'axis0.motor.current_control.Iq_measured') chartCapture.iq = parseFloat(v);
+    }
+  }
+  // Empurra na história + desenha
+  if (!isNaN(chartCapture.vbus)) chartPush('vbus', chartCapture.vbus);
+  if (!isNaN(chartCapture.ibus)) chartPush('ibus', chartCapture.ibus);
+  if (!isNaN(chartCapture.iq))   chartPush('iq',   chartCapture.iq);
+  if (!isNaN(chartCapture.ibr))  chartPush('ibr',  chartCapture.ibr);
+  drawChart();
+
+  await refreshErrors();
+}
+
+let pollTimer = null;
+function togglePolling(e) {
+  if (e.target.checked) startPolling();
+  else stopPolling();
+}
+function startPolling() {
+  if (pollTimer) return;
+  const interval = parseInt(document.getElementById('poll-interval').value) || 500;
+  document.getElementById('poll-dot').classList.add('on');
+  const tick = async () => {
+    if (!pollTimer) return;
+    try { await refreshLive(); } catch(e) {}
+    if (pollTimer) pollTimer = setTimeout(tick, interval);
+  };
+  pollTimer = setTimeout(tick, 0);
+}
+function stopPolling() {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  const dot = document.getElementById('poll-dot');
+  if (dot) dot.classList.remove('on');
+}
+
+function selectTab(id) {
+  document.querySelectorAll('nav#tabs button').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-panel').forEach(p =>
+    p.classList.toggle('active', p.id === tabId(id)));
+  // Para o poll FFB Live ao sair da aba pra não bloquear o serial em outras abas
+  if (id !== 'ffb-live' && typeof ffbPollStop === 'function') {
+    ffbPollStop();
+    const ck = document.getElementById('ffb-poll-enable');
+    if (ck) ck.checked = false;
+  }
+}
+
+function getInputValue(input) {
+  if (input.dataset.type === 'bool') return input.checked ? '1' : '0';
+  return input.value.trim();
+}
+
+function setInputValue(input, raw) {
+  if (input.dataset.type === 'bool') {
+    input.checked = raw === 'True' || raw === 'true' || raw === '1';
+  } else {
+    input.value = raw;
+  }
+  input.dataset.currentServerValue = raw;
+  input.classList.remove('changed');
+  input.classList.add('synced');
+}
+
+function markDirty(input) {
+  const server = input.dataset.currentServerValue;
+  let cur;
+  if (input.dataset.type === 'bool') {
+    cur = input.checked ? 'True' : 'False';
+    // normalize server side: ODrive returns True/False, we stored as such
+    const same = (cur === server) || (cur === '1' && server === 'True') ||
+                 (cur === '0' && server === 'False');
+    input.classList.toggle('changed', !same);
+    input.classList.toggle('synced', same);
+  } else {
+    cur = input.value.trim();
+    const same = cur === server;
+    input.classList.toggle('changed', !same);
+    input.classList.toggle('synced', same);
+  }
+}
+
+async function readOne(input) {
+  const proto = input.dataset.protocol || 'odrv';
+  const v = proto === 'offb'
+    ? await readPropOffb(input.dataset.path)
+    : await readProp(input.dataset.path);
+  if (v !== null) setInputValue(input, v);
+}
+
+async function writeOne(input) {
+  const val = getInputValue(input);
+  const proto = input.dataset.protocol || 'odrv';
+  if (proto === 'offb') {
+    // OpenFFBoard write returns valor ecoado, atualiza UI já com a resposta
+    const r = await writePropOffb(input.dataset.path, val);
+    if (r !== null) setInputValue(input, r);
+  } else {
+    await writeProp(input.dataset.path, val);
+    // Readback ODrive
+    const v = await readProp(input.dataset.path);
+    if (v !== null) setInputValue(input, v);
+  }
+}
+
+async function readAll() {
+  const inputs = document.querySelectorAll('#content input, #content select');
+  let n = 0;
+  for (const inp of inputs) {
+    await readOne(inp);
+    n++;
+  }
+  logLine('--- readAll: ' + n + ' fields ---');
+}
+
+function exportJSON() {
+  const obj = {};
+  document.querySelectorAll('#content input, #content select').forEach(inp => {
+    const v = inp.dataset.currentServerValue;
+    if (v !== undefined && v !== '') obj[inp.dataset.path] = v;
+  });
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'odrive_config_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  document.getElementById('file-import').click();
+}
+
+async function doImport(file) {
+  const text = await file.text();
+  const obj = JSON.parse(text);
+  let n = 0;
+  document.querySelectorAll('#content input, #content select').forEach(inp => {
+    const v = obj[inp.dataset.path];
+    if (v !== undefined) {
+      if (inp.dataset.type === 'bool')
+        inp.checked = (v === 'True' || v === '1' || v === true);
+      else inp.value = v;
+      markDirty(inp);
+      n++;
+    }
+  });
+  logLine('--- import: ' + n + ' fields loaded (não gravados ainda) ---');
+}
+
+/* =========================================================================
+   Wire-up
+   ========================================================================= */
+document.getElementById('btn-connect').onclick = async () => {
+  if (port) await disconnect();
+  else await connect();
+};
+document.getElementById('btn-read-all').onclick = readAll;
+// "Save ODrive" — fluxo completo de gravação:
+//   1. Escreve campos alterados (writeDirty) — propaga RAM → ODrive runtime
+//   2. Desarma motor (state=1 IDLE) — pré-requisito do save_configuration
+//   3. Envia 'ss' — persiste config na NVM e reboota
+// Após reboot, se a config tem startup_closed_loop_control=1, motor re-arma sozinho.
+// Senão, usuário precisa armar manualmente via aba Debug.
+async function saveODriveFull() {
+  const btn = document.getElementById('btn-save');
+  const original = btn.textContent;
+  btn.disabled = true;
+  try {
+    // 1. Grava alterações pendentes
+    btn.textContent = t('save.writing_changes');
+    const changed = document.querySelectorAll('#content .changed');
+    if (changed.length > 0) {
+      logLine('--- Save ODrive: ' + changed.length + ' fields to write ---');
+      for (const inp of changed) await writeOne(inp);
+    }
+
+    // 2. Desarma motor (necessário pra ss não ser ignorado)
+    btn.textContent = t('save.disarming');
+    logLine('--- Save ODrive: disarm (state=1 IDLE) ---');
+    await writeProp('axis0.requested_state', '1');
+    // pequena pausa pra estado se propagar
+    await new Promise(r => setTimeout(r, 300));
+
+    // 3. Persiste na NVM (ss reboota a placa)
+    btn.textContent = t('save.persisting');
+    logLine('--- Save ODrive: ss (persist + reboot) ---');
+    await sendCmd('ss', false);
+
+    // Após ss a placa reseta — serial vai cair em ~1s
+    btn.textContent = t('save.rebooting');
+    setTimeout(() => {
+      logLine('--- Save ODrive: aguarde reconexão. Motor pode precisar ser re-armado se autostart desabilitado ---');
+    }, 200);
+  } catch (e) {
+    logLine('Save ODrive erro: ' + e.message, 'err');
+  } finally {
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.disabled = false;
+    }, 3000);
+  }
+}
+document.getElementById('btn-save').onclick = saveODriveFull;
+document.getElementById('btn-save-ffb').onclick = async () => {
+  const r = await execPropOffb('sys.save');
+  logLine(r ? ('sys.save! → ' + r) : 'sys.save! → timeout', r === 'OK' ? 'rx' : 'err');
+};
+document.getElementById('btn-erase').onclick = () => {
+  if (confirm('Apaga config persistida + reboota. Confirma?'))
+    sendCmd('se', false);
+};
+document.getElementById('btn-reboot').onclick = () => sendCmd('sr', false);
+document.getElementById('btn-export').onclick = exportJSON;
+document.getElementById('btn-import').onclick = importJSON;
+document.getElementById('file-import').onchange = (e) => {
+  if (e.target.files[0]) doImport(e.target.files[0]);
+};
+
+buildTabs();
+initDebugTab();
+wireFFBLive();
+wireConsoleTab();
+
+// i18n — wirar select de idioma e aplicar idioma persistido
+const langSelect = document.getElementById('lang-select');
+if (langSelect) {
+  langSelect.value = currentLang;
+  langSelect.addEventListener('change', () => setLang(langSelect.value));
+}
+applyI18n();
+
+if (!('serial' in navigator)) {
+  setStatus('Web Serial não suportado — use Chrome/Edge', 'error');
+  document.getElementById('btn-connect').disabled = true;
+}
+</script>
+</body>
+</html>

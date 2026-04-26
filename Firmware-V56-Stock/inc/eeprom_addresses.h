@@ -1,0 +1,47 @@
+// Virtual addresses da EEPROM emulada. Endereços 0x0001..0x00FF reservados
+// pra sistema. A partir de 0x0100 são endereços das classes FFB/Axis/etc.
+
+#ifndef EEPROM_ADDRESSES_H_
+#define EEPROM_ADDRESSES_H_
+
+#include <stdint.h>
+
+// System / meta
+#define ADR_SYSTEM_MARKER       0x0001
+#define ADR_SW_VERSION          0x0002
+#define ADR_FLASH_VERSION       0x0003
+#define ADR_CURRENT_CONFIG      0x0004
+
+// FFB effects filters / gains (EffectsCalculator)
+#define ADR_FFB_CF_FILTER       0x0100
+#define ADR_FFB_FR_FILTER       0x0101
+#define ADR_FFB_DA_FILTER       0x0102
+#define ADR_FFB_IN_FILTER       0x0103
+#define ADR_FFB_EFFECTS1        0x0104
+#define ADR_FFB_EFFECTS2        0x0105
+#define ADR_FFB_EFFECTS3        0x0106
+
+// Axis / wheel settings (Phase 7 popula)
+#define ADR_AXIS1_CONFIG        0x0200
+#define ADR_AXIS1_MAX_SPEED     0x0201
+#define ADR_AXIS1_MAX_ACCEL     0x0202
+#define ADR_AXIS1_ENDSTOP       0x0203
+#define ADR_AXIS1_POWER         0x0204
+#define ADR_AXIS1_DEGREES       0x0205
+#define ADR_AXIS1_EFFECTS1      0x0206
+#define ADR_AXIS1_EFFECTS2      0x0207
+#define ADR_AXIS1_ENC_RATIO     0x0208
+#define ADR_AXIS1_SPEEDACCEL_FILTER 0x0209
+#define ADR_AXIS1_POSTPROCESS1  0x020A
+
+// ODrive (config retrieval pela ODriveCAN do OpenFFBoard, ainda referenciada)
+#define ADR_ODRIVE_CANID        0x0300
+#define ADR_ODRIVE_SETTING1_M0  0x0301
+#define ADR_ODRIVE_SETTING1_M1  0x0302
+#define ADR_ODRIVE_OFS_M0       0x0303
+#define ADR_ODRIVE_OFS_M1       0x0304
+
+#define NB_OF_VAR 30
+extern const uint16_t VirtAddVarTab[NB_OF_VAR];
+
+#endif

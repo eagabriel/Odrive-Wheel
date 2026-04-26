@@ -1,0 +1,87 @@
+# =============================================================================
+# Build artifacts
+# =============================================================================
+build/
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# =============================================================================
+# Compiler / IDE
+# =============================================================================
+*.obj
+*.lib
+*.a
+.vscode/
+.idea/
+*.code-workspace
+.cache/
+compile_commands.json
+
+# =============================================================================
+# Distribution archives (originals from upstream — not redistributed)
+# =============================================================================
+*.zip
+*.7z
+*.tar.gz
+*.tgz
+
+# =============================================================================
+# Standalone tools (not part of source)
+# =============================================================================
+*.exe
+
+# =============================================================================
+# Documentation binaries (large, not redistributed)
+# =============================================================================
+*.pdf
+*.docx
+*.doc
+
+# =============================================================================
+# Logs / temp / OS
+# =============================================================================
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# Saved configs (user-specific)
+# =============================================================================
+odrive_config_*.json
+odrive_config_dump.txt
+odrive servoconfig.json
+Odrive config.txt
+
+# =============================================================================
+# External tool configs / random logs (not part of project)
+# =============================================================================
+VKB_JoyTester.ini
+logfile.txt
+
+# =============================================================================
+# Extras / legacy that we don't want pushed
+# =============================================================================
+ODrive-fw-v0.5.1/
+ODrive.GUI.Configurador.exe
+OpenFFBoard-configurator/
+Firmware-Merged/
+.claude/
+
+# =============================================================================
+# ODrive Python tooling (unused — our HTML config tool replaces it)
+# Has Git LFS binaries (libfibre.dll etc) that fail to push without LFS server
+# =============================================================================
+ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/tools/
+ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/fibre-cpp/test/
+ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/.gitattributes
+ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/.gitattributes

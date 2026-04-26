@@ -1,0 +1,23 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+This project incorporates code from:
+
+  * ODrive Firmware (https://github.com/odriverobotics/ODrive)
+    Licensed under MIT License (see ODrive-fw-v0.5.6/LICENSE)
+
+  * OpenFFBoard (https://github.com/Ultrawipf/OpenFFBoard)
+    Licensed under GNU General Public License v3.0
+    (see OpenFFBoard-master/LICENSE)
+
+Because this project links against and includes GPL-licensed code from
+OpenFFBoard, the combined work is distributed under the terms of the
+GNU General Public License v3.0 as published by the Free Software
+Foundation.
+
+The full text of the GPLv3 is available at:
+https://www.gnu.org/licenses/gpl-3.0.txt

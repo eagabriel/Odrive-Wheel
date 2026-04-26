@@ -1,0 +1,3 @@
+[submodule "OpenFFBoard-master/OpenFFBoard-master"]
+	path = OpenFFBoard-master/OpenFFBoard-master
+	url = https://github.com/Ultrawipf/OpenFFBoard.git

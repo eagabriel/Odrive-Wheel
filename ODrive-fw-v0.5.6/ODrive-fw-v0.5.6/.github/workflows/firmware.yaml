@@ -1,0 +1,212 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [master, devel]
+  push:
+    branches: [master, devel]
+    tags: ['fw-v*']
+
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        board_version: [v3.6-56V]
+        debug: [true]
+
+        include:
+          - {os: ubuntu-latest, board_version: v3.2, debug: false}
+          - {os: ubuntu-latest, board_version: v3.3, debug: false}
+          - {os: ubuntu-latest, board_version: v3.4-24V, debug: false}
+          - {os: ubuntu-latest, board_version: v3.4-48V, debug: false}
+          - {os: ubuntu-latest, board_version: v3.5-24V, debug: false}
+          - {os: ubuntu-latest, board_version: v3.5-48V, debug: false}
+          - {os: ubuntu-latest, board_version: v3.6-24V, debug: false}
+          - {os: ubuntu-latest, board_version: v3.6-56V, debug: false}
+
+    runs-on: ${{ matrix.os }}
+    outputs:
+      channel: ${{ steps.release-info.outputs.channel }}
+      version: ${{ steps.release-info.outputs.version }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # fetch entire history to get version information
+
+      - name: Get release name and channel
+        id: release-info
+        shell: python
+        run: |
+          if "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/fw-v0.5.') }}" == "true":
+            channel = "master"
+            version = "${{ github.ref }}"[len("refs/tags/fw-v"):]
+
+          else:
+            channel = "none"
+            version = "${{ github.sha }}"
+
+          print("::set-output name=channel::" + channel)
+          print("::set-output name=version::" + version)
+
+      - name: Install prerequisites (Debian)
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          DEBIAN_VERSION="$(lsb_release --release --short)"
+          echo Debian version: $DEBIAN_VERSION
+          if [ "$DEBIAN_VERSION" == "16.04" ]; then
+            # Ubuntu 16.04 (Debian 9) is on ARM GCC 4.9 which is too old for us
+            sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
+            sudo apt-get update
+            sudo apt-get install gcc-arm-embedded
+          else
+            sudo apt-get install gcc-arm-none-eabi
+          fi
+
+          if ! (apt-cache search tup | grep "^tup - "); then
+            sudo add-apt-repository ppa:jonathonf/tup
+            sudo apt-get update
+          fi
+
+          sudo apt-get install tup
+
+          sudo apt install python3 python3-yaml python3-jinja2 python3-jsonschema
+
+      - name: Install prerequisites (macOS)
+        if: startsWith(matrix.os, 'macOS-')
+        run: |
+          brew install armmbed/formulae/arm-none-eabi-gcc
+          # See https://github.com/osxfuse/osxfuse/issues/801#issuecomment-833419942
+          brew install --cask macfuse
+          brew install gromgit/fuse/tup-mac
+          pip3 install PyYAML Jinja2 jsonschema
+
+        
+      - name: Cache chocolatey
+        uses: actions/cache@v2
+        if: startsWith(matrix.os, 'windows-')
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Temp\chocolatey\gcc-arm-embedded
+          key: ${{ runner.os }}-gcc-arm-embedded
+          restore-keys: |
+            ${{ runner.os }}-gcc-arm-embedded
+
+      - name: Install prerequisites (Windows)
+        if: startsWith(matrix.os, 'windows-')
+        run: |
+          Invoke-WebRequest -Uri "http://gittup.org/tup/win32/tup-latest.zip" -OutFile ".\tup-latest.zip"
+          Expand-Archive ".\tup-latest.zip" -DestinationPath ".\tup-latest" -Force
+          echo "$(Resolve-Path .)\tup-latest" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          choco install gcc-arm-embedded # downloads https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-win32.zip
+          
+          pip install PyYAML Jinja2 jsonschema
+
+      - name: Prepare Compilation
+        run: |
+          # for debugging
+          arm-none-eabi-gcc --version
+          python --version
+
+          cd ${{ github.workspace }}/Firmware
+          echo "CONFIG_BOARD_VERSION=${{ matrix.board_version }}" >> tup.config
+          echo "CONFIG_STRICT=true" >> tup.config
+          echo "CONFIG_DEBUG=${{ matrix.debug }}" >> tup.config
+          mkdir -p autogen
+          python ../tools/odrive/version.py --output autogen/version.c
+          cat autogen/version.c
+          tup init
+          tup generate ./tup_build.sh
+      
+      - name: Compile (Unix)
+        if: "!startsWith(matrix.os, 'windows-')"
+        run: |
+          cd ${{ github.workspace }}/Firmware
+          bash -xe ./tup_build.sh
+
+      - name: Compile (Windows)
+        if: startsWith(matrix.os, 'windows-')
+        run: |
+          cd ${{ github.workspace }}/Firmware
+          mv tup_build.sh tup_build.bat # in reality this is a .bat script on windows
+          .\tup_build.bat
+
+      - name: Upload binary as artifact
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.debug == false }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: firmware-${{ matrix.board_version }}
+          path: |
+            Firmware/build/ODriveFirmware.elf
+            Firmware/build/ODriveFirmware.bin
+            Firmware/build/ODriveFirmware.hex
+
+      - name: Copy firmware to temp folder
+        run: |
+          mkdir ${{ github.workspace }}/out
+          cp ${{ github.workspace }}/Firmware/build/ODriveFirmware.elf ${{ github.workspace }}/out/firmware.elf
+
+      - name: Parse and format matrix.board_version
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        id: format-board-version
+        run: |
+          formatted_version=$(echo "${{ matrix.board_version }}" | sed 's/v\([0-9]\+\)\.\([0-9]\+\)-\([0-9]\+\)V/\1.\2.\3/')
+          echo "Formatted board version: $formatted_version"
+          echo "::set-output name=formatted_board_version::$formatted_version"
+
+      - name: Upload firmware to ODrive release system
+        if: ${{ steps.release-info.outputs.channel == 'master' && matrix.os == 'ubuntu-latest' && matrix.debug == false && (startsWith(matrix.board_version, 'v3.5-') || startsWith(matrix.board_version, 'v3.6-')) }}
+        uses: ./.github/actions/upload-release
+        with:
+          release_type: firmware
+          version: ${{ steps.release-info.outputs.version }}
+          src_dir: out
+          do_access_key: ${{ secrets.DIGITALOCEAN_ACCESS_KEY }}
+          do_secret_key: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+          odrive_api_key: ${{ secrets.ODRIVE_API_KEY }}
+          board: ${{ steps.format-board-version.outputs.formatted_board_version }}
+          app: default
+          variant: public
+
+  make-release:
+    needs: [compile] # require all builds to succeed before we actually make the release
+    if: needs.compile.outputs.channel == 'master'
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout git repository
+        uses: actions/checkout@v2
+
+      - name: Install Python dependencies
+        run: pip install aiohttp appdirs
+
+      - name: Add version to release channel
+        uses: ./.github/actions/add-version-to-channel
+        with:
+          release_type: firmware
+          channel: ${{ needs.compile.outputs.channel }}
+          version: ${{ needs.compile.outputs.version }}
+          odrive_api_key: ${{ secrets.ODRIVE_API_KEY }}
+
+  code-checks:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check that we're not using std::isnan
+        run: |
+          cd ${{ github.workspace }}/Firmware
+
+          if grep 'std::isnan' -R .; then
+            echo "Don't use std::isnan because it's not compatible with '-ffast-math'. Use is_nan() instead."
+            return 1;
+          fi
+
+  #    TODO:
+  #     - check if enums.py is consistent with yaml
+  #     - clang-format check
+  #     - check if interface_generator outputs the same thing with Python 3.5 and Python 3.8
