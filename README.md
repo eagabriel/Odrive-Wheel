@@ -1,108 +1,109 @@
-# ODrive FFB Wheel — Firmware MKS Mini
+# ODrive FFB Wheel — MKS Mini Firmware
 
-Firmware customizado pra ODrive v0.5.6 rodando em hardware **MKS Mini ODrive S** (clone STM32F405),
-adicionando suporte completo a **Force Feedback HID** pra usar o motor como volante de simulador.
+Custom firmware for ODrive v0.5.6 running on **MKS Mini ODrive S** hardware
+(STM32F405 clone), adding full **HID Force Feedback** support to use the motor
+as a sim racing wheel.
 
-Baseado em:
+Based on:
 - [ODrive Firmware v0.5.6](https://github.com/odriverobotics/ODrive) (motor control)
 - [OpenFFBoard](https://github.com/Ultrawipf/OpenFFBoard) (FFB stack: HidFFB + EffectsCalculator)
 
-## Estrutura
+## Repository structure
 
 ```
 .
-├── Firmware-V56-Stock/         ← Projeto principal (CDC + HID composite + FFB)
-│   ├── src/                    ← Sources locais (USB, FFB bridge, cmd_table)
-│   ├── inc/                    ← Headers locais
-│   ├── linker/                 ← Linker script customizado (S0/S3-9 app, S10-11 EEPROM)
-│   ├── tools/                  ← HTML config tool (Web Serial API, pt/en)
+├── Firmware-V56-Stock/         ← Main project (CDC + HID composite + FFB)
+│   ├── src/                    ← Local sources (USB, FFB bridge, cmd_table)
+│   ├── inc/                    ← Local headers
+│   ├── linker/                 ← Custom linker script (S0/S3-9 app, S10-11 EEPROM)
+│   ├── tools/                  ← HTML config tool (Web Serial API, pt/en i18n)
 │   └── Makefile                ← Build via arm-none-eabi-gcc
-├── ODrive-fw-v0.5.6/           ← ODrive firmware (com patches mínimos)
-└── OpenFFBoard-master/         ← OpenFFBoard FFB stack (TinyUSB + HidFFB + EffectsCalculator)
+├── ODrive-fw-v0.5.6/           ← ODrive firmware (with minimal patches)
+└── OpenFFBoard-master/         ← Submodule → upstream Ultrawipf/OpenFFBoard
 ```
 
-## O que foi feito
+## What's been done
 
-### Hardware suportado
-- MKS Mini ODrive S (STM32F405RGT6, motor BLDC, encoder ABZ, brake resistor)
-- Fonte 24V, regen via brake resistor configurável
+### Hardware supported
+- MKS Mini ODrive S (STM32F405RGT6, BLDC motor, ABZ encoder, brake resistor)
+- 24 V power supply, configurable regen via brake resistor
 
-### Pipeline de FFB
-- USB enumera como **CDC + HID composite** (TinyUSB)
-- HID descriptor: PID gamepad 2-axis (compatível DirectInput/Windows FFB)
-- Game manda HID OUT reports → `HidFFB` → `EffectsCalculator` (1 kHz tick) → ponte pra `axes[0].controller_.input_torque_` → motor
-- Suporta efeitos: **Constant Force**, **Spring**, **Damper**, **Friction**, **Inertia**, **Periodic** (Sine/Triangle/Square/etc), **Ramp**
+### FFB pipeline
+- USB enumerates as **CDC + HID composite** (TinyUSB)
+- HID descriptor: 2-axis PID gamepad (DirectInput / Windows FFB compatible)
+- Game sends HID OUT reports → `HidFFB` → `EffectsCalculator` (1 kHz tick) → bridge → `axes[0].controller_.input_torque_` → motor
+- Supports effects: **Constant Force**, **Spring**, **Damper**, **Friction**, **Inertia**, **Periodic** (Sine/Triangle/Square/etc.), **Ramp**
 
-### Persistência separada
-- ODrive NVM: setores 1+2 (config_manager nativo do ODrive)
-- FFB EEPROM emulada: setores 10+11 (filtros, gains, params do volante)
-- Sem colisão de flash
+### Separated persistence
+- ODrive NVM: sectors 1+2 (ODrive's native config_manager)
+- FFB emulated EEPROM: sectors 10+11 (filters, gains, wheel params)
+- No flash collision
 
-### Configuração via HTML
-Tool em `Firmware-V56-Stock/tools/odrive_config.html` — Web Serial API, abre direto no Chrome/Edge.
+### HTML configuration tool
+Tool at `Firmware-V56-Stock/tools/odrive_config.html` — Web Serial API, opens directly in Chrome/Edge.
 
 Tabs:
 - **ODrive** / **Axis 0** / **Motor** / **Encoder** / **Controller** — params via ODrive ASCII
 - **FFB Wheel** — range, maxtorque, fxratio, axis effects (idlespring, damper, inertia, friction, esgain, slew, expo)
 - **FFB Effects** — master gain + per-effect gains
-- **FFB Filters** — biquad lowpass cutoff + Q por tipo de efeito
-- **FFB Live** — dashboard ao vivo (estado FFB, contadores HID, efeitos ativos, picos de bus, gráfico torque/posição)
-- **Debug / Status** — info do device, ações state machine, erros decodificados, monitor live, gráfico vbus/ibus/Iq/Ibrake
-- **Console** — log TX/RX da serial
+- **FFB Filters** — biquad lowpass cutoff + Q per effect type
+- **FFB Live** — live dashboard (FFB state, HID counters, active effects, bus current peaks, torque/position chart)
+- **Debug / Status** — device info, state machine actions, decoded errors, live monitor, vbus/ibus/Iq/Ibrake chart
+- **Console** — serial TX/RX log
 
-Cada campo configurável tem **tooltip explicando função** ao passar o mouse, e a interface tem suporte **PT/EN** com toggle no header.
+Each configurable field has a **tooltip explaining its function** on hover, and the UI supports **PT/EN** with a header toggle.
 
 ## Clone
 
-`OpenFFBoard-master/OpenFFBoard-master/` é um **git submodule** apontando pro upstream
-[`Ultrawipf/OpenFFBoard`](https://github.com/Ultrawipf/OpenFFBoard) (atualmente travado em **v1.17.0**).
-Pra clonar com submodule:
+`OpenFFBoard-master/OpenFFBoard-master/` is a **git submodule** pointing to upstream
+[`Ultrawipf/OpenFFBoard`](https://github.com/Ultrawipf/OpenFFBoard) (currently locked at **v1.17.0**).
+Clone with submodules:
 
 ```bash
-git clone --recurse-submodules <URL_DESTE_REPO>
+git clone --recurse-submodules https://github.com/eagabriel/OpenffboardOdrive.git
 ```
 
-Se já clonou sem `--recurse-submodules`:
+If you already cloned without `--recurse-submodules`:
 ```bash
 git submodule update --init --recursive
 ```
 
 ## Build
 
-Pré-requisitos:
-- `arm-none-eabi-gcc` (testado com 12.2)
+Prerequisites:
+- `arm-none-eabi-gcc` (tested with 12.2)
 - `make`
-- `dfu-util` (pra flash)
+- `dfu-util` (for flashing)
 
 ```bash
 cd Firmware-V56-Stock
 make -j4
 ```
 
-Artefato: `build/firmware-v56-stock.bin`
+Artifact: `build/firmware-v56-stock.bin`
 
 ## Flash
 
-Coloca a placa em DFU (segura BOOT0 + reset, ou desliga/liga com BOOT0 pressionado), depois:
+Put the board into DFU mode (hold BOOT0 + reset, or power-cycle with BOOT0 held), then:
 
 ```bash
 make flash-dfu
 ```
 
-Equivalente a:
+Equivalent to:
 ```bash
 dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/firmware-v56-stock.bin
 ```
 
-## Configuração inicial recomendada
+## Recommended initial configuration
 
-Após primeiro flash, conecta na HTML tool, calibra motor + encoder, e ajusta:
+After first flash, connect via the HTML tool, calibrate motor + encoder, then adjust:
 
 ```
-config.brake_resistance = 2.0          # ou valor real do seu resistor
+config.brake_resistance = 2.0          # match your physical brake resistor
 config.enable_brake_resistor = True
-config.max_regen_current = 0           # brake ativa imediatamente em qualquer regen
-config.dc_max_negative_current = -1    # pra fonte chaveada
+config.max_regen_current = 0           # brake activates immediately on any regen
+config.dc_max_negative_current = -1    # for switching PSU
 config.enable_dc_bus_overvoltage_ramp = True
 config.dc_bus_overvoltage_ramp_start = 25
 config.dc_bus_overvoltage_ramp_end = 27
@@ -112,79 +113,43 @@ axis0.controller.config.electrical_power_bandwidth = 5
 axis0.controller.config.mechanical_power_bandwidth = 5
 ```
 
-Save ODrive (botão no header). Reboot. Calibra e arma motor.
+Click **Save ODrive** in the header. Reboot. Calibrate and arm motor.
 
-Pra FFB:
+For FFB:
 ```
-axis.range = 900             # graus de rotação total
-axis.maxtorque = 12          # Nm máximo (depende do seu motor)
-axis.fxratio = 1.0           # multiplicador final
-fx.master = 255              # gain global
+axis.range = 900             # total wheel rotation in degrees
+axis.maxtorque = 12          # max Nm (depends on your motor)
+axis.fxratio = 1.0           # final multiplier
+fx.master = 255              # global gain
 ```
 
-Save FFB.
+Click **Save FFB**.
 
-## Licenças
+## Updating OpenFFBoard upstream
 
-Este projeto combina código de múltiplas origens com licenças diferentes:
+Several FFB stack files (HidFFB, EffectsCalculator) were **forked and modified** locally in
+`Firmware-V56-Stock/src/` and `inc/`. The originals live in the `OpenFFBoard-master/` submodule.
 
-- **ODrive Firmware** — MIT License — `ODrive-fw-v0.5.6/`
-- **OpenFFBoard** — GPLv3 — `OpenFFBoard-master/`
-- **Código próprio** (`Firmware-V56-Stock/src`, `inc`, `tools`) — GPLv3 (compatível com OpenFFBoard)
-
-Devido à inclusão de código GPL do OpenFFBoard, o **projeto inteiro** (firmware compilado) é
-distribuído sob **GPLv3**. Veja `LICENSE` na raiz e licenças individuais nos subdiretórios.
-
-## Status
-
-✅ Calibração motor + encoder funcional
-✅ FFB validado: Spring/Constant/Friction/Periodic respondendo no ForceTest
-✅ Brake resistor + regen estável (sem reset de fonte)
-✅ Persistência separada FFB / ODrive
-✅ HTML config tool completa em PT/EN
-🚧 Validação end-to-end em iRacing/AMS2/ETS2 (em andamento)
-
-## Diagnóstico
-
-Comandos úteis via terminal serial CDC (115200 baud):
-
-| ASCII | OpenFFBoard | Função |
-|-------|-------------|--------|
-| `r path` / `w path val` | — | Read/write ODrive properties |
-| `ss` / `se` / `sr` / `sc` | — | Save / erase / reboot / clear errors |
-| `d` / `D` / `C` / `T` / `E[N]` | — | FFB diagnostics |
-| `I` / `R` | — | Bus current peaks (read / reset) |
-| `S[N]` | — | FFB effect slot raw dump |
-| — | `axis.maxtorque?`/`=N` | FFB axis params |
-| — | `fx.spring?`/`=N` | Effect gains |
-| — | `sys.save!` | Persiste FFB EEPROM |
-| — | `sys.eetest!` / `sys.eedump?` | EEPROM low-level diagnostic |
-
-## Atualizando OpenFFBoard upstream
-
-Algumas funções do FFB stack (HidFFB, EffectsCalculator) foram **forkadas e modificadas** localmente
-em `Firmware-V56-Stock/src/` e `inc/`. As cópias originais ficam no submodule `OpenFFBoard-master/`.
-
-Quando o upstream lançar updates relevantes, workflow:
+When upstream releases relevant updates, workflow:
 
 ```bash
-# 1. Puxa último commit do upstream pro submodule
+# 1. Pull latest upstream commit into the submodule
 git submodule update --remote OpenFFBoard-master/OpenFFBoard-master
 
-# 2. Vê o que mudou
+# 2. See what changed
 cd OpenFFBoard-master/OpenFFBoard-master
-git log --oneline HEAD@{1}..HEAD          # commits novos
-git diff HEAD@{1}..HEAD --stat            # arquivos alterados
+git log --oneline HEAD@{1}..HEAD          # new commits
+git diff HEAD@{1}..HEAD --stat            # changed files
 cd ../..
 
-# 3. Compara nossos forks com o upstream atualizado
-./Firmware-V56-Stock/tools/check-openffboard-upstream.sh           # resumo
-./Firmware-V56-Stock/tools/check-openffboard-upstream.sh --verbose # com diffs
+# 3. Compare our forks against the updated upstream
+./Firmware-V56-Stock/tools/check-openffboard-upstream.sh           # summary
+./Firmware-V56-Stock/tools/check-openffboard-upstream.sh --verbose # with diffs
 
-# 4. Pra cada arquivo que mostra "DIVERGE" e teve mudanças relevantes
-#    no upstream, manualmente integra no nosso fork em Firmware-V56-Stock/
+# 4. For each file marked "DIVERGE" with relevant upstream changes,
+#    manually integrate into our fork in Firmware-V56-Stock/
 
-# 5. Compila + testa
+# 5. Compile + test
 cd Firmware-V56-Stock && make -j4
 
 # 6. Commit
@@ -192,19 +157,55 @@ git add OpenFFBoard-master/OpenFFBoard-master Firmware-V56-Stock/...
 git commit -m "Bump OpenFFBoard upstream to <hash> + integrate changes"
 ```
 
-Os arquivos forkados têm um header no início indicando:
-- Versão upstream que foi base do fork (commit hash)
-- Descrição das modificações locais
-- Comando exato pra fazer diff vs upstream
+Forked files have a header at the top indicating:
+- Upstream version that was the fork base (commit hash)
+- Description of local modifications
+- Exact command to diff against upstream
 
-Ex: `Firmware-V56-Stock/src/HidFFB.cpp` indica modificação do `set_effect` pra single-axis fallback.
+E.g., `Firmware-V56-Stock/src/HidFFB.cpp` documents the `set_effect` modification for single-axis fallback.
 
-## Histórico
+## Licenses
 
-Construído iterativamente, fases:
+This project combines code from multiple sources with different licenses:
 
-- **Fase 1** — ODrive v0.5.6 stock funcionando + calibração
-- **Fase 2a/b** — TinyUSB CDC + HID composite enumerando
-- **Fase 2c** — FFB stack portada do OpenFFBoard
-- **Fase 2d** — OpenFFBoard CmdParser via CDC (parser dual: ODrive ASCII + OpenFFBoard)
-- **Fase 3** — Persistência FFB em EEPROM emulada (S10+S11), HTML completo, dashboards
+- **ODrive Firmware** — MIT License — `ODrive-fw-v0.5.6/`
+- **OpenFFBoard** — GPLv3 — `OpenFFBoard-master/`
+- **Our own code** (`Firmware-V56-Stock/src`, `inc`, `tools`) — GPLv3 (compatible with OpenFFBoard)
+
+Because GPL-licensed code from OpenFFBoard is included, the **combined work** (compiled firmware) is
+distributed under **GPLv3**. See `LICENSE` at the repo root and individual licenses in subdirectories.
+
+## Status
+
+✅ Motor + encoder calibration working
+✅ FFB validated: Spring/Constant/Friction/Periodic responding in ForceTest
+✅ Brake resistor + regen stable (no PSU resets)
+✅ Separated FFB / ODrive persistence
+✅ Full HTML config tool in PT/EN
+🚧 End-to-end validation in iRacing/AMS2/ETS2 (in progress)
+
+## Diagnostics
+
+Useful commands via CDC serial terminal (115200 baud):
+
+| ASCII | OpenFFBoard | Function |
+|-------|-------------|----------|
+| `r path` / `w path val` | — | Read/write ODrive properties |
+| `ss` / `se` / `sr` / `sc` | — | Save / erase / reboot / clear errors |
+| `d` / `D` / `C` / `T` / `E[N]` | — | FFB diagnostics |
+| `I` / `R` | — | Bus current peaks (read / reset) |
+| `S[N]` | — | FFB effect slot raw dump |
+| — | `axis.maxtorque?`/`=N` | FFB axis params |
+| — | `fx.spring?`/`=N` | Effect gains |
+| — | `sys.save!` | Persist FFB EEPROM |
+| — | `sys.eetest!` / `sys.eedump?` | EEPROM low-level diagnostic |
+
+## History
+
+Built iteratively, in phases:
+
+- **Phase 1** — ODrive v0.5.6 stock working + calibration
+- **Phase 2a/b** — TinyUSB CDC + HID composite enumerating
+- **Phase 2c** — FFB stack ported from OpenFFBoard
+- **Phase 2d** — OpenFFBoard CmdParser via CDC (dual parser: ODrive ASCII + OpenFFBoard)
+- **Phase 3** — FFB persistence in emulated EEPROM (S10+S11), full HTML tool, dashboards
