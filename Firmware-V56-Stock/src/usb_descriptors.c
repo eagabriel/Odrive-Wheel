@@ -1,5 +1,5 @@
 // Phase 2a — TinyUSB CDC-only USB descriptors pra Firmware-V56-Stock.
-// Device se apresenta como "ODrive MKS-Mini CDC" com 1 interface CDC.
+// Device se apresenta como "ODrive XDrive-Mini CDC" com 1 interface CDC.
 // HID FFB virá na Fase 2b (bcdDevice/PID bumps pra invalidar cache do host).
 
 #include "tusb.h"
@@ -17,7 +17,7 @@
 // ---------- Device Descriptor ----------
 // CDC puro com IAD não é necessário (1 função só), mas manteremos CLASS_MISC/IAD
 // pra facilitar migração futura pra composite (Phase 2b).
-// Same pattern as Firmware-Merged (proven to enumerate on same MKS Mini hw):
+// Same pattern as Firmware-Merged (proven to enumerate on same MKS XDrive Mini hw):
 // bDeviceClass=0x00 (per-interface classes declared via IAD in config desc).
 // Device subclass/protocol still say "IAD" for compat com hosts antigos.
 static const tusb_desc_device_t desc_device = {

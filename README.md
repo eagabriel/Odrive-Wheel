@@ -1,8 +1,8 @@
-# ODrive FFB Wheel — MKS Mini Firmware
+# ODrive FFB Wheel — MKS XDrive Mini Firmware
 
 Custom firmware for ODrive v0.5.6 running on **MKS XDrive Mini** hardware
-(STM32F405 clone), adding full **HID Force Feedback** support to use the motor
-as a sim racing wheel.
+(STM32F405-based clone of ODrive v3.6-56V), adding full **HID Force Feedback**
+support to use the motor as a sim racing wheel.
 
 Based on:
 - [ODrive Firmware v0.5.6](https://github.com/odriverobotics/ODrive) (motor control)
@@ -25,7 +25,7 @@ Based on:
 ## What's been done
 
 ### Hardware supported
-- MKS Mini ODrive S (STM32F405RGT6, BLDC motor, ABZ encoder, brake resistor)
+- MKS XDrive Mini (STM32F405RGT6, BLDC motor, ABZ encoder, brake resistor)
 - 24 V power supply, configurable regen via brake resistor
 
 ### FFB pipeline

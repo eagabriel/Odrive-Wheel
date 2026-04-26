@@ -1,5 +1,5 @@
 # =============================================================================
-# Firmware-V56-Stock — ODrive v0.5.6 stock firmware para MKS Mini
+# Firmware-V56-Stock — ODrive v0.5.6 stock firmware para MKS XDrive Mini
 # Espelha Tupfile.lua de ODrive-fw-v0.5.6 sem camada OpenFFBoard.
 # CDC USB aceita ASCII (enable_ascii_protocol_on_usb default true).
 # =============================================================================
@@ -41,7 +41,7 @@ FLOAT_ABI = -mfloat-abi=hard
 MCU       = $(CPU) -mthumb $(FPU) $(FLOAT_ABI)
 
 # --- Defines -----------------------------------------------------------------
-# Build MKS Mini style: v3.6-56V (mesmo que MKS v0.5.1 oficial usa).
+# Build MKS XDrive Mini style: v3.6-56V (mesmo que MKS v0.5.1 oficial usa).
 # - HW_VERSION_VOLTAGE=56: OVP trip = 59.92V (seguro pra 24V real).
 # - VBUS divider ja hardcoded como 19:1 em low_level.cpp (nosso patch previo).
 # - USB_PROTOCOL_NATIVE: CDC endpoint aceita ASCII via enable_ascii_protocol_on_usb.
@@ -76,7 +76,7 @@ DEFS = -DSTM32F405xx \
        -D__weak=__attribute__\(\(weak\)\) \
        -D__packed=__attribute__\(\(__packed__\)\)
 
-# --- Sources: locais (patches MKS Mini) --------------------------------------
+# --- Sources: locais (patches MKS XDrive Mini) -------------------------------
 # Usamos o board.cpp upstream direto — motors[1] ficam em memoria valida
 # pois AXIS_COUNT=2 (default stock). MKS main.cpp patch opcional esta em
 # motor setup (axes[0] only) — mas como motor[1] nao tem hardware, setup
