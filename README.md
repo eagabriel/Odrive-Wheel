@@ -95,35 +95,37 @@ Equivalent to:
 dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/firmware-v56-stock.bin
 ```
 
-## Recommended initial configuration
+## Screenshots
 
-After first flash, connect via the HTML tool, calibrate motor + encoder, then adjust:
+The HTML configuration tool runs entirely in the browser via Web Serial API
+(Chrome/Edge), with no install required. Below are key screens.
 
-```
-config.brake_resistance = 2.0          # match your physical brake resistor
-config.enable_brake_resistor = True
-config.max_regen_current = 0           # brake activates immediately on any regen
-config.dc_max_negative_current = -1    # for switching PSU
-config.enable_dc_bus_overvoltage_ramp = True
-config.dc_bus_overvoltage_ramp_start = 25
-config.dc_bus_overvoltage_ramp_end = 27
-axis0.controller.config.spinout_electrical_power_threshold = 50
-axis0.controller.config.spinout_mechanical_power_threshold = -50
-axis0.controller.config.electrical_power_bandwidth = 5
-axis0.controller.config.mechanical_power_bandwidth = 5
-```
+### Header / language toggle / connection controls
+![Header](docs/screenshots/01-header.png)
 
-Click **Save ODrive** in the header. Reboot. Calibrate and arm motor.
+### ODrive tab — power, brake resistor, communication, GPIO
+![ODrive tab](docs/screenshots/02-tab-odrive.png)
 
-For FFB:
-```
-axis.range = 900             # total wheel rotation in degrees
-axis.maxtorque = 12          # max Nm (depends on your motor)
-axis.fxratio = 1.0           # final multiplier
-fx.master = 255              # global gain
-```
+### Controller tab — PID gains, spinout protection, anticogging
+![Controller tab](docs/screenshots/03-tab-controller.png)
 
-Click **Save FFB**.
+### FFB Wheel tab — force scaling, axis effects, slew/curve
+![FFB Wheel tab](docs/screenshots/04-tab-ffb-wheel.png)
+
+### FFB Effects tab — master gain + per-effect gains
+![FFB Effects tab](docs/screenshots/05-tab-ffb-effects.png)
+
+### FFB Filters tab — biquad cutoff/Q per effect type
+![FFB Filters tab](docs/screenshots/06-tab-ffb-filters.png)
+
+### FFB Live — dashboard with active effects + dynamics analysis + chart
+![FFB Live tab](docs/screenshots/07-tab-ffb-live.png)
+
+### Debug / Status — live monitor + bus current chart (vbus, ibus, Iq, Ibrake)
+![Debug tab](docs/screenshots/08-tab-debug.png)
+
+### Tooltip on hover — every configurable field has a description
+![Tooltip example](docs/screenshots/09-tooltip-example.png)
 
 ## Updating OpenFFBoard upstream
 
@@ -178,27 +180,11 @@ distributed under **GPLv3**. See `LICENSE` at the repo root and individual licen
 ## Status
 
 ✅ Motor + encoder calibration working
-✅ FFB validated: Spring/Constant/Friction/Periodic responding in ForceTest
+✅ FFB validated: Spring / Constant / Friction / Periodic responding in ForceTest
 ✅ Brake resistor + regen stable (no PSU resets)
 ✅ Separated FFB / ODrive persistence
 ✅ Full HTML config tool in PT/EN
-🚧 End-to-end validation in iRacing/AMS2/ETS2 (in progress)
-
-## Diagnostics
-
-Useful commands via CDC serial terminal (115200 baud):
-
-| ASCII | OpenFFBoard | Function |
-|-------|-------------|----------|
-| `r path` / `w path val` | — | Read/write ODrive properties |
-| `ss` / `se` / `sr` / `sc` | — | Save / erase / reboot / clear errors |
-| `d` / `D` / `C` / `T` / `E[N]` | — | FFB diagnostics |
-| `I` / `R` | — | Bus current peaks (read / reset) |
-| `S[N]` | — | FFB effect slot raw dump |
-| — | `axis.maxtorque?`/`=N` | FFB axis params |
-| — | `fx.spring?`/`=N` | Effect gains |
-| — | `sys.save!` | Persist FFB EEPROM |
-| — | `sys.eetest!` / `sys.eedump?` | EEPROM low-level diagnostic |
+✅ End-to-end validation in **iRacing**
 
 ## History
 
