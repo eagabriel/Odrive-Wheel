@@ -4,6 +4,10 @@ Custom firmware for ODrive v0.5.6 running on **MKS XDrive Mini** hardware
 (STM32F405-based clone of ODrive v3.6-56V), adding full **HID Force Feedback**
 support to use the motor as a sim racing wheel.
 
+<p align="center">
+  <img src="docs/screenshots/MKSXdriveMini.png" alt="MKS XDrive Mini board" width="500">
+</p>
+
 Based on:
 - [ODrive Firmware v0.5.6](https://github.com/odriverobotics/ODrive) (motor control)
 - [OpenFFBoard](https://github.com/Ultrawipf/OpenFFBoard) (FFB stack: HidFFB + EffectsCalculator)
@@ -26,7 +30,6 @@ Based on:
 
 ### Hardware supported
 - MKS XDrive Mini (STM32F405RGT6, BLDC motor, ABZ encoder, brake resistor)
-- 24 V power supply, configurable regen via brake resistor
 
 ### FFB pipeline
 - USB enumerates as **CDC + HID composite** (TinyUSB)
@@ -98,34 +101,13 @@ dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/firmware-v56-stock.bin
 ## Screenshots
 
 The HTML configuration tool runs entirely in the browser via Web Serial API
-(Chrome/Edge), with no install required. Below are key screens.
+(Chrome/Edge), with no install required.
 
-### Header / language toggle / connection controls
-![Header](docs/screenshots/01-header.png)
+![HTML config tool](docs/screenshots/01-Header.png)
 
-### ODrive tab — power, brake resistor, communication, GPIO
-![ODrive tab](docs/screenshots/02-tab-odrive.png)
+![HTML config tool](docs/screenshots/02-Header.png)
 
-### Controller tab — PID gains, spinout protection, anticogging
-![Controller tab](docs/screenshots/03-tab-controller.png)
-
-### FFB Wheel tab — force scaling, axis effects, slew/curve
-![FFB Wheel tab](docs/screenshots/04-tab-ffb-wheel.png)
-
-### FFB Effects tab — master gain + per-effect gains
-![FFB Effects tab](docs/screenshots/05-tab-ffb-effects.png)
-
-### FFB Filters tab — biquad cutoff/Q per effect type
-![FFB Filters tab](docs/screenshots/06-tab-ffb-filters.png)
-
-### FFB Live — dashboard with active effects + dynamics analysis + chart
-![FFB Live tab](docs/screenshots/07-tab-ffb-live.png)
-
-### Debug / Status — live monitor + bus current chart (vbus, ibus, Iq, Ibrake)
-![Debug tab](docs/screenshots/08-tab-debug.png)
-
-### Tooltip on hover — every configurable field has a description
-![Tooltip example](docs/screenshots/09-tooltip-example.png)
+![HTML config tool](docs/screenshots/03-Header.png)
 
 ## Updating OpenFFBoard upstream
 
