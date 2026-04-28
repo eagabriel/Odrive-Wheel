@@ -2678,7 +2678,12 @@ function getInputValue(input) {
   return input.value.trim();
 }
 
-function setInputValue(input, raw) {
+// Estados visuais possíveis do input:
+//   neutro (sem classe)  → branco — valor lido do device, sem mudança pendente
+//   .changed (vermelho)  → user editou mas ainda não enviou
+//   .synced (verde)      → enviado com sucesso pro device
+// markSynced=true só é passado pelo writeOne (após ✓). readOne deixa neutro.
+function setInputValue(input, raw, markSynced) {
   if (input.dataset.type === 'bool') {
     input.checked = raw === 'True' || raw === 'true' || raw === '1';
   } else {
@@ -2686,24 +2691,28 @@ function setInputValue(input, raw) {
   }
   input.dataset.currentServerValue = raw;
   input.classList.remove('changed');
-  input.classList.add('synced');
+  if (markSynced) input.classList.add('synced');
+  else input.classList.remove('synced');
 }
 
+// Disparado em cada keystroke / change. Só toca em .changed; .synced
+// permanece em verde até o user editar (vira vermelho) ou trocar de valor
+// pra original sem enviar (volta a neutro).
 function markDirty(input) {
   const server = input.dataset.currentServerValue;
   let cur;
   if (input.dataset.type === 'bool') {
     cur = input.checked ? 'True' : 'False';
-    // normalize server side: ODrive returns True/False, we stored as such
+    // ODrive returns True/False, normalize comparison
     const same = (cur === server) || (cur === '1' && server === 'True') ||
                  (cur === '0' && server === 'False');
     input.classList.toggle('changed', !same);
-    input.classList.toggle('synced', same);
+    if (!same) input.classList.remove('synced');  // edição apaga o "verde"
   } else {
     cur = input.value.trim();
     const same = cur === server;
     input.classList.toggle('changed', !same);
-    input.classList.toggle('synced', same);
+    if (!same) input.classList.remove('synced');
   }
 }
 
@@ -2712,7 +2721,7 @@ async function readOne(input) {
   const v = proto === 'offb'
     ? await readPropOffb(input.dataset.path)
     : await readProp(input.dataset.path);
-  if (v !== null) setInputValue(input, v);
+  if (v !== null) setInputValue(input, v, /*markSynced=*/false);  // BRANCO após read
 }
 
 async function writeOne(input) {
@@ -2721,12 +2730,12 @@ async function writeOne(input) {
   if (proto === 'offb') {
     // OpenFFBoard write returns valor ecoado, atualiza UI já com a resposta
     const r = await writePropOffb(input.dataset.path, val);
-    if (r !== null) setInputValue(input, r);
+    if (r !== null) setInputValue(input, r, /*markSynced=*/true);  // VERDE após ✓
   } else {
     await writeProp(input.dataset.path, val);
     // Readback ODrive
     const v = await readProp(input.dataset.path);
-    if (v !== null) setInputValue(input, v);
+    if (v !== null) setInputValue(input, v, /*markSynced=*/true);  // VERDE após ✓
   }
 }
 
