@@ -72,9 +72,25 @@
     font-family: monospace; font-size: 12px; min-width: 0;
   }
   .field input[type="checkbox"] { width: 18px; height: 18px; }
-  .field input.changed { border-color: var(--err); background: #2a1010; color: var(--err); font-weight: 600; }
-  .field input.changed:focus { outline-color: var(--err); }
-  .field input.synced { border-color: var(--ok); color: var(--ok); }
+  /* Estados visuais — aplicam pra input (texto/numero), select (enum) e checkbox.
+     Vermelho = alterado pendente, verde = enviado com sucesso. */
+  .field input.changed,
+  .field select.changed {
+    border-color: var(--err) !important;
+    background: #2a1010 !important;
+    color: var(--err) !important;
+    font-weight: 600;
+  }
+  .field input.changed:focus,
+  .field select.changed:focus { outline-color: var(--err); }
+  .field input.synced,
+  .field select.synced {
+    border-color: var(--ok) !important;
+    color: var(--ok) !important;
+  }
+  /* Checkbox — color não funciona, então usa accent-color + outline */
+  .field input[type="checkbox"].changed { accent-color: var(--err); outline: 2px solid var(--err); outline-offset: 2px; }
+  .field input[type="checkbox"].synced  { accent-color: var(--ok);  outline: 2px solid var(--ok);  outline-offset: 2px; }
   .field label .range {
     color: var(--muted); font-size: 10px; margin-left: 6px;
     font-style: italic; white-space: nowrap;
