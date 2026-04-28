@@ -210,7 +210,6 @@ const I18N = {
     'group.cal_lockin': 'Calibration Lockin',
     'group.gen_lockin': 'General Lockin',
     'group.sensorless': 'Sensorless Ramp',
-    'group.can': 'CAN',
     // Groups (Motor)
     'group.motor_type': 'Tipo / calibração',
     'group.motor_limits': 'Limites',
@@ -360,7 +359,6 @@ const I18N = {
     'group.cal_lockin': 'Calibration Lockin',
     'group.gen_lockin': 'General Lockin',
     'group.sensorless': 'Sensorless Ramp',
-    'group.can': 'CAN',
     'group.motor_type': 'Type / calibration',
     'group.motor_limits': 'Limits',
     'group.motor_temp': 'Temperature',
@@ -488,7 +486,6 @@ const FIELD_DESC = {
     'config.dc_max_negative_current':       'Corrente máxima retornada à fonte (A, negativo). Pra fonte chaveada use -0.5 a -1.',
     'config.max_regen_current':             'THRESHOLD de ativação do brake (A). 0 = brake ativa sempre. Valor alto = brake só ativa em regen forte. Cuidado: nome enganoso.',
     // ODrive — Comunicação
-    'config.enable_can_a':                  'Habilita CAN no canal A. Útil pra controle externo via ODriveCAN.',
     'config.enable_i2c_a':                  'Habilita I2C (raramente usado em wheel).',
     'config.enable_uart_a':                 'Habilita UART A. Pode usar pra debug ASCII em vez de USB.',
     'config.enable_uart_b':                 'Habilita UART B (depende do hw).',
@@ -531,12 +528,6 @@ const FIELD_DESC = {
     'axis0.config.general_lockin.finish_on_distance': 'Termina quando atinge distance.',
     'axis0.config.general_lockin.finish_on_enc_idx':  'Termina quando passa index Z.',
     'axis0.config.general_lockin.finish_on_vel':      'Termina quando atinge vel.',
-    // CAN
-    'axis0.config.can.node_id':                       'ID do nó CAN (0-63).',
-    'axis0.config.can.is_extended':                   'CAN extended (29-bit) vs standard (11-bit).',
-    'axis0.config.can.heartbeat_rate_ms':             'Taxa de heartbeat em ms.',
-    'axis0.config.can.encoder_rate_ms':               'Taxa de encoder report em ms.',
-    'axis0.config.can.iq_rate_ms':                    'Taxa de Iq em ms.',
     // Motor
     'axis0.motor.config.motor_type':           'Tipo de motor: HIGH_CURRENT (BLDC normal), GIMBAL (alta resistência), ACIM (indução).',
     'axis0.motor.config.pole_pairs':           'Pares de polos do motor. Conta os imãs e divide por 2.',
@@ -634,7 +625,6 @@ const FIELD_DESC = {
     'config.dc_max_positive_current':       'Max current drawn from PSU (A). Limits PSU load.',
     'config.dc_max_negative_current':       'Max current returned to PSU (A, negative). For switching PSU use -0.5 to -1.',
     'config.max_regen_current':             'Brake activation THRESHOLD (A). 0 = brake always active. High = brake only on heavy regen. Misleading name!',
-    'config.enable_can_a':                  'Enables CAN on channel A. For external control via ODriveCAN.',
     'config.enable_i2c_a':                  'Enables I2C (rarely used in wheel).',
     'config.enable_uart_a':                 'Enables UART A. Can use for ASCII debug instead of USB.',
     'config.enable_uart_b':                 'Enables UART B (hw dependent).',
@@ -673,11 +663,6 @@ const FIELD_DESC = {
     'axis0.config.general_lockin.finish_on_distance': 'Finish when distance reached.',
     'axis0.config.general_lockin.finish_on_enc_idx':  'Finish when Z index passed.',
     'axis0.config.general_lockin.finish_on_vel':      'Finish when velocity reached.',
-    'axis0.config.can.node_id':                       'CAN node ID (0-63).',
-    'axis0.config.can.is_extended':                   'Extended CAN (29-bit) vs standard (11-bit).',
-    'axis0.config.can.heartbeat_rate_ms':             'Heartbeat rate in ms.',
-    'axis0.config.can.encoder_rate_ms':               'Encoder report rate in ms.',
-    'axis0.config.can.iq_rate_ms':                    'Iq rate in ms.',
     'axis0.motor.config.motor_type':           'Motor type: HIGH_CURRENT (normal BLDC), GIMBAL (high resistance), ACIM (induction).',
     'axis0.motor.config.pole_pairs':           'Motor pole pairs. Count magnets, divide by 2.',
     'axis0.motor.config.torque_constant':      'Nm/A. Calc: 8.27 / motor_kv. Used to convert input_torque to current.',
@@ -787,10 +772,6 @@ const FIELD_RANGE = {
   'axis0.config.calibration_lockin.ramp_distance':  '0.5–10 rad',
   'axis0.config.calibration_lockin.accel':          '1–500 rad/s²',
   'axis0.config.calibration_lockin.vel':            '5–200 rad/s',
-  'axis0.config.can.node_id':                       '0–63',
-  'axis0.config.can.heartbeat_rate_ms':             '10–1000 ms',
-  'axis0.config.can.encoder_rate_ms':               '0–1000 ms',
-  'axis0.config.can.iq_rate_ms':                    '0–1000 ms',
 
   // Motor
   'axis0.motor.config.pole_pairs':                  '1–32',
@@ -949,7 +930,6 @@ const GROUP_KEY_MAP = {
   'Calibration Lockin':                    'group.cal_lockin',
   'General Lockin':                        'group.gen_lockin',
   'Sensorless Ramp':                       'group.sensorless',
-  'CAN':                                   'group.can',
   // Motor
   'Tipo / calibração':                     'group.motor_type',
   'Limites':                               'group.motor_limits',
@@ -1034,7 +1014,6 @@ const SCHEMA = [
       F('max_regen_current'),
 
       { group: 'Comunicação' },
-      B('enable_can_a'),
       B('enable_i2c_a'),
       B('enable_uart_a'),
       B('enable_uart_b'),
@@ -1129,19 +1108,6 @@ const SCHEMA = [
       B('sensorless_ramp.finish_on_enc_idx'),
       B('sensorless_ramp.finish_on_vel'),
 
-      { group: 'CAN' },
-      I('can.node_id'),
-      B('can.is_extended'),
-      I('can.heartbeat_rate_ms'),
-      I('can.encoder_rate_ms'),
-      I('can.iq_rate_ms'),
-      I('can.motor_error_rate_ms'),
-      I('can.encoder_error_rate_ms'),
-      I('can.controller_error_rate_ms'),
-      I('can.sensorless_error_rate_ms'),
-      I('can.sensorless_rate_ms'),
-      I('can.bus_vi_rate_ms'),
-      I('can.encoder_count_rate_ms'),
     ]
   },
   {
