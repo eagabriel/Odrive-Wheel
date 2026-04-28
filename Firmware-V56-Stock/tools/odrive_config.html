@@ -148,8 +148,7 @@
   <div class="controls">
     <button id="btn-connect" class="primary" data-i18n="btn.connect">Conectar</button>
     <button id="btn-read-all" disabled data-i18n-title="btn.read_all.title" style="font-size:16px;padding:6px 10px;line-height:1">↻</button>
-    <button id="btn-save" class="ok" disabled data-i18n-title="btn.save_odrive.title">Save ODrive</button>
-    <button id="btn-save-ffb" class="ok" disabled data-i18n="btn.save_ffb" data-i18n-title="btn.save_ffb.title">Salvar FFB (sys.save!)</button>
+    <button id="btn-save" class="ok" disabled data-i18n="btn.save" data-i18n-title="btn.save.title">Save</button>
     <button id="btn-erase" class="danger" disabled data-i18n="btn.erase">Apagar config (se)</button>
     <button id="btn-reboot" disabled data-i18n="btn.reboot">Reboot (sr)</button>
     <button id="btn-export" disabled data-i18n="btn.export">Exportar JSON</button>
@@ -180,9 +179,8 @@ const I18N = {
     'btn.connect': 'Conectar',
     'btn.disconnect': 'Desconectar',
     'btn.read_all.title': 'Ler todos os campos do device (ODrive + FFB)',
-    'btn.save_odrive.title': 'Grava campos alterados na RAM, desarma o motor (IDLE), e persiste na NVM via ss. Motor precisa ser re-armado depois',
-    'btn.save_ffb': 'Salvar FFB',
-    'btn.save_ffb.title': 'Persiste params FFB (axis/gains/filtros) na EEPROM emulada — independente do ss da ODrive',
+    'btn.save': 'Salvar',
+    'btn.save.title': 'Save unificado: 1) persiste params FFB na EEPROM emulada (sys.save!), 2) grava campos alterados em RAM, 3) desarma motor (IDLE), 4) persiste config ODrive na NVM (ss) e reboota. Motor re-arma sozinho se startup_closed_loop_control=True.',
     'btn.erase': 'Apagar config (se)',
     'btn.reboot': 'Reboot (sr)',
     'btn.export': 'Exportar JSON',
@@ -320,10 +318,11 @@ const I18N = {
     'act.erase_confirm':       'Apaga config + reboot. Confirma?',
     'act.reboot':              'Reboot',
     'act.clear_errors':        'Limpar Erros',
-    // Save ODrive flow status
+    // Save flow status (PT)
     'save.writing_changes':    'Gravando alterações...',
+    'save.persisting_ffb':     'Salvando FFB (EEPROM)...',
     'save.disarming':          'Desarmando motor...',
-    'save.persisting':         'Salvando NVM...',
+    'save.persisting_odrive':  'Salvando ODrive (NVM)...',
     'save.rebooting':          'Reboot em curso (~3s)',
   },
   en: {
@@ -331,9 +330,8 @@ const I18N = {
     'btn.connect': 'Connect',
     'btn.disconnect': 'Disconnect',
     'btn.read_all.title': 'Read all device fields (ODrive + FFB)',
-    'btn.save_odrive.title': 'Writes changed fields to RAM, sets motor to IDLE, then persists to NVM via ss. Motor needs to be re-armed after',
-    'btn.save_ffb': 'Save FFB',
-    'btn.save_ffb.title': 'Persists FFB params (axis/gains/filters) to emulated EEPROM — independent from ODrive ss',
+    'btn.save': 'Save',
+    'btn.save.title': 'Unified save: 1) persists FFB params to emulated EEPROM (sys.save!), 2) writes changed fields to RAM, 3) sets motor to IDLE, 4) persists ODrive config to NVM (ss) and reboots. Motor re-arms automatically if startup_closed_loop_control=True.',
     'btn.erase': 'Erase config (se)',
     'btn.reboot': 'Reboot (sr)',
     'btn.export': 'Export JSON',
@@ -462,10 +460,11 @@ const I18N = {
     'act.erase_confirm':       'Erases config + reboot. Confirm?',
     'act.reboot':              'Reboot',
     'act.clear_errors':        'Clear Errors',
-    // Save ODrive flow status
+    // Save flow status (EN)
     'save.writing_changes':    'Writing changes...',
+    'save.persisting_ffb':     'Saving FFB (EEPROM)...',
     'save.disarming':          'Disarming motor...',
-    'save.persisting':         'Saving NVM...',
+    'save.persisting_odrive':  'Saving ODrive (NVM)...',
     'save.rebooting':          'Rebooting (~3s)',
   }
 };
@@ -1570,7 +1569,7 @@ async function execPropOffb(path) {
    UI construction
    ========================================================================= */
 function toggleControls(connected) {
-  const ids = ['btn-read-all', 'btn-save', 'btn-save-ffb',
+  const ids = ['btn-read-all', 'btn-save',
                'btn-erase', 'btn-reboot', 'btn-export', 'btn-import'];
   ids.forEach(i => document.getElementById(i).disabled = !connected);
   document.getElementById('btn-connect').textContent =
@@ -2781,44 +2780,51 @@ document.getElementById('btn-connect').onclick = async () => {
   else await connect();
 };
 document.getElementById('btn-read-all').onclick = readAll;
-// "Save ODrive" — fluxo completo de gravação:
-//   1. Escreve campos alterados (writeDirty) — propaga RAM → ODrive runtime
-//   2. Desarma motor (state=1 IDLE) — pré-requisito do save_configuration
-//   3. Envia 'ss' — persiste config na NVM e reboota
-// Após reboot, se a config tem startup_closed_loop_control=1, motor re-arma sozinho.
-// Senão, usuário precisa armar manualmente via aba Debug.
-async function saveODriveFull() {
+// "Save" unificado — sequência completa:
+//   1. Escreve campos alterados (writeDirty) — propaga UI → device runtime
+//   2. Persiste FFB EEPROM (sys.save!) — params FFB em S10+S11 (não reboota)
+//   3. Desarma motor (state=1 IDLE) — pré-requisito do save_configuration
+//   4. Envia 'ss' — persiste config ODrive em S1+S2 e reboota
+// Salvar FFB ANTES do ss garante que mudanças FFB persistem mesmo se ss falhar.
+// Após reboot, se config tem startup_closed_loop_control=1, motor re-arma sozinho.
+async function saveAll() {
   const btn = document.getElementById('btn-save');
   const original = btn.textContent;
   btn.disabled = true;
   try {
-    // 1. Grava alterações pendentes
+    // 1. Grava alterações pendentes (UI → device RAM)
     btn.textContent = t('save.writing_changes');
     const changed = document.querySelectorAll('#content .changed');
     if (changed.length > 0) {
-      logLine('--- Save ODrive: ' + changed.length + ' fields to write ---');
+      logLine('--- Save: ' + changed.length + ' fields to write ---');
       for (const inp of changed) await writeOne(inp);
     }
 
-    // 2. Desarma motor (necessário pra ss não ser ignorado)
+    // 2. Persiste FFB EEPROM primeiro (sys.save!) — não reboota, então é seguro
+    //    fazer antes do ss. Se ss falhar, mudanças FFB já estarão persistidas.
+    btn.textContent = t('save.persisting_ffb');
+    logLine('--- Save: FFB EEPROM (sys.save!) ---');
+    const ffbResp = await execPropOffb('sys.save');
+    logLine('sys.save! → ' + (ffbResp || 'timeout'), ffbResp === 'OK' ? 'rx' : 'err');
+
+    // 3. Desarma motor (necessário pra save_configuration não ser ignorado)
     btn.textContent = t('save.disarming');
-    logLine('--- Save ODrive: disarm (state=1 IDLE) ---');
+    logLine('--- Save: disarm motor (state=1 IDLE) ---');
     await writeProp('axis0.requested_state', '1');
-    // pequena pausa pra estado se propagar
     await new Promise(r => setTimeout(r, 300));
 
-    // 3. Persiste na NVM (ss reboota a placa)
-    btn.textContent = t('save.persisting');
-    logLine('--- Save ODrive: ss (persist + reboot) ---');
+    // 4. Persiste ODrive NVM (ss reboota a placa)
+    btn.textContent = t('save.persisting_odrive');
+    logLine('--- Save: ODrive NVM (ss — persist + reboot) ---');
     await sendCmd('ss', false);
 
     // Após ss a placa reseta — serial vai cair em ~1s
     btn.textContent = t('save.rebooting');
     setTimeout(() => {
-      logLine('--- Save ODrive: aguarde reconexão. Motor pode precisar ser re-armado se autostart desabilitado ---');
+      logLine('--- Save complete: aguarde reconexão. Motor re-arma se startup_closed_loop_control=True ---');
     }, 200);
   } catch (e) {
-    logLine('Save ODrive erro: ' + e.message, 'err');
+    logLine('Save erro: ' + e.message, 'err');
   } finally {
     setTimeout(() => {
       btn.textContent = original;
@@ -2826,11 +2832,7 @@ async function saveODriveFull() {
     }, 3000);
   }
 }
-document.getElementById('btn-save').onclick = saveODriveFull;
-document.getElementById('btn-save-ffb').onclick = async () => {
-  const r = await execPropOffb('sys.save');
-  logLine(r ? ('sys.save! → ' + r) : 'sys.save! → timeout', r === 'OK' ? 'rx' : 'err');
-};
+document.getElementById('btn-save').onclick = saveAll;
 document.getElementById('btn-erase').onclick = () => {
   if (confirm('Apaga config persistida + reboota. Confirma?'))
     sendCmd('se', false);
