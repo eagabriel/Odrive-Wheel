@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>ODrive Config — MKS XDrive Mini</title>
+<title>OpenFFBDrive — MKS XDrive Mini</title>
 <style>
   :root {
     --bg: #1e1e1e; --fg: #e8e8e8; --accent: #4fc3f7; --muted: #888;
@@ -72,25 +72,11 @@
     font-family: monospace; font-size: 12px; min-width: 0;
   }
   .field input[type="checkbox"] { width: 18px; height: 18px; }
-  /* Estados visuais — aplicam pra input (texto/numero), select (enum) e checkbox.
-     Vermelho = alterado pendente, verde = enviado com sucesso. */
-  .field input.changed,
-  .field select.changed {
-    border-color: var(--err) !important;
-    background: #2a1010 !important;
-    color: var(--err) !important;
-    font-weight: 600;
-  }
-  .field input.changed:focus,
-  .field select.changed:focus { outline-color: var(--err); }
-  .field input.synced,
-  .field select.synced {
-    border-color: var(--ok) !important;
-    color: var(--ok) !important;
-  }
-  /* Checkbox — color não funciona, então usa accent-color + outline */
-  .field input[type="checkbox"].changed { accent-color: var(--err); outline: 2px solid var(--err); outline-offset: 2px; }
-  .field input[type="checkbox"].synced  { accent-color: var(--ok);  outline: 2px solid var(--ok);  outline-offset: 2px; }
+  /* Estados visuais .changed/.synced são aplicados via INLINE STYLES no JS
+     (_applyFieldState). Aqui mantemos só o accent-color do checkbox que
+     não pode ser setado direto via .style (depende do user-agent stylesheet). */
+  .field input[type="checkbox"].changed { accent-color: var(--err); }
+  .field input[type="checkbox"].synced  { accent-color: var(--ok); }
   .field label .range {
     color: var(--muted); font-size: 10px; margin-left: 6px;
     font-style: italic; white-space: nowrap;
@@ -158,7 +144,7 @@
 <body>
 
 <header>
-  <h1 data-i18n="header.title">ODrive Config — MKS XDrive Mini</h1>
+  <h1 data-i18n="header.title">OpenFFBDrive — MKS XDrive Mini</h1>
   <div class="controls">
     <button id="btn-connect" class="primary" data-i18n="btn.connect">Conectar</button>
     <button id="btn-read-all" disabled data-i18n-title="btn.read_all.title" style="font-size:16px;padding:6px 10px;line-height:1">↻</button>
@@ -190,7 +176,7 @@
    ========================================================================= */
 const I18N = {
   pt: {
-    'header.title': 'ODrive Config — MKS XDrive Mini',
+    'header.title': 'OpenFFBDrive — MKS XDrive Mini',
     'btn.connect': 'Conectar',
     'btn.disconnect': 'Desconectar',
     'btn.read_all.title': 'Ler todos os campos do device (ODrive + FFB)',
@@ -219,7 +205,6 @@ const I18N = {
     'group.power_brake': 'Alimentação / Brake',
     'group.comm': 'Comunicação',
     'group.gpio_modes': 'GPIO Modes',
-    'group.gpio_mapping': 'GPIO PWM/Analog Mapping (min/max)',
     // Groups (Axis 0)
     'group.startup': 'Startup Sequence',
     'group.op_mode': 'Modo de operação',
@@ -342,7 +327,7 @@ const I18N = {
     'save.rebooting':          'Reboot em curso (~3s)',
   },
   en: {
-    'header.title': 'ODrive Config — MKS XDrive Mini',
+    'header.title': 'OpenFFBDrive — MKS XDrive Mini',
     'btn.connect': 'Connect',
     'btn.disconnect': 'Disconnect',
     'btn.read_all.title': 'Read all device fields (ODrive + FFB)',
@@ -369,7 +354,6 @@ const I18N = {
     'group.power_brake': 'Power / Brake',
     'group.comm': 'Communication',
     'group.gpio_modes': 'GPIO Modes',
-    'group.gpio_mapping': 'GPIO PWM/Analog Mapping (min/max)',
     'group.startup': 'Startup Sequence',
     'group.op_mode': 'Operating mode',
     'group.cal_lockin': 'Calibration Lockin',
@@ -939,7 +923,6 @@ const GROUP_KEY_MAP = {
   'Alimentação / Brake':                  'group.power_brake',
   'Comunicação':                           'group.comm',
   'GPIO Modes':                            'group.gpio_modes',
-  'GPIO PWM/Analog Mapping (min/max)':    'group.gpio_mapping',
   // Axis 0
   'Startup Sequence':                      'group.startup',
   'Modo de operação':                      'group.op_mode',
@@ -1061,19 +1044,6 @@ const SCHEMA = [
       E('gpio15_mode', ENUM_GPIO_MODE),
       E('gpio16_mode', ENUM_GPIO_MODE),
 
-      { group: 'GPIO PWM/Analog Mapping (min/max)' },
-      F('gpio1_pwm_mapping.min'),
-      F('gpio1_pwm_mapping.max'),
-      F('gpio2_pwm_mapping.min'),
-      F('gpio2_pwm_mapping.max'),
-      F('gpio3_pwm_mapping.min'),
-      F('gpio3_pwm_mapping.max'),
-      F('gpio3_analog_mapping.min'),
-      F('gpio3_analog_mapping.max'),
-      F('gpio4_pwm_mapping.min'),
-      F('gpio4_pwm_mapping.max'),
-      F('gpio4_analog_mapping.min'),
-      F('gpio4_analog_mapping.max'),
     ]
   },
   {
@@ -2661,10 +2631,47 @@ function getInputValue(input) {
 }
 
 // Estados visuais possíveis do input:
-//   neutro (sem classe)  → branco — valor lido do device, sem mudança pendente
-//   .changed (vermelho)  → user editou mas ainda não enviou
-//   .synced (verde)      → enviado com sucesso pro device
-// markSynced=true só é passado pelo writeOne (após ✓). readOne deixa neutro.
+//   'neutral'  → branco — valor lido do device, sem mudança pendente
+//   'changed'  → vermelho — user editou mas ainda não enviou
+//   'synced'   → verde — enviado com sucesso pro device
+//
+// Aplicamos via INLINE STYLES (não via classes CSS) pra garantir precedência
+// máxima sobre qualquer regra do stylesheet (cache, especificidade, etc).
+// Classes ainda são adicionadas pra permitir CSS adicional opcional futuro.
+function _applyFieldState(input, state) {
+  // Reset todos os estilos relacionados a estado
+  input.style.removeProperty('color');
+  input.style.removeProperty('background-color');
+  input.style.removeProperty('border-color');
+  input.style.removeProperty('font-weight');
+  input.style.removeProperty('outline');
+  input.style.removeProperty('outline-offset');
+  input.classList.remove('changed', 'synced');
+
+  if (state === 'changed') {
+    input.classList.add('changed');
+    if (input.type === 'checkbox') {
+      input.style.outline = '2px solid #ef5350';
+      input.style.outlineOffset = '2px';
+    } else {
+      input.style.color = '#ef5350';
+      input.style.backgroundColor = '#2a1010';
+      input.style.borderColor = '#ef5350';
+      input.style.fontWeight = '600';
+    }
+  } else if (state === 'synced') {
+    input.classList.add('synced');
+    if (input.type === 'checkbox') {
+      input.style.outline = '2px solid #66bb6a';
+      input.style.outlineOffset = '2px';
+    } else {
+      input.style.color = '#66bb6a';
+      input.style.borderColor = '#66bb6a';
+    }
+  }
+  // 'neutral' — só removemos os estilos acima, deixa como default do CSS base
+}
+
 function setInputValue(input, raw, markSynced) {
   if (input.dataset.type === 'bool') {
     input.checked = raw === 'True' || raw === 'true' || raw === '1';
@@ -2672,29 +2679,28 @@ function setInputValue(input, raw, markSynced) {
     input.value = raw;
   }
   input.dataset.currentServerValue = raw;
-  input.classList.remove('changed');
-  if (markSynced) input.classList.add('synced');
-  else input.classList.remove('synced');
+  _applyFieldState(input, markSynced ? 'synced' : 'neutral');
 }
 
-// Disparado em cada keystroke / change. Só toca em .changed; .synced
-// permanece em verde até o user editar (vira vermelho) ou trocar de valor
-// pra original sem enviar (volta a neutro).
+// Disparado em cada keystroke / change.
 function markDirty(input) {
   const server = input.dataset.currentServerValue;
-  let cur;
+  let cur, same;
   if (input.dataset.type === 'bool') {
     cur = input.checked ? 'True' : 'False';
-    // ODrive returns True/False, normalize comparison
-    const same = (cur === server) || (cur === '1' && server === 'True') ||
-                 (cur === '0' && server === 'False');
-    input.classList.toggle('changed', !same);
-    if (!same) input.classList.remove('synced');  // edição apaga o "verde"
+    same = (cur === server) || (cur === '1' && server === 'True') ||
+           (cur === '0' && server === 'False');
   } else {
     cur = input.value.trim();
-    const same = cur === server;
-    input.classList.toggle('changed', !same);
-    if (!same) input.classList.remove('synced');
+    same = cur === server;
+  }
+  if (same) {
+    // value matches server — but we don't know if it was synced or just neutral
+    // Conservative: go to neutral (white). If it was just synced and user
+    // re-typed identical value, that's OK — still effectively unchanged.
+    _applyFieldState(input, 'neutral');
+  } else {
+    _applyFieldState(input, 'changed');
   }
 }
 
