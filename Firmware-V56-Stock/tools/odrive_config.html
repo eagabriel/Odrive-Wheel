@@ -1026,22 +1026,13 @@ const SCHEMA = [
 
       { group: 'GPIO Modes' },
       I('error_gpio_pin'),
+      // MKS XDrive Mini só expõe GPIO 1-4 e 6 nos conectores externos.
+      // Demais (5, 7-16) ficam ocultos pra não confundir.
       E('gpio1_mode', ENUM_GPIO_MODE),
       E('gpio2_mode', ENUM_GPIO_MODE),
       E('gpio3_mode', ENUM_GPIO_MODE),
       E('gpio4_mode', ENUM_GPIO_MODE),
-      E('gpio5_mode', ENUM_GPIO_MODE),
       E('gpio6_mode', ENUM_GPIO_MODE),
-      E('gpio7_mode', ENUM_GPIO_MODE),
-      E('gpio8_mode', ENUM_GPIO_MODE),
-      E('gpio9_mode', ENUM_GPIO_MODE),
-      E('gpio10_mode', ENUM_GPIO_MODE),
-      E('gpio11_mode', ENUM_GPIO_MODE),
-      E('gpio12_mode', ENUM_GPIO_MODE),
-      E('gpio13_mode', ENUM_GPIO_MODE),
-      E('gpio14_mode', ENUM_GPIO_MODE),
-      E('gpio15_mode', ENUM_GPIO_MODE),
-      E('gpio16_mode', ENUM_GPIO_MODE),
 
     ]
   },
