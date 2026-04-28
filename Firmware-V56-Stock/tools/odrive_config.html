@@ -72,8 +72,13 @@
     font-family: monospace; font-size: 12px; min-width: 0;
   }
   .field input[type="checkbox"] { width: 18px; height: 18px; }
-  .field input.changed { border-color: var(--warn); background: #2a1a00; }
-  .field input.synced { border-color: var(--ok); }
+  .field input.changed { border-color: var(--err); background: #2a1010; color: var(--err); font-weight: 600; }
+  .field input.changed:focus { outline-color: var(--err); }
+  .field input.synced { border-color: var(--ok); color: var(--ok); }
+  .field label .range {
+    color: var(--muted); font-size: 10px; margin-left: 6px;
+    font-style: italic; white-space: nowrap;
+  }
   .field button { padding: 3px 8px; font-size: 11px; }
   /* Console agora vive numa aba dedicada (id "console-tab") */
   #panel-console-tab.tab-panel.active { display: flex; flex-direction: column; }
@@ -754,6 +759,124 @@ const FIELD_DESC = {
     'fx.filterInQ':    'Inertia filter Q. Default 20.',
   }
 };
+
+/* Faixa aceitável de cada parâmetro — exibido inline no label.
+   Inclui apenas os campos onde o range é relevante pro user (skip enums e bools,
+   que já são auto-explicativos). Ranges baseados em ODrive YAML + nossa
+   implementação FFB. */
+const FIELD_RANGE = {
+  // ODrive — Brake / Power
+  'config.brake_resistance':              '0.05–10 Ω',
+  'config.dc_bus_undervoltage_trip_level':'5–30 V',
+  'config.dc_bus_overvoltage_trip_level': '20–60 V',
+  'config.dc_bus_overvoltage_ramp_start': '15–55 V',
+  'config.dc_bus_overvoltage_ramp_end':   '15–60 V',
+  'config.dc_max_positive_current':       '0–100 A',
+  'config.dc_max_negative_current':       '-100..0 A',
+  'config.max_regen_current':             '0–100 A',
+  // ODrive — Comm
+  'config.uart_a_baudrate':               '9600–921600',
+  'config.uart_b_baudrate':               '9600–921600',
+  'config.uart_c_baudrate':               '9600–921600',
+  'config.error_gpio_pin':                '0–16 (0=off)',
+
+  // Axis — Watchdog / Calibration
+  'axis0.config.watchdog_timeout':                  '0–10 s (0=off)',
+  'axis0.config.calibration_lockin.current':        '1–60 A',
+  'axis0.config.calibration_lockin.ramp_time':      '0.1–5 s',
+  'axis0.config.calibration_lockin.ramp_distance':  '0.5–10 rad',
+  'axis0.config.calibration_lockin.accel':          '1–500 rad/s²',
+  'axis0.config.calibration_lockin.vel':            '5–200 rad/s',
+  'axis0.config.can.node_id':                       '0–63',
+  'axis0.config.can.heartbeat_rate_ms':             '10–1000 ms',
+  'axis0.config.can.encoder_rate_ms':               '0–1000 ms',
+  'axis0.config.can.iq_rate_ms':                    '0–1000 ms',
+
+  // Motor
+  'axis0.motor.config.pole_pairs':                  '1–32',
+  'axis0.motor.config.torque_constant':             '0.001–10 Nm/A',
+  'axis0.motor.config.phase_resistance':            '0.001–5 Ω',
+  'axis0.motor.config.phase_inductance':            '1e-6–0.01 H',
+  'axis0.motor.config.calibration_current':         '1–60 A',
+  'axis0.motor.config.resistance_calib_max_voltage':'0.5–20 V',
+  'axis0.motor.config.requested_current_range':     '5–80 A',
+  'axis0.motor.config.current_control_bandwidth':   '50–2000 Hz',
+  'axis0.motor.config.dc_calib_tau':                '0.05–2 s',
+  'axis0.motor.config.current_lim':                 '0–80 A',
+  'axis0.motor.config.current_lim_margin':          '1–20 A',
+  'axis0.motor.config.torque_lim':                  '0–inf Nm',
+  'axis0.motor.config.I_bus_hard_min':              '-inf..0 A',
+  'axis0.motor.config.I_bus_hard_max':              '0–inf A',
+  'axis0.motor.config.I_leak_max':                  '0.01–1 A',
+  'axis0.motor.config.inverter_temp_limit_lower':   '50–120 °C',
+  'axis0.motor.config.inverter_temp_limit_upper':   '60–125 °C',
+
+  // Encoder
+  'axis0.encoder.config.cpr':                       '1–1000000',
+  'axis0.encoder.config.direction':                 '-1 ou 1',
+  'axis0.encoder.config.bandwidth':                 '50–2000 Hz',
+  'axis0.encoder.config.phase_offset':              '-32768..32767',
+  'axis0.encoder.config.calib_range':               '0.001–0.1 turn',
+  'axis0.encoder.config.calib_scan_distance':       '6–25 rad',
+  'axis0.encoder.config.calib_scan_omega':          '5–50 rad/s',
+
+  // Controller
+  'axis0.controller.config.input_filter_bandwidth': '0.1–500 Hz',
+  'axis0.controller.config.torque_ramp_rate':       '0.001–100 Nm/s',
+  'axis0.controller.config.vel_ramp_rate':          '0.01–100 turn/s²',
+  'axis0.controller.config.pos_gain':               '0.1–500',
+  'axis0.controller.config.vel_gain':               '0.001–10',
+  'axis0.controller.config.vel_integrator_gain':    '0.001–10',
+  'axis0.controller.config.vel_integrator_limit':   '0–inf',
+  'axis0.controller.config.inertia':                '0–10 kg·m²',
+  'axis0.controller.config.gain_scheduling_width':  '1–100',
+  'axis0.controller.config.vel_limit':              '0.01–1000 turn/s',
+  'axis0.controller.config.vel_limit_tolerance':    '1.0–5.0',
+  'axis0.controller.config.circular_setpoint_range':'0.01–100 turn',
+  'axis0.controller.config.steps_per_circular_range':'1–100000',
+  'axis0.controller.config.homing_speed':           '0.01–10 turn/s',
+  'axis0.controller.config.electrical_power_bandwidth':'0.5–500 Hz',
+  'axis0.controller.config.mechanical_power_bandwidth':'0.5–500 Hz',
+  'axis0.controller.config.spinout_electrical_power_threshold':'1–500 W',
+  'axis0.controller.config.spinout_mechanical_power_threshold':'-500..-1 W',
+  'axis0.controller.config.anticogging.cogging_ratio':         '0.1–2.0',
+  'axis0.controller.config.anticogging.calib_pos_threshold':   '0.01–10',
+  'axis0.controller.config.anticogging.calib_vel_threshold':   '0.01–10',
+
+  // FFB Wheel (axis.* via cmdparser)
+  'axis.range':         '90–3600°',
+  'axis.maxtorque':     '0.1–20 Nm',
+  'axis.fxratio':       '0.0–1.0',
+  'axis.idlespring':    '0–255',
+  'axis.axisdamper':    '0–255',
+  'axis.axisinertia':   '0–255',
+  'axis.axisfriction':  '0–255',
+  'axis.esgain':        '0–255',
+  'axis.maxtorquerate': '0–65535',
+  'axis.expo':          '-32767..32767',
+  'axis.exposcale':     '1–255',
+
+  // FFB Effects gains
+  'fx.master':   '0–255',
+  'fx.spring':   '0–255',
+  'fx.damper':   '0–255',
+  'fx.friction': '0–255',
+  'fx.inertia':  '0–255',
+
+  // FFB Filters (biquad lowpass per effect)
+  'fx.filterCfFreq': '1–500 Hz',
+  'fx.filterCfQ':    '1–500',
+  'fx.filterFrFreq': '1–500 Hz',
+  'fx.filterFrQ':    '1–500',
+  'fx.filterDaFreq': '1–500 Hz',
+  'fx.filterDaQ':    '1–500',
+  'fx.filterInFreq': '1–500 Hz',
+  'fx.filterInQ':    '1–500',
+};
+
+function fieldRange(path) {
+  return FIELD_RANGE[path] || '';
+}
 
 let currentLang = (function() {
   const saved = localStorage.getItem('odrive-lang');
@@ -1569,9 +1692,11 @@ function buildTabs() {
       // Tooltip: descrição + path técnico no final
       const desc = fieldDesc(path);
       labelEl.title = desc || path;
+      const range = fieldRange(path);
       labelEl.innerHTML = fld.name +
         '<span class="type">(' + fld.type +
-        (fld.opts ? ' ['+Object.keys(fld.opts).length+']' : '') + ')</span>';
+        (fld.opts ? ' ['+Object.keys(fld.opts).length+']' : '') + ')</span>' +
+        (range ? '<span class="range">[' + range + ']</span>' : '');
       labelEl.htmlFor = 'in-' + path;
 
       const valWrap = document.createElement('div');
