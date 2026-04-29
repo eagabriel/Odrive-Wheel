@@ -1,4 +1,4 @@
-// Phase 2a — TinyUSB CDC-only USB descriptors pra Firmware-V56-Stock.
+// Phase 2a — TinyUSB CDC-only USB descriptors pra Odrive-Wheel.
 // Device se apresenta como "ODrive XDrive-Mini CDC" com 1 interface CDC.
 // HID FFB virá na Fase 2b (bcdDevice/PID bumps pra invalidar cache do host).
 

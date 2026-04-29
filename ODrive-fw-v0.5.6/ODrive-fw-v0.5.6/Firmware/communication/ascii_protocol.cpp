@@ -521,6 +521,10 @@ void AsciiProtocol::cmd_system_ctrl(char * pStr, bool use_checksum) {
         case 'e':   odrv.erase_configuration(); break;  // Erase config
         case 'r':   odrv.reboot();              break;  // Reboot
         case 'c':   odrv.clear_errors();        break;  // clear all errors and rearm brake resistor if necessary
+        // Odrive-Wheel: 'sd' reboota direto pro bootloader DFU interno do STM32 (sem precisar
+        // de jumper BOOT0). Usa _reboot_cookie=0xDEADBEEF + NVIC_SystemReset; early_start_checks
+        // detecta e salta pra 0x1FFF0000. Usado pelo flasher via WebUSB do odrive-wheel.html.
+        case 'd':   odrv.enter_dfu_mode();      break;  // Reboot to DFU bootloader
         default:    /* default */               break;
     }
 }

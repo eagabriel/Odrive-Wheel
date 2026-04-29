@@ -16,7 +16,7 @@
  *     gerem torque no eixo X do volante.
  *
  * Pra atualizar contra upstream:
- *   diff Firmware-V56-Stock/src/HidFFB.cpp \
+ *   diff Odrive-Wheel/src/HidFFB.cpp \
  *        OpenFFBoard-master/OpenFFBoard-master/Firmware/FFBoard/Src/HidFFB.cpp
  * ───────────────────────────────────────────────────────────────────────────
  */

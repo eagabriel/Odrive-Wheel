@@ -18,7 +18,7 @@
  *   - public applyFilterChanges() — re-aplica filtros nos efeitos ativos
  *
  * Pra atualizar contra upstream:
- *   diff Firmware-V56-Stock/inc/EffectsCalculator.h \
+ *   diff Odrive-Wheel/inc/EffectsCalculator.h \
  *        OpenFFBoard-master/OpenFFBoard-master/Firmware/FFBoard/Inc/EffectsCalculator.h
  * ───────────────────────────────────────────────────────────────────────────
  */

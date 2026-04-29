@@ -6,7 +6,7 @@
 #
 # Mostra:
 #   1. Commit do submodule atualmente checkado
-#   2. Lista arquivos forkados em Firmware-V56-Stock/{src,inc} que existem
+#   2. Lista arquivos forkados em Odrive-Wheel/{src,inc} que existem
 #      tanto local quanto no upstream
 #   3. Pra cada um, indica se diff vs upstream
 #   4. (Opcional) imprime diff detalhado com flag --verbose
@@ -15,7 +15,7 @@
 #   git submodule update --remote OpenFFBoard-master/OpenFFBoard-master
 #   ./tools/check-openffboard-upstream.sh
 #   # → revê os diffs, integra mudanças relevantes nas cópias locais
-#   git add OpenFFBoard-master/OpenFFBoard-master Firmware-V56-Stock/...
+#   git add OpenFFBoard-master/OpenFFBoard-master Odrive-Wheel/...
 #   git commit -m "Bump OpenFFBoard upstream + integrate changes"
 # =============================================================================
 
@@ -23,8 +23,8 @@ set -e
 cd "$(dirname "$0")/../.."
 
 UPSTREAM="OpenFFBoard-master/OpenFFBoard-master/Firmware/FFBoard"
-LOCAL_SRC="Firmware-V56-Stock/src"
-LOCAL_INC="Firmware-V56-Stock/inc"
+LOCAL_SRC="Odrive-Wheel/src"
+LOCAL_INC="Odrive-Wheel/inc"
 VERBOSE=${1:-}
 
 echo "═══════════════════════════════════════════════════════════════════"

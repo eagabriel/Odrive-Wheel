@@ -1,10 +1,11 @@
 # =============================================================================
-# Firmware-V56-Stock — ODrive v0.5.6 stock firmware para MKS XDrive Mini
-# Espelha Tupfile.lua de ODrive-fw-v0.5.6 sem camada OpenFFBoard.
-# CDC USB aceita ASCII (enable_ascii_protocol_on_usb default true).
+# Odrive-Wheel — ODrive v0.5.6 + OpenFFBoard FFB stack para MKS XDrive Mini
+# Espelha Tupfile.lua de ODrive-fw-v0.5.6 + adiciona FFB (HidFFB +
+# EffectsCalculator). CDC USB aceita ASCII (enable_ascii_protocol_on_usb
+# default true) + parser OpenFFBoard.
 # =============================================================================
 
-TARGET    = firmware-v56-stock
+TARGET    = odrive-wheel
 BUILD_DIR = build
 
 # --- Toolchain ---------------------------------------------------------------
