@@ -90,7 +90,7 @@ can be done in the browser.
 Clone with submodules:
 
 ```bash
-git clone --recurse-submodules https://github.com/eagabriel/OpenffboardOdrive.git
+git clone --recurse-submodules https://github.com/eagabriel/Odrive-Wheel.git
 ```
 
 If you already cloned without `--recurse-submodules`:

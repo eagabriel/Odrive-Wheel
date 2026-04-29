@@ -1,314 +1,314 @@
 # Getting Started — Odrive-Wheel
 
-Existem três rotas pra colocar o firmware na MKS XDrive Mini:
+There are three ways to get the firmware onto an MKS XDrive Mini board:
 
-- **Rota A — dfu-util (CLI)** — baixa o `.bin` pronto e grava via linha de comando. Necessária na **primeira gravação**, ou se algo der errado.
-- **Rota A2 — Web Flasher (navegador)** — depois que o firmware Odrive-Wheel já estiver na placa, você pode atualizar pelo próprio HTML config tool, sem dfu-util. Mais simples no dia-a-dia.
-- **Rota B — Compilar do código (VS Code)** — clona o repo, builda e grava. Pra quem quer modificar.
+- **Route A — `dfu-util` (CLI)** — download the prebuilt `.bin` and flash it from the command line. Required for the **first flash**, or if something ever goes wrong.
+- **Route A2 — Web Flasher (browser)** — once the Odrive-Wheel firmware is already on the board, you can update it from the HTML config tool itself, no `dfu-util` needed. The easier option for day-to-day use.
+- **Route B — Compile from source (VS Code)** — clone the repo, build, and flash. For when you want to modify the code.
 
-Depois do firmware gravado, a seção **"Primeira vez ligando o motor com segurança"** é **obrigatória** — não pule, mesmo na rota A. ODrive sem calibração ou com `brake_resistance` errado pode danificar a fonte ou o resistor de freio.
-
----
-
-## Hardware esperado
-
-- Placa **MKS XDrive Mini** (clone do ODrive v3.6, STM32F405)
-- Motor **BLDC** (3 fases — sem hall, sem driver de passo)
-- Encoder **incremental ABZ** (Z opcional mas recomendado pra sim racing)
-- Fonte **12 a 48 V** (Atenção a versão de tensão da sua MKS Xdrive Mini)
-- **Resistor de freio** conectados nos terminais AUX (tipicamente 2 Ω 50 W)
-- Cabo **USB-C** pra dados (não só carga!)
+After the firmware is flashed, the **"First-time motor bring-up"** section is **mandatory** — do not skip it, even on Route A. An ODrive without calibration or with the wrong `brake_resistance` can damage the PSU or the brake resistor.
 
 ---
 
-## Rota A — Apenas gravar firmware pronto
+## Expected hardware
 
-### 1. Baixar o binário
+- **MKS XDrive Mini** board (ODrive v3.6 clone, STM32F405)
+- **BLDC motor** (3-phase — no hall, no stepper driver)
+- **Incremental ABZ encoder** (Z optional but recommended for sim racing)
+- **12 to 48 V power supply** (mind the voltage variant of your MKS XDrive Mini)
+- **Brake resistor** wired to the AUX terminals (typically 2 Ω 50 W)
+- **USB-C cable for data** (not just for charging!)
 
-Página de Releases: https://github.com/eagabriel/OpenffboardOdrive/releases
+---
 
-Baixe `odrive-wheel.bin` da última release.
+## Route A — Flash the prebuilt firmware
 
-### 2. Instalar dfu-util
+### 1. Download the binary
 
-- **Windows**: baixe `dfu-util-0.11-binaries.tar.xz` em [dfu-util.sourceforge.net](http://dfu-util.sourceforge.net/releases/), extraia e adicione ao PATH. Pode também vir junto com o STM32CubeProgrammer.
+Releases page: https://github.com/eagabriel/Odrive-Wheel/releases
+
+Download `odrive-wheel.bin` from the latest release.
+
+### 2. Install dfu-util
+
+- **Windows**: download `dfu-util-0.11-binaries.tar.xz` from [dfu-util.sourceforge.net](http://dfu-util.sourceforge.net/releases/), extract, and add it to PATH. It also ships with STM32CubeProgrammer.
 - **Linux**: `sudo apt install dfu-util`
 - **macOS**: `brew install dfu-util`
 
-Confirme: `dfu-util --version` (versão ≥ 0.10).
+Verify: `dfu-util --version` (version ≥ 0.10).
 
-### 3. Colocar a placa em DFU mode
+### 3. Put the board into DFU mode
 
-1. Desligue a fonte.
-2. Mantenha o **botão BOOT0** pressionado (alguns clones têm jumper — feche o jumper BOOT0).
-3. Conecte o USB-C ao PC.
-4. Solte o BOOT0.
+1. Power off the supply.
+2. Hold the **BOOT0 button** (some clones have a jumper instead — close the BOOT0 jumper).
+3. Plug the USB-C cable into the PC.
+4. Release BOOT0.
 
-Alternativamente pressione BOOT0 e de um pulso no botão reset
+Alternatively, hold BOOT0 and tap the reset button.
 
-No Windows, pode ser preciso instalar o driver **WinUSB** uma vez via [Zadig](https://zadig.akeo.ie/) — selecione o device `STM32 BOOTLOADER` e troque o driver pra `WinUSB`.
+On Windows, you may need to install the **WinUSB** driver once via [Zadig](https://zadig.akeo.ie/) — pick the `STM32 BOOTLOADER` device and replace its driver with `WinUSB`.
 
-Confirme: `dfu-util -l` deve listar `[0483:df11]`.
+Verify: `dfu-util -l` should list `[0483:df11]`.
 
-### 4. Gravar
+### 4. Flash
 
 ```bash
 dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D odrive-wheel.bin
 ```
 
-Saída esperada termina com `Done!` e a placa reboota sozinha. Pronto — pula direto pra **Primeira vez ligando o motor com segurança**.
+Expected output ends with `Done!` and the board reboots on its own. You're done — jump straight to **First-time motor bring-up**.
 
 ---
 
-## Rota A2 — Atualizar firmware pelo navegador (Web Flasher)
+## Route A2 — Update firmware from the browser (Web Flasher)
 
-> ⚠️ Esta rota só funciona **depois** que o firmware Odrive-Wheel já estiver gravado na placa pela primeira vez (Rota A ou B). É pra atualizações futuras.
+> ⚠️ This route only works **after** the Odrive-Wheel firmware has been flashed at least once (Route A or B). It is for subsequent updates.
 
-A ferramenta `tools/odrive-wheel.html` tem uma aba **"DFU Flash"** que faz tudo dentro do navegador: reinicia a placa em modo DFU, detecta o bootloader, escolhe o `.bin` e grava — sem dfu-util e sem precisar pressionar BOOT0.
+The `tools/odrive-wheel.html` tool has a **"DFU Flash"** tab that does everything inside the browser: reboots the board into DFU mode, detects the bootloader, lets you pick the `.bin`, and flashes — no `dfu-util`, no need to press BOOT0.
 
-### Pré-requisitos (uma vez por máquina)
+### Prerequisites (one time per machine)
 
-- **Chrome ou Edge atualizado** (precisa de WebUSB + Web Serial).
-- **No Windows**: instalar driver **WinUSB** no bootloader STM32 via [Zadig](https://zadig.akeo.ie/):
-  1. Coloque a placa em DFU mode uma vez (Rota A passo 3, ou rode `sd` pelo Console se já tem firmware Odrive-Wheel).
-  2. Abra Zadig → menu **Options → List All Devices**.
-  3. Selecione **STM32 BOOTLOADER** no dropdown.
-  4. Driver alvo: **WinUSB** → clique **Replace Driver**.
-  5. Aguarde "Driver installed" e feche.
+- **Up-to-date Chrome or Edge** (needs WebUSB + Web Serial).
+- **On Windows**: install the **WinUSB** driver on the STM32 bootloader via [Zadig](https://zadig.akeo.ie/):
+  1. Put the board into DFU mode once (Route A step 3, or run `sd` from the Console if you already have Odrive-Wheel firmware).
+  2. Open Zadig → menu **Options → List All Devices**.
+  3. Select **STM32 BOOTLOADER** in the dropdown.
+  4. Target driver: **WinUSB** → click **Replace Driver**.
+  5. Wait for "Driver installed" and close.
 
-  Isso é uma vez só por máquina. Depois disso o driver fica permanentemente. (Não confunda com o dispositivo CDC `Odrive-Wheel CDC` — esse continua usando o driver padrão do Windows e funciona com Web Serial sem mexer em nada.)
+  This is one-time per machine. The driver stays installed afterwards. (Don't confuse it with the CDC `Odrive-Wheel CDC` device — that one keeps the default Windows driver and works with Web Serial out of the box.)
 
-### Passo a passo
+### Step by step
 
-1. Abra `Odrive-Wheel/tools/odrive-wheel.html` no Chrome/Edge.
-2. Conecte normalmente à placa pela serial (botão **Conectar** no header).
-3. Vá na aba **DFU Flash** (sidebar, embaixo em "Tools").
-4. **Step 1 — Reiniciar em DFU**: clica no botão. A ferramenta envia `sd` pela serial e a placa reboota direto pro bootloader STM32. Aguarde ~2 s.
-5. **Step 2 — Procurar bootloader**: clica em "Procurar bootloader". O navegador abre um diálogo pedindo permissão pra acessar o `STM32 BOOTLOADER` — aprove. O badge fica verde com `✓` e mostra `VID:0x0483 PID:0xDF11`.
-6. **Step 3 — Selecionar firmware**: clica em "Escolher arquivo" e seleciona o `odrive-wheel.bin` (do Release, ou do `Odrive-Wheel/build/` se você compilou).
-7. **Step 4 — Gravar firmware**: clica em "Gravar firmware". Apaga setores S0–S9 (256 KB onde fica o app), grava em chunks de 1 KB (~30–60 s no total) e a placa reboota sozinha rodando o firmware novo.
+1. Open `Odrive-Wheel/tools/odrive-wheel.html` in Chrome/Edge.
+2. Connect to the board over serial (the **Connect** button in the header).
+3. Go to the **DFU Flash** tab in the sidebar (under "Tools").
+4. **Step 1 — Reboot to DFU**: click the button. The tool sends `sd` over serial and the board reboots straight into the STM32 bootloader. Wait ~2 s.
+5. **Step 2 — Find bootloader**: click "Find bootloader". The browser opens a dialog asking for permission to access `STM32 BOOTLOADER` — approve it. The badge turns green with `✓` and shows `VID:0x0483 PID:0xDF11`.
+6. **Step 3 — Choose firmware**: click "Choose file" and pick `odrive-wheel.bin` (from the Release, or from `Odrive-Wheel/build/` if you compiled it).
+7. **Step 4 — Flash firmware**: click "Flash firmware". It erases sectors S0–S9 (256 KB of application flash), writes in 1 KB chunks (~30–60 s total), and the board reboots into the new firmware automatically.
 
-O Log de operações no fim da página mostra cada etapa em tempo real. A barra de progresso vai de 0 a 100%.
+The operation log at the bottom of the page shows every step in real time. The progress bar runs from 0 to 100%.
 
 ### Troubleshooting
 
-| Problema | Solução |
+| Problem | Fix |
 |---|---|
-| Step 2 dá "No device selected" | Step 1 não funcionou, ou Zadig/WinUSB não foi instalado. Vá em DFU pelo BOOT0 + tente de novo. |
-| Step 4 falha em "DFU status=0x..." | Bootloader em estado de erro — desconecta o cabo USB, religa em DFU mode (BOOT0) e tenta o Step 4 sem o Step 1. |
-| Placa não volta a aparecer como CDC depois do flash | Aguarde 5–10 s; algumas vezes o Windows demora pra re-enumerar. Se persistir, desconecta/reconecta o USB. |
-| WebUSB pede permissão toda vez | Normal — é uma proteção do Chrome. Cada arquivo `.html` em `file://` é tratado como uma origem nova. |
+| Step 2 says "No device selected" | Step 1 didn't work, or Zadig/WinUSB wasn't installed. Enter DFU via BOOT0 + try again. |
+| Step 4 fails with "DFU status=0x..." | Bootloader is stuck in an error state — unplug the USB cable, plug it back in DFU mode (BOOT0), and try Step 4 directly without Step 1. |
+| Board doesn't reappear as CDC after flashing | Wait 5–10 s; Windows sometimes takes a moment to re-enumerate. If it persists, unplug and replug the USB cable. |
+| WebUSB asks for permission every time | Normal — it's a Chrome safety feature. Each `.html` file under `file://` is treated as a fresh origin. |
 
-### EEPROM (configurações) é preservada
+### EEPROM (settings) is preserved
 
-O Web Flasher só apaga os setores S0–S9 (firmware). Os setores **S10 e S11** (onde estão suas configurações FFB salvas — gain, filtros, range, idlespring, etc.) **NÃO são tocados**. Você não perde calibração nem ajustes ao atualizar.
+The Web Flasher only erases sectors S0–S9 (firmware). Sectors **S10 and S11** (where your saved FFB settings live — gain, filters, range, idle spring, etc.) are **not touched**. You don't lose calibration or tuning when you update.
 
-> ⚠️ Mas o Save da ODrive (NVM em S1) **fica dentro** do range que apagamos. Se atualizar o firmware, os parâmetros ODrive (motor, encoder, controller, brake_resistance) voltam aos defaults. Sempre exporte o JSON pelo botão **Export** antes de atualizar, e reimporte depois.
+> ⚠️ However, the ODrive Save NVM (in S1) **lives within** the range we erase. Updating the firmware will reset ODrive parameters (motor, encoder, controller, brake_resistance) to defaults. Always export the JSON via the **Export** button before updating, and re-import afterwards.
 
 ---
 
-## Rota B — Compilar do código (VS Code)
+## Route B — Compile from source (VS Code)
 
-### 1. Pré-requisitos
+### 1. Prerequisites
 
-| Ferramenta | Onde pegar | Notas |
+| Tool | Where to get it | Notes |
 |---|---|---|
-| **arm-none-eabi-gcc** 12.x | [Arm GNU Toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain) | Adicionar ao PATH |
-| **make** | Windows: [chocolatey](https://chocolatey.org) `choco install make` ou MSYS2 | Linux/Mac já vêm com |
+| **arm-none-eabi-gcc** 12.x | [Arm GNU Toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain) | Add to PATH |
+| **make** | Windows: [chocolatey](https://chocolatey.org) `choco install make` or MSYS2 | Linux/Mac come with it |
 | **Git** | [git-scm.com](https://git-scm.com/) | — |
-| **dfu-util** ≥ 0.10 | ver Rota A | Pra `make flash-dfu` |
+| **dfu-util** ≥ 0.10 | see Route A | For `make flash-dfu` |
 | **VS Code** | [code.visualstudio.com](https://code.visualstudio.com/) | — |
 
-Verifique:
+Verify:
 ```bash
-arm-none-eabi-gcc --version    # deve dizer 12.x
+arm-none-eabi-gcc --version    # should say 12.x
 make --version
 git --version
 dfu-util --version
 ```
 
-### 2. Clonar com submódulo
+### 2. Clone with submodule
 
-O OpenFFBoard fica em submódulo Git, então use `--recurse-submodules`:
+OpenFFBoard is a Git submodule, so use `--recurse-submodules`:
 
 ```bash
-git clone --recurse-submodules https://github.com/eagabriel/OpenffboardOdrive.git
-cd OpenffboardOdrive
+git clone --recurse-submodules https://github.com/eagabriel/Odrive-Wheel.git
+cd Odrive-Wheel
 ```
 
-Se já clonou sem submódulos:
+If you already cloned without submodules:
 ```bash
 git submodule update --init --recursive
 ```
 
-### 3. Extensões recomendadas no VS Code
+### 3. Recommended VS Code extensions
 
-Abra o VS Code na pasta do repo e instale:
+Open VS Code at the repo root and install:
 
 - **C/C++** (`ms-vscode.cpptools`) — IntelliSense
-- **Makefile Tools** (`ms-vscode.makefile-tools`) — atalhos de build
-- **Cortex-Debug** (`marus25.cortex-debug`) — opcional, pra debug com ST-Link
+- **Makefile Tools** (`ms-vscode.makefile-tools`) — build shortcuts
+- **Cortex-Debug** (`marus25.cortex-debug`) — optional, for debugging with ST-Link
 
-### 4. Compilar
+### 4. Build
 
-Pelo terminal integrado do VS Code (Ctrl+Shift+`):
+From the integrated terminal in VS Code (Ctrl+Shift+`):
 
 ```bash
 cd Odrive-Wheel
 make -j4
 ```
 
-Build leva ~1 min na primeira vez. Saída em `build/odrive-wheel.bin` (~400 KB).
+The first build takes ~1 min. The output ends up at `build/odrive-wheel.bin` (~400 KB).
 
-Erros comuns:
-- `arm-none-eabi-gcc: command not found` → toolchain não está no PATH
-- `fatal error: tusb.h: No such file` → submódulo não inicializado, rode `git submodule update --init --recursive`
+Common errors:
+- `arm-none-eabi-gcc: command not found` → toolchain not on PATH
+- `fatal error: tusb.h: No such file` → submodule not initialized, run `git submodule update --init --recursive`
 
-### 5. Gravar
+### 5. Flash
 
-Coloque a placa em DFU mode (ver Rota A passo 3) e:
+Put the board into DFU mode (see Route A step 3) and:
 
 ```bash
 make flash-dfu
 ```
 
-Equivalente a:
+Equivalent to:
 ```bash
 dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/odrive-wheel.bin
 ```
 
 ---
 
-## Primeira vez ligando o motor com segurança
+## First-time motor bring-up
 
-> ⚠️ **Antes de ligar a fonte:**
-> - **Desacople o motor do volante.** A primeira calibração faz o motor girar — se ele estiver no eixo do volante, vai bater no batente físico.
-> - **Confirme o resistor de freio fisicamente conectado** nos terminais AUX. Sem ele, qualquer regen vai pra fonte e provavelmente desarma a OVP da PSU.
+> ⚠️ **Before powering up:**
+> - **Disconnect the motor from the wheel.** The first calibration spins the motor — if it's already mounted to the wheel shaft, it will hit the physical end-stop.
+> - **Confirm the brake resistor is physically wired** to the AUX terminals. Without it, any regen current goes back to the PSU and will likely trip its OVP.
 
 
 
-### 1. Conectar a ferramenta de configuração
+### 1. Connect the configuration tool
 
-1. Abra `Odrive-Wheel/tools/odrive-wheel.html` no **Chrome ou Edge** (Web Serial só funciona nesses dois).
-2. Clique em **Conectar** e escolha a porta serial da placa (`Odrive-Wheel CDC` ou similar).
-3. O status deve ficar verde ("Conectado").
+1. Open `Odrive-Wheel/tools/odrive-wheel.html` in **Chrome or Edge** (Web Serial only works there).
+2. Click **Connect** and pick the board's serial port (`Odrive-Wheel CDC` or similar).
+3. The status pill should turn green ("Connected").
 
-### 2. Configuração mínima — alimentação e proteções
+### 2. Minimum configuration — power & protections
 
-Aba **ODrive**:
+**ODrive** tab:
 
-| Campo | Valor sugerido | Por quê |
+| Field | Suggested value | Why |
 |---|---|---|
-| `brake_resistance` | **2.0** (Ω) | Casa com o resistor físico — ERRADO aqui = trava ou queima |
-| `enable_brake_resistor` | **true** | Liga o controle ativo do regen |
-| `dc_max_positive_current` | **20** (A) | Limite de corrente da fonte → motor |
-| `dc_max_negative_current` | **-5** (A) | Quanto pode voltar pro brake (negativo!) |
-| `dc_bus_overvoltage_trip_level` | **28** (V) | Acima disso desarma — protege a fonte (coloque 4V acima da tensão da sua fonte) |
-| `dc_bus_undervoltage_trip_level` | **8** (V) | Evita brown-out |
-| `max_regen_current` | **0** (A) | Threshold pro brake virar dump load | (Significa que toda corrente de regeneração vai para o resistor, mais seguro pra começar.
+| `brake_resistance` | **2.0** (Ω) | Must match the physical resistor — wrong here = lockup or burn |
+| `enable_brake_resistor` | **true** | Enables active regen control |
+| `dc_max_positive_current` | **20** (A) | Current limit from PSU → motor |
+| `dc_max_negative_current` | **-5** (A) | How much can flow back to the brake (negative!) |
+| `dc_bus_overvoltage_trip_level` | **28** (V) | Trip threshold — protects the PSU (set 4 V above your supply voltage) |
+| `dc_bus_undervoltage_trip_level` | **8** (V) | Prevents brown-outs |
+| `max_regen_current` | **0** (A) | Threshold above which the brake kicks in as a dump load (0 means *all* regen current goes to the resistor — safer to start with) |
 
-### 3. Configuração mínima — motor
+### 3. Minimum configuration — motor
 
-Aba **Motor** (primeiro a calibrar; valores conservadores):
+**Motor** tab (calibrated first; conservative values):
 
-| Campo | Valor sugerido |
+| Field | Suggested value |
 |---|---|
 | `motor_type` | **0** (HIGH_CURRENT) |
-| `pole_pairs` | depende do motor — conte os ímãs do rotor e divida por 2 (típico 7) |
-| `torque_constant` | **0.87 / Nm/A** |
-| `current_lim` | **10** (A) — começa baixo! |
+| `pole_pairs` | depends on your motor — count rotor magnets and divide by 2 (typical: 7) |
+| `torque_constant` | **0.87** (Nm/A) |
+| `current_lim` | **10** (A) — start low! |
 | `calibration_current` | **5** (A) |
 | `resistance_calib_max_voltage` | **12.0** (V) |
 | `pre_calibrated` | **false** |
 
-### 4. Configuração mínima — encoder
+### 4. Minimum configuration — encoder
 
-Aba **Encoder**:
+**Encoder** tab:
 
-| Campo | Valor sugerido |
+| Field | Suggested value |
 |---|---|
 | `mode` | **0** (INCREMENTAL) |
-| `cpr` | **linhas do encoder × 4** (ex: 1000 linhas → 4000) |
-| `use_index` | **true** se Z conectado, senão false |
+| `cpr` | **encoder lines × 4** (e.g. 1000 lines → 4000) |
+| `use_index` | **true** if Z is wired, otherwise false |
 | `pre_calibrated` | **false** |
 
-### 5. Configuração mínima — controller (modo FFB)
+### 5. Minimum configuration — controller (FFB mode)
 
-Aba **Controller**:
+**Controller** tab:
 
-| Campo | Valor sugerido |
+| Field | Suggested value |
 |---|---|
-| `control_mode` | **1** (TORQUE_CONTROL) — obrigatório pra FFB |
+| `control_mode` | **1** (TORQUE_CONTROL) — required for FFB |
 | `input_mode` | **1** (PASSTHROUGH) |
-| `vel_limit` | **8** (turns/s) — corte de segurança |
+| `vel_limit` | **8** (turns/s) — safety cutoff |
 
-Aba **Axis 0**:
+**Axis 0** tab:
 
-| Campo | Valor sugerido |
+| Field | Suggested value |
 |---|---|
-| `startup_motor_calibration` | **false** (calibra manual primeiro) |
+| `startup_motor_calibration` | **false** (calibrate manually first) |
 | `startup_encoder_offset_calibration` | **false** |
-| `startup_closed_loop_control` | **false** (vamos ligar depois) |
+| `startup_closed_loop_control` | **false** (we'll enable this later) |
 
-### 6. Salvar e calibrar
+### 6. Save and calibrate
 
-1. Clique em **Salvar** (botão verde no header).
-   - O Save faz: persiste FFB EEPROM → grava configs ODrive → reboota a placa.
-2. Após o reboot, reconecte.
-3. Aba **Debug / Status**, na seção "Ações":
-   - **Motor calibration** (`w axis0.requested_state 4`) — motor faz "beep" e mede R/L. Verifique em **Live monitor** que `motor.config.phase_resistance` ficou entre 0.05–1.0 Ω e `phase_inductance` entre 1e-5 e 5e-4 H. Se ficou fora, motor mal conectado ou `pole_pairs` errado.
-   - Se OK, vá no campo `motor.config.pre_calibrated` → **true** + Save.
-   - **Encoder offset calibration** (`w axis0.requested_state 7`) — motor gira ~1 volta lento, mede o offset. Verifique `encoder.config.offset` ≠ 0 e `axis0.error` = 0.
-   - Se OK, `encoder.config.pre_calibrated` → **true** + Save.
-4. Reboota.
+1. Click **Save** (the green button in the header).
+   - Save does this: persists FFB to EEPROM → writes ODrive configs → reboots the board.
+2. After the reboot, reconnect.
+3. **Debug / Status** tab, "Actions" section:
+   - **Motor calibration** (`w axis0.requested_state 4`) — the motor "beeps" and measures R/L. Check in **Live monitor** that `motor.config.phase_resistance` lands between 0.05–1.0 Ω and `phase_inductance` between 1e-5 and 5e-4 H. If out of range, the motor is mis-wired or `pole_pairs` is wrong.
+   - If OK, set `motor.config.pre_calibrated` → **true** + Save.
+   - **Encoder offset calibration** (`w axis0.requested_state 7`) — the motor turns ~1 rev slowly to measure the offset. Verify `encoder.config.offset` ≠ 0 and `axis0.error` = 0.
+   - If OK, `encoder.config.pre_calibrated` → **true** + Save.
+4. Reboot.
 
-### 7. Primeiro teste em closed loop (sem FFB ainda)
+### 7. First closed-loop test (no FFB yet)
 
-1. Aba **Debug / Status** → ação **Closed loop** (`w axis0.requested_state 8`).
-2. Tente girar o eixo com a mão — ele deve **resistir** (seguindo torque comando = 0). Isso confirma que o controle fechou.
-3. Se gira solto, calibração ruim. Se trava com vibração, `pole_pairs` ou `cpr` errado.
-4. Tudo OK → desarma com `w axis0.requested_state 1` (IDLE).
+1. **Debug / Status** tab → action **Closed loop** (`w axis0.requested_state 8`).
+2. Try to spin the shaft by hand — it should **resist** (holding torque command = 0). That confirms the loop closed.
+3. If the shaft spins freely, calibration is bad. If it locks up with vibration, `pole_pairs` or `cpr` is wrong.
+4. All good → disarm with `w axis0.requested_state 1` (IDLE).
 
-### 8. Configuração mínima — FFB
+### 8. Minimum configuration — FFB
 
-Aba **FFB Wheel**:
+**FFB Wheel** tab:
 
-| Campo | Valor sugerido pro 1º teste |
+| Field | Suggested first-test value |
 |---|---|
-| `range` | **900** (graus de batente a batente) |
-| `maxtorque` | **2.0** (Nm) — **começa baixo!** Vai girar puxando, não quer surpresa |
+| `range` | **900** (degrees lock-to-lock) |
+| `maxtorque` | **2.0** (Nm) — **start low!** It will pull hard, you don't want surprises |
 | `fxratio` | **1.0** (100%) |
-| `idlespring` | **5** (mola de centro quando jogo não envia FFB) |
+| `idlespring` | **5** (centering spring when the game isn't sending FFB) |
 
-Aba **FFB Effects**:
+**FFB Effects** tab:
 
-| Campo | Valor |
+| Field | Value |
 |---|---|
 | `master` | **255** (100%) |
 
 Save → reboot.
 
-### 9. Validar FFB
+### 9. Validate FFB
 
-1. Use algum app como o Forcetest presente dentro de docs/Tools para testar cada efeito.
-2. Aba **Test Forces** (se disponível).
-3. Aba **FFB Live** na ferramenta web — você verá `HID OUT counter` subindo e os efeitos ativos.
+1. Use a tool such as **ForceTest** (in `docs/Tools`) to exercise each effect.
+2. In Windows, `joy.cpl` → "Odrive-Wheel" → **Test Forces** tab if available.
+3. **FFB Live** tab in the web tool — you'll see `HID OUT counter` ticking up and the active effects.
 
-Se sentir torque proporcional ao input → FFB OK. Suba `maxtorque` aos poucos (2 → 4 → 6 Nm)
-
----
-
-## Checklist final antes de jogar
-
-- [ ] Motor montado no eixo, eixo travado mecanicamente (não fica dando volta infinita)
-- [ ] Resistor de freio em local ventilado (pode esquentar a 60–80 °C em uso, isso é normal)
-- [ ] No jogo, **comece com FFB strength baixo** (50%) e ajuste pra cima
-- [ ] Volte aos valores conservadores se sentir vibração ou ruído alto
-- [ ] Faça um export de suas configurações que funcionam antes de começar a alterar outras.
+If you feel torque proportional to the input → FFB is working. Raise `maxtorque` slowly (2 → 4 → 6 Nm) only after you've mounted the motor on the wheel shaft and verified the physical end-stop can take it.
 
 ---
 
-## Onde pedir ajuda
+## Final checklist before driving
 
-- Issues do projeto: https://github.com/eagabriel/Odrive-Wheel/issues
-- Discord do OpenFFBoard
+- [ ] Motor mounted on the shaft, shaft mechanically end-stopped (no infinite rotation)
+- [ ] Brake resistor in a ventilated spot (it can hit 60–80 °C in heavy use, that's normal)
+- [ ] In game, **start with low FFB strength** (50%) and dial up
+- [ ] Roll back to conservative values if you get vibration or audible noise
+- [ ] **Export your working config** before tweaking anything else
+
+---
+
+## Where to ask for help
+
+- Project issues: https://github.com/eagabriel/Odrive-Wheel/issues
+- OpenFFBoard Discord
