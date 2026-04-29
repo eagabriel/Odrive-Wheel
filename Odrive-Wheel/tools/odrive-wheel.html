@@ -173,6 +173,32 @@
     color: var(--fg-dim); font-size: 16px;
     pointer-events: none;
   }
+  .search-count {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-family: var(--font-mono);
+    color: var(--accent-2);
+    background: rgba(99,102,241,.15);
+    border: 1px solid rgba(99,102,241,.3);
+    padding: 1px 7px; border-radius: 999px;
+    pointer-events: none;
+  }
+  .search-count.zero {
+    color: var(--fg-dim);
+    background: var(--bg-card-2);
+    border-color: var(--border);
+  }
+  .sidebar-item .match-count {
+    margin-left: auto;
+    font-size: 10.5px; font-family: var(--font-mono);
+    color: var(--accent-2);
+    background: rgba(99,102,241,.18);
+    border: 1px solid rgba(99,102,241,.35);
+    padding: 0 6px; border-radius: 999px;
+    min-width: 18px; text-align: center;
+  }
+  .sidebar-item.active .match-count {
+    background: rgba(99,102,241,.3);
+  }
   .header-actions {
     margin-left: auto;
     display: flex; align-items: center; gap: 8px;
@@ -577,11 +603,28 @@
   }
 
   /* ============================================================
-     Search hide/show
+     Search hide/show — só esconde dentro do tab ATIVO. As outras abas
+     ficam display:none por padrão, mas seus matches são contados e
+     mostrados no badge da sidebar.
      ============================================================ */
-  body.search-active .field { display: none; }
-  body.search-active .field.search-match { display: flex; }
-  body.search-active .group { display: none; }
+  body.search-active .tab-panel.active .field { display: none; }
+  body.search-active .tab-panel.active .field.search-match { display: flex; }
+  body.search-active .tab-panel.active .group { display: none; }
+  /* Banner mostrando quantos matches tem em outras abas, quando a aba atual tem 0 */
+  .search-redirect {
+    grid-column: 1 / -1;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    color: var(--fg-muted); font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .search-redirect b { color: var(--accent-2); }
+  .search-redirect a {
+    color: var(--accent-2); cursor: pointer;
+    text-decoration: underline; margin-right: 10px;
+  }
 
   /* ============================================================
      Scrollbar styling
@@ -617,7 +660,9 @@
 <!-- ============== Header ============== -->
 <header class="app-header">
   <div class="header-search">
-    <input type="search" id="search-input" placeholder="Search parameter (path or name)..." disabled>
+    <input type="search" id="search-input" data-i18n-placeholder="search.placeholder"
+           placeholder="Search parameter (e.g. pole_pairs, brake, encoder)…">
+    <span id="search-count" class="search-count" hidden></span>
   </div>
   <div class="header-actions">
     <span id="status" class="status-pill">
@@ -671,6 +716,9 @@ const I18N = {
     'sidebar.group.odrive': 'ODrive',
     'sidebar.group.ffb':    'Force Feedback',
     'sidebar.group.tools':  'Ferramentas',
+    'search.placeholder':   'Buscar parâmetro (ex: pole_pairs, brake, encoder)…',
+    'search.no_match_here': 'Nenhum resultado para "<b>{q}</b>" nesta aba, mas outras abas têm:',
+    'search.no_match_anywhere': 'Nenhum parâmetro corresponde a "<b>{q}</b>". Tente um termo mais curto, ou parte do path (ex: <code>brake</code>, <code>encoder</code>, <code>vel_limit</code>).',
     // Tabs
     'tab.odrv': 'ODrive',
     'tab.axis0': 'Axis 0 Geral',
@@ -846,6 +894,9 @@ const I18N = {
     'sidebar.group.odrive': 'ODrive',
     'sidebar.group.ffb':    'Force Feedback',
     'sidebar.group.tools':  'Tools',
+    'search.placeholder':   'Search parameter (e.g. pole_pairs, brake, encoder)…',
+    'search.no_match_here': 'Nothing matches "<b>{q}</b>" in this tab, but other tabs have results:',
+    'search.no_match_anywhere': 'No parameters match "<b>{q}</b>". Try a shorter term, or part of the path (e.g. <code>brake</code>, <code>encoder</code>, <code>vel_limit</code>).',
     'tab.odrv': 'ODrive',
     'tab.axis0': 'Axis 0 General',
     'tab.motor': 'Motor',
@@ -1409,6 +1460,10 @@ function applyI18n() {
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     el.title = t(el.dataset.i18nTitle);
+  });
+  // Placeholders de inputs (search box e similares)
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
   });
   // Atualiza tabs (label dos botões)
   document.querySelectorAll('nav#tabs button[data-tab]').forEach(btn => {
@@ -2618,8 +2673,7 @@ async function execPropOffb(path) {
    ========================================================================= */
 function toggleControls(connected) {
   const ids = ['btn-read-all', 'btn-save',
-               'btn-erase', 'btn-reboot', 'btn-export', 'btn-import',
-               'search-input'];
+               'btn-erase', 'btn-reboot', 'btn-export', 'btn-import'];
   ids.forEach(i => { const el = document.getElementById(i); if (el) el.disabled = !connected; });
   document.getElementById('btn-connect').textContent =
     connected ? t('btn.disconnect') : t('btn.connect');
@@ -3714,6 +3768,11 @@ function selectTab(id) {
     const ck = document.getElementById('ffb-poll-enable');
     if (ck) ck.checked = false;
   }
+  // Re-aplica busca pra atualizar o banner / matches da nova aba
+  const si = document.getElementById('search-input');
+  if (si && si.value.trim() && typeof applySearch === 'function') {
+    applySearch(si.value);
+  }
 }
 
 function getInputValue(input) {
@@ -3969,24 +4028,119 @@ function toast(msg, kind) {
 }
 
 /* =========================================================================
-   Search — filtra .field cards por nome/path. Esconde groups vazios.
+   Search — busca GLOBAL (em todas as abas). Mostra:
+     - Cards filtrados na aba atual
+     - Badges de contagem por aba na sidebar
+     - Counter total no input
+     - Banner "tem N matches em outras abas" se a aba atual tem 0 matches
+   Limpa com Esc.
    ========================================================================= */
+function applySearch(q) {
+  q = (q || '').trim().toLowerCase();
+  const counterEl = document.getElementById('search-count');
+  const matchesByTab = {};
+
+  // Limpa banner anterior em todas as abas
+  document.querySelectorAll('.search-redirect').forEach(el => el.remove());
+
+  if (!q) {
+    document.body.classList.remove('search-active');
+    document.querySelectorAll('.tab-panel .field').forEach(c => c.classList.remove('search-match'));
+    document.querySelectorAll('#sidebar-nav .match-count').forEach(b => b.remove());
+    if (counterEl) counterEl.hidden = true;
+    return;
+  }
+
+  document.body.classList.add('search-active');
+
+  // Marca matches em todas as abas
+  document.querySelectorAll('.tab-panel .field').forEach(card => {
+    const lbl = card.querySelector('label');
+    const path = (lbl?.dataset.fieldPath || '').toLowerCase();
+    const text = (lbl?.textContent || '').toLowerCase();
+    const match = q && (path.includes(q) || text.includes(q));
+    card.classList.toggle('search-match', !!match);
+    if (match) {
+      const panel = card.closest('.tab-panel');
+      const tabId = panel?.id?.replace(/^tab-/, '');
+      if (tabId) matchesByTab[tabId] = (matchesByTab[tabId] || 0) + 1;
+    }
+  });
+
+  // Atualiza badges de contagem na sidebar
+  document.querySelectorAll('#sidebar-nav .sidebar-item').forEach(item => {
+    const tabId = item.dataset.tab;
+    const count = matchesByTab[tabId] || 0;
+    let badge = item.querySelector('.match-count');
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'match-count';
+        item.appendChild(badge);
+      }
+      badge.textContent = String(count);
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+
+  // Counter total no input
+  const total = Object.values(matchesByTab).reduce((a, b) => a + b, 0);
+  if (counterEl) {
+    counterEl.hidden = false;
+    counterEl.textContent = total + ' match' + (total === 1 ? '' : 'es');
+    counterEl.classList.toggle('zero', total === 0);
+  }
+
+  // Se a aba atual tem 0 matches mas outras têm, mostra banner com links
+  const activePanel = document.querySelector('.tab-panel.active');
+  if (activePanel) {
+    const activeTabId = activePanel.id.replace(/^tab-/, '');
+    const activeCount = matchesByTab[activeTabId] || 0;
+    if (activeCount === 0 && total > 0) {
+      const banner = document.createElement('div');
+      banner.className = 'search-redirect';
+      const otherTabs = Object.entries(matchesByTab).filter(([id]) => id !== activeTabId);
+      const links = otherTabs.map(([id, n]) =>
+        '<a data-jump="' + id + '">' + (t('tab.' + id) || id) + ' (' + n + ')</a>'
+      ).join('');
+      banner.innerHTML = t('search.no_match_here').replace('{q}', escapeHtml(q)) + ' ' + links;
+      banner.querySelectorAll('a[data-jump]').forEach(a => {
+        a.addEventListener('click', () => selectTab(a.dataset.jump));
+      });
+      activePanel.insertBefore(banner, activePanel.firstChild);
+    } else if (total === 0) {
+      const banner = document.createElement('div');
+      banner.className = 'search-redirect';
+      banner.innerHTML = t('search.no_match_anywhere').replace('{q}', escapeHtml(q));
+      activePanel.insertBefore(banner, activePanel.firstChild);
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const searchInput = document.getElementById('search-input');
 if (searchInput) {
-  searchInput.addEventListener('input', () => {
-    const q = searchInput.value.trim().toLowerCase();
-    if (!q) {
-      document.body.classList.remove('search-active');
-      return;
+  searchInput.addEventListener('input', () => applySearch(searchInput.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      applySearch('');
+      searchInput.blur();
     }
-    document.body.classList.add('search-active');
-    document.querySelectorAll('.tab-panel.active .field').forEach(card => {
-      const lbl = card.querySelector('label');
-      const path = (lbl?.dataset.fieldPath || '').toLowerCase();
-      const text = (lbl?.textContent || '').toLowerCase();
-      const match = path.includes(q) || text.includes(q);
-      card.classList.toggle('search-match', match);
-    });
+  });
+  // "/" em qualquer lugar foca a busca (atalho tipo GitHub)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
   });
 }
 
