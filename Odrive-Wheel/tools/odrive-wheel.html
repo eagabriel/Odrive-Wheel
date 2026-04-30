@@ -479,6 +479,32 @@
   #log .rx  { color: var(--ok); }
   #log .err { color: var(--err); }
 
+  /* Console input bar (manual command entry) */
+  .console-input-bar {
+    grid-column: 1 / -1;
+    display: flex; align-items: stretch; gap: 8px;
+    margin-top: 10px;
+  }
+  .console-input-bar .prompt {
+    display: flex; align-items: center; padding: 0 6px 0 2px;
+    color: var(--accent-2); font-family: var(--font-mono);
+    font-size: 18px; font-weight: 700;
+  }
+  .console-input-bar input {
+    flex: 1;
+    background: var(--bg-input); color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 13px;
+    transition: var(--transition);
+  }
+  .console-input-bar input:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+  }
+  .console-input-bar input:disabled { opacity: .5; cursor: not-allowed; }
+
   /* ============================================================
      DFU Flash tab — step cards + progress bar
      ============================================================ */
@@ -871,6 +897,9 @@ const I18N = {
     'console.clear':           'Limpar',
     'console.pause':           '⏸ Pausar',
     'console.resume':          '▶ Continuar',
+    'console.send':            'Enviar',
+    'console.input_placeholder': 'Digite comando ASCII (Enter envia, ↑/↓ histórico)…',
+    'console.input_hint':      'Exemplos: r vbus_voltage · w axis0.requested_state 1 · ss · sys.save? · sys.eedump?',
     // Action buttons
     'act.save_nvm':            'Salvar NVM',
     'act.erase_reboot':        'Apagar + Reboot',
@@ -882,7 +911,9 @@ const I18N = {
     'save.persisting_ffb':     'Salvando FFB (EEPROM)...',
     'save.disarming':          'Desarmando motor...',
     'save.persisting_odrive':  'Salvando ODrive (NVM)...',
-    'save.rebooting':          'Reboot em curso (~3s)',
+    'save.rebooting':          'Reboot em curso (~5s)',
+    'save.reconnecting':       'Reconectando...',
+    'save.reading_back':       'Re-lendo valores...',
   },
   en: {
     'header.title': 'Odrive-Wheel — MKS XDrive Mini',
@@ -1046,6 +1077,9 @@ const I18N = {
     'console.clear':           'Clear',
     'console.pause':           '⏸ Pause',
     'console.resume':          '▶ Resume',
+    'console.send':            'Send',
+    'console.input_placeholder': 'Type ASCII command (Enter to send, ↑/↓ history)…',
+    'console.input_hint':      'Examples: r vbus_voltage · w axis0.requested_state 1 · ss · sys.save? · sys.eedump?',
     // Action buttons
     'act.save_nvm':            'Save NVM',
     'act.erase_reboot':        'Erase + Reboot',
@@ -1057,7 +1091,9 @@ const I18N = {
     'save.persisting_ffb':     'Saving FFB (EEPROM)...',
     'save.disarming':          'Disarming motor...',
     'save.persisting_odrive':  'Saving ODrive (NVM)...',
-    'save.rebooting':          'Rebooting (~3s)',
+    'save.rebooting':          'Rebooting (~5s)',
+    'save.reconnecting':       'Reconnecting...',
+    'save.reading_back':       'Reading back...',
   }
 };
 
@@ -2059,6 +2095,61 @@ function wireConsoleTab() {
     pauseBtn.style.background = logPaused ? 'var(--warn)' : '';
     pauseBtn.style.color = logPaused ? '#000' : '';
   });
+
+  // Manual command input: digite e Enter envia (ou clica Enviar).
+  // Histórico tipo shell: ↑/↓ navega últimos 50 comandos, persiste em
+  // localStorage. Não filtra/valida — manda exatamente o que você digitou
+  // (com \n no final). Útil pra testes de baixo nível: 'sys.eedump?',
+  // 'r axis0.error', 'w motor.config.pole_pairs 7', etc.
+  const inputEl = document.getElementById('console-input');
+  const sendBtn = document.getElementById('btn-console-send');
+  if (inputEl && sendBtn) {
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem('odrive-console-history') || '[]'); } catch(e) {}
+    let histIdx = history.length;  // aponta pra "depois do último" (= linha em branco)
+
+    const doSend = async () => {
+      const cmd = inputEl.value.trim();
+      if (!cmd) return;
+      if (!writer) {
+        logLine('Não conectado. Clique em Conectar antes.', 'err');
+        return;
+      }
+      // Push pro histórico (sem duplicar consecutivo)
+      if (history[history.length - 1] !== cmd) {
+        history.push(cmd);
+        while (history.length > 50) history.shift();
+        try { localStorage.setItem('odrive-console-history', JSON.stringify(history)); } catch(e) {}
+      }
+      histIdx = history.length;
+      inputEl.value = '';
+      try {
+        await sendCmd(cmd, false);
+      } catch (e) {
+        logLine('send err: ' + e.message, 'err');
+      }
+    };
+
+    sendBtn.addEventListener('click', doSend);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doSend();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (history.length === 0) return;
+        histIdx = Math.max(0, histIdx - 1);
+        inputEl.value = history[histIdx] || '';
+        // Põe cursor no fim
+        setTimeout(() => inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length), 0);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (histIdx >= history.length) { inputEl.value = ''; return; }
+        histIdx++;
+        inputEl.value = histIdx < history.length ? history[histIdx] : '';
+      }
+    });
+  }
 }
 
 /* =========================================================================
@@ -2754,7 +2845,7 @@ function buildTabs() {
       content.appendChild(panel);
       return;
     }
-    // Console tab — log de TX/RX e mensagens internas
+    // Console tab — log de TX/RX e mensagens internas + input manual
     if (tab.custom && tab.id === 'console-tab') {
       panel.innerHTML = `
         <div class="console-toolbar">
@@ -2767,6 +2858,17 @@ function buildTabs() {
           </span>
         </div>
         <pre id="log" class="console-box"></pre>
+        <div class="console-input-bar">
+          <span class="prompt">›</span>
+          <input type="text" id="console-input"
+                 data-i18n-placeholder="console.input_placeholder"
+                 placeholder="Digite comando ASCII (Enter envia, ↑/↓ histórico)…"
+                 autocomplete="off" spellcheck="false">
+          <button id="btn-console-send" class="primary" data-i18n="console.send">Enviar</button>
+        </div>
+        <p class="hint" style="grid-column:1/-1;color:var(--fg-dim);font-size:11.5px;margin:4px 0 0">
+          <span data-i18n="console.input_hint">Exemplos: <code>r vbus_voltage</code> · <code>w axis0.requested_state 1</code> · <code>ss</code> · <code>sys.save?</code> · <code>sys.eedump?</code></span>
+        </p>
       `;
       content.appendChild(panel);
       return;
@@ -3998,6 +4100,40 @@ document.getElementById('btn-read-all').onclick = readAll;
 //   4. Envia 'ss' — persiste config ODrive em S1+S2 e reboota
 // Salvar FFB ANTES do ss garante que mudanças FFB persistem mesmo se ss falhar.
 // Após reboot, se config tem startup_closed_loop_control=1, motor re-arma sozinho.
+/* Tenta reabrir a serial usando uma porta já autorizada (getPorts não pede
+   permissão de novo, ao contrário do requestPort). Usado após save: a placa
+   reboota, USB cai, OS re-enumera, esta função pega o handle de volta. */
+async function tryAutoReconnect(maxAttempts = 8, delayMs = 1000) {
+  if (port) return false; // já conectado
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const ports = await navigator.serial.getPorts();
+      if (ports && ports.length > 0) {
+        // Pega a primeira porta autorizada — se o usuário tem mais de uma,
+        // assume que a última usada é a primeira da lista (é o comportamento
+        // observado em Chrome).
+        const candidate = ports[0];
+        try {
+          await candidate.open({ baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none' });
+          port = candidate;
+          writer = port.writable.getWriter();
+          reader = port.readable.getReader();
+          setStatus(t('status.connected'), 'connected');
+          toggleControls(true);
+          logLine('--- auto-reconnect OK (tentativa ' + attempt + ') ---', 'rx');
+          readLoop();
+          return true;
+        } catch (openErr) {
+          // Porta listada mas não pôde abrir (ainda enumerando ou em uso) — tenta de novo.
+        }
+      }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, delayMs));
+  }
+  logLine('--- auto-reconnect falhou após ' + maxAttempts + ' tentativas — reconecte manualmente ---', 'err');
+  return false;
+}
+
 async function saveAll() {
   const btn = document.getElementById('btn-save');
   const original = btn.textContent;
@@ -4011,36 +4147,65 @@ async function saveAll() {
       for (const inp of changed) await writeOne(inp);
     }
 
-    // 2. Persiste FFB EEPROM primeiro (sys.save!) — não reboota, então é seguro
-    //    fazer antes do ss. Se ss falhar, mudanças FFB já estarão persistidas.
-    btn.textContent = t('save.persisting_ffb');
-    logLine('--- Save: FFB EEPROM (sys.save!) ---');
-    const ffbResp = await execPropOffb('sys.save');
-    logLine('sys.save! → ' + (ffbResp || 'timeout'), ffbResp === 'OK' ? 'rx' : 'err');
-
-    // 3. Desarma motor (necessário pra save_configuration não ser ignorado)
+    // 2. DESARMA MOTOR PRIMEIRO. Phase 4.x — antes vinha *depois* do FFB save.
+    //    Bug: erase de flash (FFB EE ou ODrive NVM) trava prefetch da flash
+    //    inteira por ~250ms-1.5s; o ISR FOC fica suspenso e ao retomar pode
+    //    dar pulso de torque. Com motor IDLE primeiro, qualquer stall de ISR
+    //    é inofensivo.
     btn.textContent = t('save.disarming');
     logLine('--- Save: disarm motor (state=1 IDLE) ---');
     await writeProp('axis0.requested_state', '1');
     await new Promise(r => setTimeout(r, 300));
+
+    // 3. Persiste FFB EEPROM (sys.save!) — agora em S1+S2, não colide mais
+    //    com a NVM ODrive (S10+S11). Não reboota, então é seguro antes do ss.
+    btn.textContent = t('save.persisting_ffb');
+    logLine('--- Save: FFB EEPROM (sys.save!) ---');
+    const ffbResp = await execPropOffb('sys.save');
+    logLine('sys.save! → ' + (ffbResp || 'timeout'), ffbResp === 'OK' ? 'rx' : 'err');
 
     // 4. Persiste ODrive NVM (ss reboota a placa)
     btn.textContent = t('save.persisting_odrive');
     logLine('--- Save: ODrive NVM (ss — persist + reboot) ---');
     await sendCmd('ss', false);
 
-    // Após ss a placa reseta — serial vai cair em ~1s
+    // 5. Após ss a placa reseta — serial cai em ~1s. Aguarda 5s e tenta
+    //    reconectar automaticamente, depois roda readAll() pra confirmar
+    //    que valores persistiram. Se reconnect falhar, usuário reconecta
+    //    manualmente — sem perda.
     btn.textContent = t('save.rebooting');
-    setTimeout(() => {
-      logLine('--- Save complete: aguarde reconexão. Motor re-arma se startup_closed_loop_control=True ---');
-    }, 200);
+    logLine('--- Save: aguardando placa rebootar (5s) ---');
+    // Limpa state de serial antigo (a porta vai morrer com o reboot do device)
+    try { if (reader) { await reader.cancel(); reader.releaseLock(); reader = null; } } catch(e) {}
+    try { if (writer) { writer.releaseLock(); writer = null; } } catch(e) {}
+    try { if (port) { await port.close(); } } catch(e) {}
+    port = null;
+    setStatus(t('status.disconnected'));
+    toggleControls(false);
+
+    await new Promise(r => setTimeout(r, 5000));
+
+    btn.textContent = t('save.reconnecting');
+    logLine('--- Save: tentando auto-reconnect ---');
+    const reconnected = await tryAutoReconnect();
+    if (reconnected) {
+      // Pequena pausa pra serial estabilizar (firmware ainda boot-up)
+      await new Promise(r => setTimeout(r, 500));
+      btn.textContent = t('save.reading_back');
+      logLine('--- Save: re-lendo todos os campos pra confirmar persistência ---');
+      try {
+        await readAll();
+        logLine('--- Save complete + re-read OK ---', 'rx');
+        if (typeof toast === 'function') toast('Save complete + re-read OK', 'ok');
+      } catch (e) {
+        logLine('readAll após reconnect falhou: ' + e.message, 'err');
+      }
+    }
   } catch (e) {
     logLine('Save erro: ' + e.message, 'err');
   } finally {
-    setTimeout(() => {
-      btn.textContent = original;
-      btn.disabled = false;
-    }, 3000);
+    btn.textContent = original;
+    btn.disabled = false;
   }
 }
 document.getElementById('btn-save').onclick = saveAll;

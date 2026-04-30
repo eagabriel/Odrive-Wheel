@@ -302,7 +302,7 @@ If you feel torque proportional to the input → FFB is working. Raise `maxtorqu
 
 ## Final checklist before driving
 
-- [ ] Motor mounted on the shaft, shaft mechanically end-stopped (no infinite rotation)
+- [ ] Steering wheel mounted on the shaft, shaft mechanically or software end-stopped (no infinite rotation)
 - [ ] Brake resistor in a ventilated spot (it can hit 60–80 °C in heavy use, that's normal)
 - [ ] In game, **start with low FFB strength** (50%) and dial up
 - [ ] Roll back to conservative values if you get vibration or audible noise
