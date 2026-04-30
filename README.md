@@ -54,10 +54,14 @@ step-by-step guide covering:
 - No flash collision — firmware updates do not erase FFB settings
 
 ### HTML configuration tool
-Tool at `Odrive-Wheel/tools/odrive-wheel.html` — opens directly in Chrome/Edge.
 
-The tool uses **Web Serial API** to talk to the device and **WebUSB** for in-browser DFU flashing.
-(Legacy version `odrive_config.html` is kept in the same folder for reference.)
+> 🌐 **Use it online — no install required:**
+> **<https://eagabriel.github.io/Odrive-Wheel/>**
+>
+> The tool runs entirely in the browser (Chrome/Edge) and talks to the board over
+> **Web Serial** (config) and **WebUSB** (in-browser DFU flashing). The hosted version
+> is always in sync with the latest `Odrive-Wheel/tools/odrive-wheel.html` on `main`.
+> You can also clone the repo and open the file locally if you prefer.
 
 Tabs:
 - **ODrive** / **Axis 0** / **Motor** / **Encoder** / **Controller** — params via ODrive ASCII

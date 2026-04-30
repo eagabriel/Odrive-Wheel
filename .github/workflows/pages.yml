@@ -1,0 +1,90 @@
+# =============================================================================
+# Deploy the Odrive-Wheel HTML configuration tool to GitHub Pages.
+#
+# Source-of-truth file: Odrive-Wheel/tools/odrive-wheel.html
+#
+# This workflow keeps a single copy of the tool in the repo. On every push to
+# main, it copies that file to _site/index.html and publishes it to Pages, so
+# users can open https://eagabriel.github.io/Odrive-Wheel/ directly without
+# cloning anything.
+#
+# To activate this workflow once after merging:
+#   1. Go to https://github.com/eagabriel/Odrive-Wheel/settings/pages
+#   2. Under "Build and deployment" -> "Source", choose "GitHub Actions".
+#   3. Push or run the workflow manually (Actions tab -> "Deploy GitHub Pages"
+#      -> "Run workflow"). Subsequent pushes to main will deploy automatically.
+# =============================================================================
+
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Only redeploy when something Pages-relevant changes
+    paths:
+      - 'Odrive-Wheel/tools/odrive-wheel.html'
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping queued runs in between
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build static site
+        run: |
+          mkdir -p _site
+          # The configuration tool is the landing page
+          cp Odrive-Wheel/tools/odrive-wheel.html _site/index.html
+          # Also expose docs (Getting Started + screenshots) under /docs/
+          mkdir -p _site/docs
+          cp -r docs/* _site/docs/ 2>/dev/null || true
+          # Friendly 404 that links back to the tool
+          cat > _site/404.html <<'EOF'
+          <!doctype html><html lang="en"><head><meta charset="utf-8">
+          <title>Not found — Odrive-Wheel</title>
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <style>
+            body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+                 background:#0e1116;color:#e6edf3;display:flex;align-items:center;
+                 justify-content:center;height:100vh;margin:0;text-align:center}
+            a{color:#818cf8}
+            h1{font-size:48px;margin:0 0 8px}
+            p{color:#8b949e}
+          </style></head><body><div>
+            <h1>404</h1>
+            <p>That page doesn't exist.</p>
+            <p><a href="/Odrive-Wheel/">← Back to the configuration tool</a></p>
+          </div></body></html>
+          EOF
+          # Tell Jekyll not to process anything (faster build, no surprises)
+          touch _site/.nojekyll
+          ls -la _site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

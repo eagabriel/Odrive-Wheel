@@ -80,7 +80,9 @@ The `tools/odrive-wheel.html` tool has a **"DFU Flash"** tab that does everythin
 
 ### Step by step
 
-1. Open `Odrive-Wheel/tools/odrive-wheel.html` in Chrome/Edge.
+1. Open the config tool — easiest is the hosted version at
+   **<https://eagabriel.github.io/Odrive-Wheel/>** (no install). Or open
+   `Odrive-Wheel/tools/odrive-wheel.html` locally if you prefer.
 2. Connect to the board over serial (the **Connect** button in the header).
 3. Go to the **DFU Flash** tab in the sidebar (under "Tools").
 4. **Step 1 — Reboot to DFU**: click the button. The tool sends `sd` over serial and the board reboots straight into the STM32 bootloader. Wait ~2 s.
@@ -189,7 +191,7 @@ dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D build/odrive-wheel.bin
 
 ### 1. Connect the configuration tool
 
-1. Open `Odrive-Wheel/tools/odrive-wheel.html` in **Chrome or Edge** (Web Serial only works there).
+1. Open the config tool: <https://eagabriel.github.io/Odrive-Wheel/> in **Chrome or Edge** (Web Serial only works there). Local copy at `Odrive-Wheel/tools/odrive-wheel.html` works equivalently.
 2. Click **Connect** and pick the board's serial port (`Odrive-Wheel CDC` or similar).
 3. The status pill should turn green ("Connected").
 
