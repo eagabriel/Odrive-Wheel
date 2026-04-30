@@ -823,6 +823,12 @@ const I18N = {
     'ffb.kv_lt':               'last torque (int32)',
     'ffb.counters_title':      'Contadores HID OUT',
     'ffb.counters_subtitle':   '(reports recebidos do jogo)',
+    'ffb.rate_title':          'Taxa de atualização do jogo',
+    'ffb.rate_subtitle':       '(em Hz, derivado dos contadores)',
+    'ffb.rate_hout':           'HID OUT total',
+    'ffb.rate_setef':          'Force updates (setEffect)',
+    'ffb.rate_efop':           'Effect ops (start/stop)',
+    'ffb.rate_hint':           'Tipicamente: 60 Hz (jogos casuais) · 100–250 Hz (sim racing) · 500 Hz+ (rigs com USB polling alto). Se ficar abaixo de 30 Hz com FFB ativo, o jogo provavelmente está limitando.',
     'ffb.kv_hout':             'total HID OUT',
     'ffb.kv_setef':            'setEffectTorque calls',
     'ffb.kv_ctrl':             'CTRL (enable/disable)',
@@ -992,6 +998,12 @@ const I18N = {
     'ffb.kv_lt':               'last torque (int32)',
     'ffb.counters_title':      'HID OUT counters',
     'ffb.counters_subtitle':   '(reports received from game)',
+    'ffb.rate_title':          'Game update rate',
+    'ffb.rate_subtitle':       '(in Hz, derived from counters)',
+    'ffb.rate_hout':           'HID OUT total',
+    'ffb.rate_setef':          'Force updates (setEffect)',
+    'ffb.rate_efop':           'Effect ops (start/stop)',
+    'ffb.rate_hint':           'Typical: 60 Hz (casual games) · 100–250 Hz (sim racing) · 500 Hz+ (high-poll rigs). If below 30 Hz with FFB active, the game is likely throttling.',
     'ffb.kv_hout':             'total HID OUT',
     'ffb.kv_setef':            'setEffectTorque calls',
     'ffb.kv_ctrl':             'CTRL (enable/disable)',
@@ -2875,6 +2887,18 @@ function buildFFBLiveHTML() {
     </div>
 
     <div class="debug-section">
+      <h3><span data-i18n="ffb.rate_title">Taxa de atualização do jogo</span> <small style="color:var(--muted)" data-i18n="ffb.rate_subtitle">(em Hz, derivado dos contadores)</small></h3>
+      <div class="live-grid">
+        <div class="live-kv"><span class="k" data-i18n="ffb.rate_hout">HID OUT total</span><span class="v" id="ffb-kv-rate-hout">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.rate_setef">Force updates (setEffect)</span><span class="v" id="ffb-kv-rate-setef">—</span></div>
+        <div class="live-kv"><span class="k" data-i18n="ffb.rate_efop">Effect ops (start/stop)</span><span class="v" id="ffb-kv-rate-efop">—</span></div>
+      </div>
+      <p style="color:var(--fg-dim);font-size:11.5px;margin:8px 0 0;line-height:1.5" data-i18n="ffb.rate_hint">
+        Tipicamente: 60 Hz (jogos casuais) · 100–250 Hz (sim racing) · 500 Hz+ (rigs com USB polling alto). Se ficar abaixo de 30 Hz com FFB ativo, o jogo provavelmente está limitando.
+      </p>
+    </div>
+
+    <div class="debug-section">
       <h3><span data-i18n="ffb.counters_title">Contadores HID OUT</span> <small style="color:var(--muted)" data-i18n="ffb.counters_subtitle">(reports recebidos do jogo)</small></h3>
       <div class="live-grid">
         <div class="live-kv"><span class="k" data-i18n="ffb.kv_hout">total HID OUT</span><span class="v" id="ffb-kv-hout">—</span></div>
@@ -3118,6 +3142,38 @@ function _parseKVPairs(line, regex) {
   return out;
 }
 
+// Estado pra calcular taxa (Hz) dos contadores monotônicos do firmware.
+// Guarda ultimo valor e timestamp pra derivar dN/dt no próximo poll.
+const _ffbRate = {
+  hout:  { last: null, ts: 0 },
+  setef: { last: null, ts: 0 },
+  efop:  { last: null, ts: 0 },
+};
+function _computeRate(slot, current) {
+  const now = performance.now();
+  const prev = _ffbRate[slot];
+  let hz = null;
+  if (prev.last !== null && now > prev.ts) {
+    const dt = (now - prev.ts) / 1000;        // segundos
+    const dN = current - prev.last;
+    if (dN >= 0 && dt > 0.05) hz = dN / dt;   // ignora intervalos ínfimos / contador resetado
+  }
+  prev.last = current;
+  prev.ts = now;
+  return hz;
+}
+function _setRateKV(id, hz) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (hz === null) { el.textContent = '—'; el.className = 'v'; return; }
+  el.textContent = hz.toFixed(0) + ' Hz';
+  // Verde ≥60, amarelo 30-60, vermelho <30, cinza zero
+  if (hz === 0)        el.className = 'v';
+  else if (hz < 30)    el.className = 'v err';
+  else if (hz < 60)    el.className = 'v warn';
+  else                 el.className = 'v ok';
+}
+
 async function pollFFBLiveOnce() {
   if (!writer || ffbPollInFlight) return;
   ffbPollInFlight = true;
@@ -3133,6 +3189,9 @@ async function pollFFBLiveOnce() {
         _setKV('ffb-kv-eff',    m[2]);
         _setKV('ffb-kv-hout',   m[3]);
         _setKV('ffb-kv-setef',  m[4]);
+        // Calcula Hz a partir dos contadores
+        _setRateKV('ffb-kv-rate-hout',  _computeRate('hout',  parseInt(m[3], 10)));
+        _setRateKV('ffb-kv-rate-setef', _computeRate('setef', parseInt(m[4], 10)));
       }
     }
     // 'D' → ctrl=N newef=N setef=N efop=N
@@ -3144,6 +3203,7 @@ async function pollFFBLiveOnce() {
         _setKV('ffb-kv-newef',  m[2]);
         _setKV('ffb-kv-setefr', m[3]);
         _setKV('ffb-kv-efop',   m[4]);
+        _setRateKV('ffb-kv-rate-efop', _computeRate('efop', parseInt(m[4], 10)));
       }
     }
     // 'C' → cond=N cnst=N prdc=N
