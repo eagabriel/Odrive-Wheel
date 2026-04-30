@@ -8,6 +8,13 @@ support to use the motor as a sim racing wheel.
   <img src="docs/screenshots/MKSXdriveMini.png" alt="MKS XDrive Mini board" width="500">
 </p>
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/eduardogabq" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+         alt="Buy me a coffee" height="40">
+  </a>
+</p>
+
 Based on:
 - [ODrive Firmware v0.5.6](https://github.com/odriverobotics/ODrive) (motor control)
 - [OpenFFBoard](https://github.com/Ultrawipf/OpenFFBoard) (FFB stack: HidFFB + EffectsCalculator)
@@ -205,6 +212,18 @@ This project combines code from multiple sources with different licenses:
 
 Because GPL-licensed code from OpenFFBoard is included, the **combined work** (compiled firmware) is
 distributed under **GPLv3**. See `LICENSE` at the repo root and individual licenses in subdirectories.
+
+## Support the project
+
+If Odrive-Wheel saved you time or money on a wheelbase, consider buying me a coffee.
+It is the easiest way to say thanks and keeps the project maintained on my own time.
+
+<p align="left">
+  <a href="https://www.buymeacoffee.com/eduardogabq" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+         alt="Buy me a coffee" height="40">
+  </a>
+</p>
 
 ## Status
 
