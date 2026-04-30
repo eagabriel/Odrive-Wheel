@@ -6,6 +6,16 @@
 
 #include <stdint.h>
 
+// Layout/cookie atual da EE. Bumpar quando mudarmos significado de bits ou
+// adicionarmos/removermos endereços. ffb_task_init lê ADR_FLASH_VERSION no
+// boot — se diferir desta constante, o EE inteiro é re-formatado pra evitar
+// que dados de layout antigo sejam interpretados como válidos.
+//
+// Histórico:
+//   0x0001 — layout inicial (S10/S11, 128K pages)
+//   0x0002 — layout movido pra S1/S2 (16K pages) após colisão com ODrive NVM
+#define EE_LAYOUT_VERSION       0x0002
+
 // System / meta
 #define ADR_SYSTEM_MARKER       0x0001
 #define ADR_SW_VERSION          0x0002

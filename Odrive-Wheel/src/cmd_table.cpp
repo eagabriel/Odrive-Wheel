@@ -195,6 +195,17 @@ static int h_sys_eedump(uint8_t, CmdType t, const char*, char *r, size_t s) {
     return 0;
 }
 
+// sys.eeformat! — escape hatch que força format completo do EE com clear de
+// error flags entre cada operação. Usar quando bootRC != 0 e sys.save! continua
+// falhando (caso típico: flash com flags PGAERR/PGSERR latched de operação
+// anterior, ou pages com 0x00 stuck do .bin antigo que não foi gap-fillado).
+extern "C" void ffb_eeformat(char *buf, int bufsize);
+static int h_sys_eeformat(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_EXEC && t != CMD_TYPE_GET) return -1;
+    ffb_eeformat(r, (int)s);
+    return 0;
+}
+
 // sys.reboot — Configurator às vezes oferece botão. Stub respondendo OK
 // (nao reboota de verdade pra evitar perda de estado durante probe).
 static int h_sys_reboot(uint8_t, CmdType t, const char*, char *r, size_t s) {
@@ -664,6 +675,7 @@ const CmdEntry cmdtable[] = {
     { "sys",   "savestat",     h_sys_savestat },      // diag last save
     { "sys",   "eetest",       h_sys_eetest },        // EEPROM low-level test
     { "sys",   "eedump",       h_sys_eedump },        // EEPROM raw status
+    { "sys",   "eeformat",     h_sys_eeformat },      // EEPROM force format (escape hatch)
     { "sys",   "reboot",       h_sys_reboot },        // reset chip
     { "sys",   "uptime",       h_sys_uptime },
     { "sys",   "ping",         h_sys_ping },

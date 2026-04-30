@@ -43,22 +43,32 @@ _heap_end_max = _estack - _Min_Stack_Size;
  *
  * Flash layout no F405 (STM32F405RGT6, 1MB):
  *   sector 0  (16K)  @0x08000000 -> vetores + stub Reset_Handler (FLASH_HEAD)
- *   sector 1  (16K)  @0x08004000 -> ODrive NVM page A (config_manager hardcoded)
- *   sector 2  (16K)  @0x08008000 -> ODrive NVM page B (config_manager hardcoded)
+ *   sector 1  (16K)  @0x08004000 -> FFB EEPROM emulada página 0 (FFB_NVM)
+ *   sector 2  (16K)  @0x08008000 -> FFB EEPROM emulada página 1 (FFB_NVM)
  *   sectores 3-9    @0x0800C000..0x080BFFFF -> .text principal (FLASH)
- *   sector 10 (128K) @0x080C0000 -> FFB EEPROM emulada página 0 (NVM region)
- *   sector 11 (128K) @0x080E0000 -> FFB EEPROM emulada página 1 (NVM region)
+ *   sector 10 (128K) @0x080C0000 -> ODrive NVM page A (stm32_nvm.c hardcoded)
+ *   sector 11 (128K) @0x080E0000 -> ODrive NVM page B (stm32_nvm.c hardcoded)
  *
- * Phase 3.1: FFB EEPROM mudou de S1+S2 (que colidem com ODrive NVM) pra
- * S10+S11. Defines em Makefile: EEPROM_START_ADDRESS=0x080C0000, PAGE_SIZE=128K.
+ * Phase 4.x: FFB EEPROM movida de S10+S11 -> S1+S2 (16K cada).
+ *   ODrive 0.5.6 Drivers/STM32/stm32_nvm.c hardcoda S10+S11 para F405,
+ *   colidindo com nossa EE — corrupção mútua era o sintoma reportado:
+ *   "FFB às vezes não grava" e "save FFB corrompe params ODrive".
+ *   Corrigido movendo nossa EE para S1+S2 que estavam ociosos no linker.
+ *
+ * Defines em Makefile: EEPROM_START_ADDRESS=0x08004000, PAGE_SIZE=0x4000,
+ *   PAGE0_ID=FLASH_SECTOR_1, PAGE1_ID=FLASH_SECTOR_2.
+ *
+ * As regions FFB_NVM e ODRIVE_NVM existem aqui só pra IMPEDIR que o linker
+ * coloque .text/.rodata em S1/S2 ou S10/S11 caso a imagem cresça.
  */
 MEMORY
 {
 RAM        (xrw) : ORIGIN = 0x20000000, LENGTH = 128K
 CCMRAM     (rw)  : ORIGIN = 0x10000000, LENGTH = 64K
 FLASH_HEAD (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
+FFB_NVM    (r)   : ORIGIN = 0x08004000, LENGTH = 32K
 FLASH      (rx)  : ORIGIN = 0x0800C000, LENGTH = 720K
-NVM        (r)   : ORIGIN = 0x080C0000, LENGTH = 256K
+ODRIVE_NVM (r)   : ORIGIN = 0x080C0000, LENGTH = 256K
 }
 
 /* Define output sections */

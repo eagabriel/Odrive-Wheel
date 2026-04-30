@@ -298,9 +298,40 @@ extern "C" void ffb_task_init(void) {
     // Phase 3.5 — inicializa EEPROM emulada ANTES do EffectsCalculator.
     // Construtor do EffectsCalculator chama restoreFlash() pra carregar gains
     // e filtros — sem EE_Init prévio, leituras retornam erro e tudo cai em
-    // defaults. Pages estão em S10+S11 (relocados na Phase 3.1).
+    // defaults. Pages em S1+S2 (movidas na Phase 4.x — antes em S10+S11
+    // que colidia com ODrive NVM).
     HAL_FLASH_Unlock();
+    // Phase 4.x — STM32F4 latch nas flags de erro de flash (PGAERR/PGSERR/
+    // WRPERR/PGPERR). Se ODrive (ou qualquer outro código antes de nós)
+    // deixou alguma seteada, FLASH_WaitForLastOperation retorna HAL_ERROR
+    // em CASCATA pra todas as próximas ops, mesmo as válidas. ClearError
+    // resolve. ODrive's stm32_nvm.c faz isso, nossa EE não fazia → bug.
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
     s_boot_ee_init_rc = EE_Init();
+
+    // Phase 4.x — cookie de versão de layout. Se EE foi formatada por uma
+    // versão antiga do firmware com layout diferente (ex: outras posições
+    // de bits, outros endereços virtuais), os dados velhos NÃO devem ser
+    // interpretados como válidos. Lê ADR_FLASH_VERSION; se não bater com
+    // EE_LAYOUT_VERSION, formata. Após formatar, escreve a versão atual
+    // pra próximos boots passarem direto. Também trata o caso de EE_Init
+    // ter falhado (s_boot_ee_init_rc != 0) — força format pra recuperar.
+    {
+        uint16_t stored_version = 0;
+        uint16_t rc = EE_ReadVariable(ADR_FLASH_VERSION, &stored_version);
+        bool needs_format = (s_boot_ee_init_rc != 0) ||
+                            (rc == NO_VALID_PAGE) ||
+                            (rc == 0 && stored_version != EE_LAYOUT_VERSION);
+        if (needs_format) {
+            __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                                   FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                                   FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
+            EE_Format();
+            EE_WriteVariable(ADR_FLASH_VERSION, EE_LAYOUT_VERSION);
+        }
+    }
     HAL_FLASH_Lock();
 
     s_effects_calc = std::make_shared<EffectsCalculator>();
@@ -612,6 +643,10 @@ extern "C" int ffb_save_flash(void) {
     s_last_save_errors = 0;
 
     HAL_FLASH_Unlock();
+    // Phase 4.x — limpa flags de erro latched (ver ffb_task_init pra explicação).
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
     // EE_Init é chamado no boot (ffb_task_init). Redundância aqui foi removida
     // após Phase 3.13 — cada chamada de EE_Init pode triggerar erase em estados
     // raros (VALID+VALID transitório), o que adiciona latência e complexidade.
@@ -654,6 +689,9 @@ extern "C" int ffb_save_errors(void) { return s_last_save_errors; }
 // reservado (0x04F1) e reporta sucesso/falha no nível baixo.
 extern "C" int ffb_eetest(uint16_t want, uint16_t *got_out) {
     HAL_FLASH_Unlock();
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
     bool wok = Flash_Write(0x04F1, want);
     HAL_FLASH_Lock();
     uint16_t got = 0xFFFF;
@@ -671,22 +709,89 @@ extern "C" {
 #include "eeprom.h"
 }
 extern "C" void ffb_eedump(char *buf, int bufsize) {
-    if (!buf || bufsize < 64) { if (buf && bufsize > 0) buf[0] = 0; return; }
-    uint16_t p0 = *(volatile uint16_t*)PAGE0_BASE_ADDRESS;
-    uint16_t p1 = *(volatile uint16_t*)PAGE1_BASE_ADDRESS;
+    if (!buf || bufsize < 96) { if (buf && bufsize > 0) buf[0] = 0; return; }
+    uint16_t p0_pre = *(volatile uint16_t*)PAGE0_BASE_ADDRESS;
+    uint16_t p1_pre = *(volatile uint16_t*)PAGE1_BASE_ADDRESS;
 
     HAL_FLASH_Unlock();
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
     uint16_t init_rc = EE_Init();
     uint16_t wrc = EE_WriteVariable(0x04F2, 0x5A5A);
+    uint32_t hal_err = HAL_FLASH_GetError();
     HAL_FLASH_Lock();
 
     uint16_t got = 0xFFFF;
     uint16_t rrc = EE_ReadVariable(0x04F2, &got);
 
+    uint16_t p0_post = *(volatile uint16_t*)PAGE0_BASE_ADDRESS;
+    uint16_t p1_post = *(volatile uint16_t*)PAGE1_BASE_ADDRESS;
+
     snprintf(buf, bufsize,
-             "p0=%04X p1=%04X bootRC=%u init=%u wrc=%u rrc=%u got=%04X",
-             (unsigned)p0, (unsigned)p1, (unsigned)s_boot_ee_init_rc,
-             (unsigned)init_rc, (unsigned)wrc, (unsigned)rrc, (unsigned)got);
+             "pre=%04X/%04X post=%04X/%04X bootRC=%u init=%u wrc=%u rrc=%u got=%04X halErr=%lX",
+             (unsigned)p0_pre,  (unsigned)p1_pre,
+             (unsigned)p0_post, (unsigned)p1_post,
+             (unsigned)s_boot_ee_init_rc,
+             (unsigned)init_rc, (unsigned)wrc, (unsigned)rrc,
+             (unsigned)got, (unsigned long)hal_err);
+}
+
+// Phase 4.x — escape hatch: força format completo do EE com clear error
+// flags. Usar quando bootRC != 0 e sys.save! continua falhando, ou quando
+// suspeitamos de estado corrompido das pages. Reporta status de cada etapa
+// pra diagnóstico.
+extern "C" void ffb_eeformat(char *buf, int bufsize) {
+    if (!buf || bufsize < 96) { if (buf && bufsize > 0) buf[0] = 0; return; }
+
+    HAL_FLASH_Unlock();
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
+
+    // Erase explícito de PAGE0 (S1) — não confia em VerifyPageFullyErased
+    FLASH_EraseInitTypeDef pE0;
+    pE0.TypeErase = FLASH_TYPEERASE_SECTORS;
+    pE0.Sector = PAGE0_ID;
+    pE0.NbSectors = 1;
+    pE0.VoltageRange = VOLTAGE_RANGE;
+    uint32_t err0 = 0;
+    HAL_StatusTypeDef rc_e0 = HAL_FLASHEx_Erase(&pE0, &err0);
+    uint32_t hal0 = HAL_FLASH_GetError();
+
+    // Programa VALID_PAGE em PAGE0_BASE (header)
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
+    HAL_StatusTypeDef rc_pgm = HAL_FLASH_Program(TYPEPROGRAM_HALFWORD,
+                                                 PAGE0_BASE_ADDRESS, VALID_PAGE);
+
+    // Erase explícito de PAGE1 (S2)
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP    | FLASH_FLAG_OPERR  |
+                           FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                           FLASH_FLAG_PGSERR | FLASH_FLAG_PGPERR);
+    FLASH_EraseInitTypeDef pE1;
+    pE1.TypeErase = FLASH_TYPEERASE_SECTORS;
+    pE1.Sector = PAGE1_ID;
+    pE1.NbSectors = 1;
+    pE1.VoltageRange = VOLTAGE_RANGE;
+    uint32_t err1 = 0;
+    HAL_StatusTypeDef rc_e1 = HAL_FLASHEx_Erase(&pE1, &err1);
+    uint32_t hal1 = HAL_FLASH_GetError();
+
+    // Re-escreve cookie de layout
+    EE_WriteVariable(ADR_FLASH_VERSION, EE_LAYOUT_VERSION);
+
+    HAL_FLASH_Lock();
+
+    uint16_t p0_post = *(volatile uint16_t*)PAGE0_BASE_ADDRESS;
+    uint16_t p1_post = *(volatile uint16_t*)PAGE1_BASE_ADDRESS;
+
+    snprintf(buf, bufsize,
+             "e0=%u pgm=%u e1=%u hal0=%lX hal1=%lX p0=%04X p1=%04X",
+             (unsigned)rc_e0, (unsigned)rc_pgm, (unsigned)rc_e1,
+             (unsigned long)hal0, (unsigned long)hal1,
+             (unsigned)p0_post, (unsigned)p1_post);
 }
 
 // Axis params (axis.range / axis.maxtorque / axis.fxratio) — persistem via

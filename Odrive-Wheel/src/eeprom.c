@@ -333,9 +333,19 @@ uint16_t EE_VerifyPageFullyErased(uint32_t Address)
 {
   uint32_t ReadStatus = 1;
   uint16_t AddressValue = 0x5555;
-    
+
+  /* BUG-FIX (Phase 4.x): código ST sample original tinha "while (Address <= PAGE0_END_ADDRESS)"
+   * que estava ERRADO pra PAGE1 — quando chamado com PAGE1_BASE_ADDRESS, a condição
+   * sempre era falsa (PAGE1_BASE > PAGE0_END) e o loop nunca rodava, retornando 1
+   * (= erased) por default. Isso fazia EE_Format pular o erase da PAGE1 quando ela
+   * NÃO estava erased, deixando dados antigos lá. Sintoma: sys.save! falhava em ERR
+   * porque o write subsequente em PAGE1 tentava programar 0->1 (impossível sem erase).
+   * Fix: calcular o end address correto baseado em qual página está sendo verificada.
+   */
+  uint32_t PageEnd = (Address >= PAGE1_BASE_ADDRESS) ? PAGE1_END_ADDRESS : PAGE0_END_ADDRESS;
+
   /* Check each active page address starting from end */
-  while (Address <= PAGE0_END_ADDRESS)
+  while (Address <= PageEnd)
   {
     /* Get the current location content to be compared with virtual address */
     AddressValue = (*(__IO uint16_t*)Address);
@@ -343,7 +353,7 @@ uint16_t EE_VerifyPageFullyErased(uint32_t Address)
     /* Compare the read address with the virtual address */
     if (AddressValue != ERASED)
     {
-      
+
       /* In case variable value is read, reset ReadStatus flag */
       ReadStatus = 0;
 
@@ -352,7 +362,7 @@ uint16_t EE_VerifyPageFullyErased(uint32_t Address)
     /* Next address location */
     Address = Address + 4;
   }
-  
+
   /* Return ReadStatus value: (0: Page not erased, 1: Sector erased) */
   return ReadStatus;
 }

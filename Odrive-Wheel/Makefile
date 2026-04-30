@@ -17,7 +17,12 @@ CP  = $(PREFIX)objcopy
 SZ  = $(PREFIX)size
 
 HEX = $(CP) -O ihex
-BIN = $(CP) -O binary -S
+# --gap-fill=0xFF é CRÍTICO. objcopy default preenche gaps com 0x00, e como
+# nosso linker tem buracos entre setores reservados (S1/S2 da FFB EE entre
+# vetores em S0 e .text em S3), gravar via dfu-util com 0x00 nesses gaps
+# CORROMPE a EE — flash só vai 1->0 sem erase, então 0x00 stuck até erase
+# manual. Com 0xFF (= flash erased), gravar sobre setor erased é no-op.
+BIN = $(CP) -O binary -S --gap-fill=0xFF
 
 # --- Root paths --------------------------------------------------------------
 ODRIVE_ROOT = ../ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware
@@ -51,6 +56,14 @@ MCU       = $(CPU) -mthumb $(FPU) $(FLOAT_ABI)
 # exposed in our descriptor — `#if defined(USB_PROTOCOL_NATIVE)` blocks stay
 # defined so interface_usb.cpp stays identical to stock (fibre_over_cdc
 # instances sit idle, harmless).
+#
+# Phase 4.x — FFB EEPROM emulada movida de S10/S11 (0x080C0000) para
+# S1/S2 (0x08004000). Motivo: ODrive 0.5.6 stm32_nvm.c hardcoda S10/S11
+# para STM32F405 (Drivers/STM32/stm32_nvm.c linhas 44-49), o que causava
+# colisão direta — ambos subsistemas escrevendo no mesmo bloco físico,
+# com layouts incompatíveis. S1+S2 (16K cada) ficavam livres no linker
+# (.text começa em S3). 16K dá ~4095 entries antes de page swap; erase
+# de 16K = ~250ms (vs ~1.5s do setor 128K).
 DEFS = -DSTM32F405xx \
        -DUSE_HAL_DRIVER \
        -DHSE_VALUE=8000000 \
@@ -61,10 +74,10 @@ DEFS = -DSTM32F405xx \
        -DUSB_PROTOCOL_NATIVE \
        -DUART_PROTOCOL_ASCII \
        -DUSE_EEPROM_EMULATION \
-       -DEEPROM_START_ADDRESS=0x080C0000 \
-       -DPAGE_SIZE=0x20000 \
-       -DPAGE0_ID=FLASH_SECTOR_10 \
-       -DPAGE1_ID=FLASH_SECTOR_11 \
+       -DEEPROM_START_ADDRESS=0x08004000 \
+       -DPAGE_SIZE=0x4000 \
+       -DPAGE0_ID=FLASH_SECTOR_1 \
+       -DPAGE1_ID=FLASH_SECTOR_2 \
        -DFIBRE_ENABLE_SERVER=1 \
        -DFIBRE_ENABLE_CLIENT=0 \
        -DFIBRE_ENABLE_EVENT_LOOP=0 \
