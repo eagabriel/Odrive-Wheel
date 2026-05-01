@@ -81,7 +81,6 @@ Firmware-Merged/
 # ODrive Python tooling (unused — our HTML config tool replaces it)
 # Has Git LFS binaries (libfibre.dll etc) that fail to push without LFS server
 # =============================================================================
-ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/tools/
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/fibre-cpp/test/
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/.gitattributes
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/.gitattributes
