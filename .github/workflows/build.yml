@@ -19,13 +19,24 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    # 2. Install ARM GCC compiler and Make
+    # 2. Install ARM GCC compiler, Make, and Python
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi build-essential
+        sudo apt-get install -y gcc-arm-none-eabi build-essential python3 python3-yaml python3-jinja2 python3-jsonschema
 
-    # 3. Build the firmware using Make
+    # 3. Generate ODrive autogen files
+    - name: Generate ODrive autogen files
+      working-directory: ./ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware
+      run: |
+        mkdir -p autogen
+        python3 ../tools/odrive/version.py --output autogen/version.c
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/interfaces_template.j2 --output autogen/interfaces.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/function_stubs_template.j2 --output autogen/function_stubs.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --generate-endpoints ODrive --template fibre-cpp/endpoints_template.j2 --output autogen/endpoints.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/type_info_template.j2 --output autogen/type_info.hpp
+
+    # 4. Build the firmware using Make
     - name: Build Firmware
       working-directory: ./Odrive-Wheel
       run: |
