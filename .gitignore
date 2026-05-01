@@ -21,7 +21,7 @@ build/
 *.code-workspace
 .cache/
 compile_commands.json
-
+.venv
 # =============================================================================
 # Distribution archives (originals from upstream — not redistributed)
 # =============================================================================
