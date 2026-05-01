@@ -506,6 +506,144 @@
   .console-input-bar input:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ============================================================
+     Inputs tab — GPIO cards (button/axis config + live preview)
+     ============================================================ */
+  .inputs-status {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .inputs-status .status-led {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--fg-dim);
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .inputs-status.connected .status-led {
+    background: var(--ok);
+    box-shadow: 0 0 12px var(--ok);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .inputs-status.error .status-led {
+    background: var(--err);
+  }
+  .inputs-status .text {
+    color: var(--fg);
+    font-size: 13px;
+  }
+  .inputs-status .text .sub {
+    color: var(--fg-muted); font-size: 12px; margin-left: 6px;
+  }
+  .gpio-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    transition: var(--transition);
+    position: relative;
+  }
+  .gpio-card.active {
+    border-color: rgba(99, 102, 241, .4);
+    background: linear-gradient(135deg, rgba(99,102,241,.05), transparent 50%);
+  }
+  .gpio-card .badge {
+    margin-left: auto;
+    padding: 2px 9px; border-radius: 999px;
+    font-size: 11px; font-family: var(--font-mono);
+    background: var(--bg-card-2); color: var(--fg-muted);
+    border: 1px solid var(--border);
+  }
+  .gpio-card.active .badge {
+    color: var(--ok);
+    border-color: rgba(16,185,129,.4);
+    background: rgba(16,185,129,.1);
+  }
+  .gpio-card h4 {
+    margin: 0; font-size: 13.5px; font-weight: 600;
+    color: var(--fg);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+  }
+  .gpio-card h4 .pin {
+    color: var(--fg-dim); font-size: 11px;
+    font-weight: 400; margin-left: auto;
+  }
+  .gpio-card .row {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .gpio-card .row > label {
+    font-size: 12px; color: var(--fg-muted);
+    min-width: 70px;
+  }
+  .gpio-card select, .gpio-card input[type="number"] {
+    flex: 1;
+    background: var(--bg-input);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 9px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    min-width: 0;
+  }
+  .gpio-card input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+  }
+  .gpio-card button.capture {
+    padding: 5px 10px; font-size: 11px;
+  }
+  .gpio-card .live {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .gpio-card .live .label {
+    color: var(--fg-muted); font-size: 11px;
+  }
+  .gpio-card .live .value {
+    color: var(--fg); flex: 1; text-align: right;
+  }
+  .gpio-card .live .indicator-btn {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--fg-dim); transition: var(--transition);
+  }
+  .gpio-card .live .indicator-btn.on {
+    background: var(--ok);
+    box-shadow: 0 0 10px var(--ok);
+  }
+  .gpio-card .live .bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-card-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .gpio-card .live .bar {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 80ms linear;
+  }
+  .inputs-controls {
+    grid-column: 1 / -1;
+    display: flex; gap: 10px; align-items: center;
+    padding: 6px 0;
+  }
+  .inputs-controls .poll-info {
+    color: var(--fg-muted); font-size: 11.5px;
+    margin-left: auto;
+  }
+
+  /* ============================================================
      DFU Flash tab — step cards + progress bar
      ============================================================ */
   .dfu-step {
@@ -741,6 +879,7 @@ const I18N = {
     // Sidebar groups
     'sidebar.group.odrive': 'ODrive',
     'sidebar.group.ffb':    'Force Feedback',
+    'sidebar.group.io':     'Inputs',
     'sidebar.group.tools':  'Ferramentas',
     'search.placeholder':   'Buscar parâmetro (ex: pole_pairs, brake, encoder)…',
     'search.no_match_here': 'Nenhum resultado para "<b>{q}</b>" nesta aba, mas outras abas têm:',
@@ -758,6 +897,33 @@ const I18N = {
     'tab.ffb-live': 'FFB Live',
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
+    'tab.inputs': 'Inputs (GPIO)',
+    // Inputs section (PT)
+    'inputs.title':       'Entradas digitais e analógicas',
+    'inputs.subtitle':    'GPIOs 1-4 da MKS XDrive Mini configuráveis como botões ou eixos do joystick HID. Polling a 1 kHz.',
+    'inputs.gpio_label':  'GPIO',
+    'inputs.mode':        'Modo',
+    'inputs.mode_off':    'Desligado',
+    'inputs.mode_button': 'Botão',
+    'inputs.mode_axis':   'Eixo',
+    'inputs.button_idx':  'Botão #',
+    'inputs.axis_idx':    'Eixo',
+    'inputs.invert':      'Inverter',
+    'inputs.amin':        'ADC mínimo',
+    'inputs.amax':        'ADC máximo',
+    'inputs.capture_min': 'Capturar mín.',
+    'inputs.capture_max': 'Capturar máx.',
+    'inputs.live_label':  'Atual',
+    'inputs.note':        'Salvar persiste no EEPROM. Botões funcionam pressionando para GND (pull-up interno). Eixos calibrados pelos botões "Capturar" — pressione com o pedal/pot no extremo desejado.',
+    'inputs.status_disconnected':   'Desconectado — conecte na placa pra ler o estado dos GPIOs.',
+    'inputs.status_idle':           'Conectado, leitura ao vivo desligada. Clique "Iniciar leitura" pra ver os valores em tempo real.',
+    'inputs.status_polling':        'Lendo ao vivo a',
+    'inputs.status_polling_unit':   'Hz (5 polls/s × 4 GPIOs)',
+    'inputs.btn_start':             '▶ Iniciar leitura',
+    'inputs.btn_stop':              '■ Parar leitura',
+    'inputs.badge_off':             'Off',
+    'inputs.badge_button':          '● Configurado: botão',
+    'inputs.badge_axis':            '● Configurado: eixo',
     // DFU section (PT)
     'dfu.title': 'Atualização de Firmware via DFU',
     'dfu.subtitle': 'Reboota a placa pro bootloader STM32 e grava o .bin pelo navegador (sem dfu-util).',
@@ -930,6 +1096,7 @@ const I18N = {
     'status.connected': 'Connected',
     'sidebar.group.odrive': 'ODrive',
     'sidebar.group.ffb':    'Force Feedback',
+    'sidebar.group.io':     'Inputs',
     'sidebar.group.tools':  'Tools',
     'search.placeholder':   'Search parameter (e.g. pole_pairs, brake, encoder)…',
     'search.no_match_here': 'Nothing matches "<b>{q}</b>" in this tab, but other tabs have results:',
@@ -946,6 +1113,33 @@ const I18N = {
     'tab.ffb-live': 'FFB Live',
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
+    'tab.inputs': 'Inputs (GPIO)',
+    // Inputs section (EN)
+    'inputs.title':       'Digital and analog inputs',
+    'inputs.subtitle':    'MKS XDrive Mini GPIOs 1-4 configurable as joystick buttons or axes via HID. Polled at 1 kHz.',
+    'inputs.gpio_label':  'GPIO',
+    'inputs.mode':        'Mode',
+    'inputs.mode_off':    'Off',
+    'inputs.mode_button': 'Button',
+    'inputs.mode_axis':   'Axis',
+    'inputs.button_idx':  'Button #',
+    'inputs.axis_idx':    'Axis',
+    'inputs.invert':      'Invert',
+    'inputs.amin':        'ADC min',
+    'inputs.amax':        'ADC max',
+    'inputs.capture_min': 'Capture min',
+    'inputs.capture_max': 'Capture max',
+    'inputs.live_label':  'Current',
+    'inputs.note':        'Save persists to EEPROM. Buttons trigger when pulled to GND (internal pull-up). Axes calibrated via the "Capture" buttons — press them with the pedal/pot at the desired extreme.',
+    'inputs.status_disconnected':   'Not connected — connect to the board to read GPIO state.',
+    'inputs.status_idle':           'Connected, live read off. Click "Start reading" to see real-time values.',
+    'inputs.status_polling':        'Reading live at',
+    'inputs.status_polling_unit':   'Hz (5 polls/s × 4 GPIOs)',
+    'inputs.btn_start':             '▶ Start reading',
+    'inputs.btn_stop':              '■ Stop reading',
+    'inputs.badge_off':             'Off',
+    'inputs.badge_button':          '● Configured: button',
+    'inputs.badge_axis':            '● Configured: axis',
     // DFU section (EN)
     'dfu.title': 'Firmware Update via DFU',
     'dfu.subtitle': 'Reboots the board into the STM32 bootloader and flashes the .bin from the browser (no dfu-util needed).',
@@ -1567,7 +1761,6 @@ const GROUP_KEY_MAP = {
   // ODrive
   'Alimentação / Brake':                  'group.power_brake',
   'Comunicação':                           'group.comm',
-  'GPIO Modes':                            'group.gpio_modes',
   // Axis 0
   'Startup Sequence':                      'group.startup',
   'Modo de operação':                      'group.op_mode',
@@ -1648,6 +1841,8 @@ const SIDEBAR_GROUPS = [
     items: ['odrv', 'axis0', 'motor', 'encoder', 'controller'] },
   { titleKey: 'sidebar.group.ffb',    title: 'Force Feedback',
     items: ['ffb-wheel', 'ffb-effects', 'ffb-filters', 'ffb-live'] },
+  { titleKey: 'sidebar.group.io',     title: 'Inputs',
+    items: ['inputs'] },
   { titleKey: 'sidebar.group.tools',  title: 'Tools',
     items: ['debug', 'console-tab', 'dfu'] },
 ];
@@ -1664,6 +1859,7 @@ const TAB_ICONS = {
   'ffb-live':     '◔',
   'console-tab':  '❯_',
   'dfu':          '⇩',
+  'inputs':       '⌨',
 };
 
 const SCHEMA = [
@@ -1694,16 +1890,15 @@ const SCHEMA = [
       I('uart_b_baudrate'),
       I('uart_c_baudrate'),
       E('usb_cdc_protocol', ENUM_STREAM_PROTO),
-
-      { group: 'GPIO Modes' },
       I('error_gpio_pin'),
-      // MKS XDrive Mini só expõe GPIO 1-4 e 6 nos conectores externos.
-      // Demais (5, 7-16) ficam ocultos pra não confundir.
-      E('gpio1_mode', ENUM_GPIO_MODE),
-      E('gpio2_mode', ENUM_GPIO_MODE),
-      E('gpio3_mode', ENUM_GPIO_MODE),
-      E('gpio4_mode', ENUM_GPIO_MODE),
-      E('gpio6_mode', ENUM_GPIO_MODE),
+
+      // Phase 4.x — gpio*_mode REMOVIDOS desta aba pra evitar conflito com
+      // nossa configuração de inputs (aba "Inputs (GPIO)"). Os pinos GPIO 1-4
+      // são gerenciados exclusivamente pelo nosso sistema de inputs do joystick;
+      // setar config.gpioN_mode aqui faria ODrive reconfigurar o pino no boot
+      // antes do nosso código rodar, podendo causar inconsistências sutis (ADC
+      // já configurado pra UART, address I2C lido em pino com botão pendurado,
+      // etc.). Quem precisa configurar GPIO 1-4 vai na aba Inputs.
 
     ]
   },
@@ -1951,6 +2146,9 @@ const SCHEMA = [
   },
   {
     id: 'dfu', label: 'DFU Flash', prefix: '', custom: true,
+  },
+  {
+    id: 'inputs', label: 'Inputs', prefix: '', custom: true,
   }
 ];
 
@@ -2312,6 +2510,321 @@ function buildDFUHTML() {
       <pre class="dfu-log" id="dfu-log"></pre>
     </div>
   `;
+}
+
+/* =========================================================================
+   Inputs tab — GPIO 1..4 da MKS XDrive Mini configuráveis como botões ou
+   eixos do joystick HID. Comandos firmware (sintaxe OpenFFBoard cmdparser):
+     gpio.<inst>.mode    0=off / 1=button / 2=axis
+     gpio.<inst>.idx     0..63 (button) ou 0..3 (axis: 0=Rx,1=Ry,2=Rz,3=Slider)
+     gpio.<inst>.invert  0/1
+     gpio.<inst>.amin    0..4095 (axis only)
+     gpio.<inst>.amax    0..4095 (axis only)
+     gpio.<inst>.cur?    leitura raw atual (0/1 botão, 0..4095 eixo)
+   Polling de live indicator: 200 ms quando aba ativa.
+   ========================================================================= */
+const INPUTS_GPIOS = [1, 2, 3, 4];
+const INPUTS_PIN_NAMES = { 1: 'PA0 (ADC1_IN0)', 2: 'PA1 (ADC1_IN1)', 3: 'PA2 (ADC1_IN2)', 4: 'PA3 (ADC1_IN3)' };
+const INPUTS_AXIS_NAMES = ['Rx', 'Ry', 'Rz', 'Slider'];
+let inputsPollTimer = null;
+
+function buildInputsHTML() {
+  const cards = INPUTS_GPIOS.map(i => `
+    <div class="gpio-card" id="gpio-card-${i}">
+      <h4>
+        <span data-i18n="inputs.gpio_label">GPIO</span> ${i}
+        <span class="pin">${INPUTS_PIN_NAMES[i]}</span>
+        <span class="badge" id="gpio-badge-${i}" data-i18n="inputs.badge_off">Off</span>
+      </h4>
+      <div class="row">
+        <label data-i18n="inputs.mode">Mode</label>
+        <select data-gpio="${i}" data-field="mode">
+          <option value="0" data-i18n="inputs.mode_off">Off</option>
+          <option value="1" data-i18n="inputs.mode_button">Button</option>
+          <option value="2" data-i18n="inputs.mode_axis">Axis</option>
+        </select>
+      </div>
+      <div class="row" data-show-when="button">
+        <label data-i18n="inputs.button_idx">Button #</label>
+        <input type="number" min="0" max="63" data-gpio="${i}" data-field="idx-button">
+      </div>
+      <div class="row" data-show-when="axis">
+        <label data-i18n="inputs.axis_idx">Axis</label>
+        <select data-gpio="${i}" data-field="idx-axis">
+          <option value="0">Rx</option>
+          <option value="1">Ry</option>
+          <option value="2">Rz</option>
+          <option value="3">Slider</option>
+        </select>
+      </div>
+      <div class="row">
+        <label data-i18n="inputs.invert">Invert</label>
+        <input type="checkbox" data-gpio="${i}" data-field="invert">
+      </div>
+      <div class="row" data-show-when="axis">
+        <label data-i18n="inputs.amin">ADC min</label>
+        <input type="number" min="0" max="4095" data-gpio="${i}" data-field="amin">
+        <button class="capture" data-gpio="${i}" data-field="capture-min" data-i18n="inputs.capture_min">Capture min</button>
+      </div>
+      <div class="row" data-show-when="axis">
+        <label data-i18n="inputs.amax">ADC max</label>
+        <input type="number" min="0" max="4095" data-gpio="${i}" data-field="amax">
+        <button class="capture" data-gpio="${i}" data-field="capture-max" data-i18n="inputs.capture_max">Capture max</button>
+      </div>
+      <div class="live">
+        <span class="label" data-i18n="inputs.live_label">Current</span>
+        <div class="bar-wrap" data-show-when="axis"><div class="bar" id="gpio-bar-${i}"></div></div>
+        <div class="indicator-btn" id="gpio-ind-${i}" data-show-when="button"></div>
+        <span class="value" id="gpio-val-${i}">—</span>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="debug-section" style="grid-column:1/-1;">
+      <h3 data-i18n="inputs.title">Entradas digitais e analógicas</h3>
+      <p style="color:var(--fg-muted);font-size:13px;margin:0;" data-i18n="inputs.subtitle">
+        GPIOs 1-4 da MKS XDrive Mini configuráveis como botões ou eixos do joystick HID.
+      </p>
+    </div>
+
+    <div class="inputs-status" id="inputs-status">
+      <div class="status-led"></div>
+      <div class="text" id="inputs-status-text" data-i18n="inputs.status_disconnected">
+        Desconectado — conecte na placa pra ler o estado dos GPIOs.
+      </div>
+      <button id="inputs-toggle-poll" class="primary" data-i18n="inputs.btn_start"
+              style="margin-left:auto">▶ Iniciar leitura</button>
+    </div>
+
+    <div class="inputs-controls">
+      <span class="poll-info" data-i18n="inputs.note">
+        Salvar persiste no EEPROM. Botões funcionam pressionando para GND.
+      </span>
+    </div>
+
+    ${cards}
+  `;
+}
+
+function wireInputsTab() {
+  if (!document.getElementById('gpio-card-1')) return;
+
+  // Helper pra atualizar visibilidade dos rows + badge baseado no modo
+  const refreshVisibility = (cardEl, mode) => {
+    cardEl.classList.toggle('active', mode !== '0');
+    cardEl.querySelectorAll('[data-show-when]').forEach(el => {
+      const want = el.dataset.showWhen;
+      const show = (want === 'button' && mode === '1') || (want === 'axis' && mode === '2');
+      el.style.display = show ? '' : 'none';
+    });
+    // Badge no header do card
+    const badge = cardEl.querySelector('.badge');
+    if (badge) {
+      const key = mode === '1' ? 'inputs.badge_button'
+                : mode === '2' ? 'inputs.badge_axis'
+                : 'inputs.badge_off';
+      badge.dataset.i18n = key;
+      badge.textContent = t(key);
+    }
+  };
+
+  // Atualiza o status global (header da aba)
+  // states: 'disconnected' | 'idle' (conectado, não polling) | 'connected' (polling) | 'error'
+  const setStatusHeader = (state, info) => {
+    const box = document.getElementById('inputs-status');
+    const txt = document.getElementById('inputs-status-text');
+    if (!box || !txt) return;
+    box.classList.remove('connected', 'error');
+    if (state === 'connected') {
+      box.classList.add('connected');
+      txt.innerHTML = t('inputs.status_polling') +
+        ' <b>' + (info || '5') + '</b> ' + t('inputs.status_polling_unit');
+    } else if (state === 'idle') {
+      txt.textContent = t('inputs.status_idle');
+    } else if (state === 'error') {
+      box.classList.add('error');
+      txt.textContent = info || '';
+    } else {
+      txt.textContent = t('inputs.status_disconnected');
+    }
+  };
+
+  // Carrega cfg atual do device pra cada GPIO (chamado no connect)
+  // Não bloqueia a UI se sem conexão — campos ficam em default.
+  const sendOffb = async (cmd, isExec) => {
+    if (!writer) return null;
+    return await sendCmd(cmd, !isExec).catch(() => null);
+  };
+
+  const reload = async () => {
+    if (!writer) return;
+    for (const i of INPUTS_GPIOS) {
+      const card = document.getElementById('gpio-card-' + i);
+      if (!card) continue;
+
+      // Lê todos os campos via OpenFFBoard cmdparser (sufixo "?" = GET).
+      const m  = await sendOffb('gpio.' + i + '.mode?', false);
+      const ix = await sendOffb('gpio.' + i + '.idx?', false);
+      const iv = await sendOffb('gpio.' + i + '.invert?', false);
+      const am = await sendOffb('gpio.' + i + '.amin?', false);
+      const ax = await sendOffb('gpio.' + i + '.amax?', false);
+
+      // Reply OpenFFBoard: "[gpio.N.field?|VALUE]". Extrai o VALUE.
+      const parse = (r) => { if (!r) return null; const x = r.match(/\|(-?\d+)\]/); return x ? x[1] : null; };
+      const mv = parse(m), ixv = parse(ix), ivv = parse(iv), amv = parse(am), axv = parse(ax);
+
+      if (mv !== null) {
+        card.querySelector('[data-field="mode"]').value = mv;
+        refreshVisibility(card, mv);
+      }
+      if (ixv !== null) {
+        // idx é um valor único; exibido em button-idx ou axis-idx conforme mode
+        card.querySelector('[data-field="idx-button"]').value = ixv;
+        const axIdx = parseInt(ixv, 10);
+        const axSel = card.querySelector('[data-field="idx-axis"]');
+        if (axIdx >= 0 && axIdx <= 3) axSel.value = String(axIdx);
+      }
+      if (ivv !== null) card.querySelector('[data-field="invert"]').checked = ivv === '1';
+      if (amv !== null) card.querySelector('[data-field="amin"]').value = amv;
+      if (axv !== null) card.querySelector('[data-field="amax"]').value = axv;
+    }
+  };
+
+  // Send field change via OpenFFBoard set
+  const sendSet = async (gpio, field, value) => {
+    if (!writer) {
+      toast('Conecte primeiro', 'err');
+      return;
+    }
+    await sendOffb('gpio.' + gpio + '.' + field + '=' + value, false);
+  };
+
+  // Listeners por card
+  INPUTS_GPIOS.forEach(i => {
+    const card = document.getElementById('gpio-card-' + i);
+
+    const modeSel  = card.querySelector('[data-field="mode"]');
+    const idxBtn   = card.querySelector('[data-field="idx-button"]');
+    const idxAxis  = card.querySelector('[data-field="idx-axis"]');
+    const invertCk = card.querySelector('[data-field="invert"]');
+    const aminIn   = card.querySelector('[data-field="amin"]');
+    const amaxIn   = card.querySelector('[data-field="amax"]');
+    const capMin   = card.querySelector('[data-field="capture-min"]');
+    const capMax   = card.querySelector('[data-field="capture-max"]');
+
+    modeSel.addEventListener('change', async () => {
+      const v = modeSel.value;
+      refreshVisibility(card, v);
+      await sendSet(i, 'mode', v);
+    });
+    idxBtn.addEventListener('change', () => sendSet(i, 'idx', idxBtn.value));
+    idxAxis.addEventListener('change', () => sendSet(i, 'idx', idxAxis.value));
+    invertCk.addEventListener('change', () => sendSet(i, 'invert', invertCk.checked ? '1' : '0'));
+    aminIn.addEventListener('change', () => sendSet(i, 'amin', aminIn.value));
+    amaxIn.addEventListener('change', () => sendSet(i, 'amax', amaxIn.value));
+
+    // "Capture min/max": lê valor atual via gpio.N.cur? e seta amin/amax local + remoto
+    capMin.addEventListener('click', async () => {
+      const r = await sendOffb('gpio.' + i + '.cur?', false);
+      const x = r ? r.match(/\|(\d+)\]/) : null;
+      if (x) {
+        aminIn.value = x[1];
+        await sendSet(i, 'amin', x[1]);
+        toast('GPIO ' + i + ' min capturado: ' + x[1], 'ok');
+      }
+    });
+    capMax.addEventListener('click', async () => {
+      const r = await sendOffb('gpio.' + i + '.cur?', false);
+      const x = r ? r.match(/\|(\d+)\]/) : null;
+      if (x) {
+        amaxIn.value = x[1];
+        await sendSet(i, 'amax', x[1]);
+        toast('GPIO ' + i + ' max capturado: ' + x[1], 'ok');
+      }
+    });
+  });
+
+  // Live indicator polling — só roda quando aba Inputs está ativa
+  const pollLive = async () => {
+    if (!writer) {
+      setStatusHeader('disconnected');
+      return;
+    }
+    setStatusHeader('connected', '5');
+    for (const i of INPUTS_GPIOS) {
+      const card = document.getElementById('gpio-card-' + i);
+      if (!card) continue;
+      const mode = card.querySelector('[data-field="mode"]').value;
+      if (mode === '0') {
+        document.getElementById('gpio-val-' + i).textContent = '—';
+        continue;
+      }
+      const r = await sendOffb('gpio.' + i + '.cur?', false);
+      const x = r ? r.match(/\|(\d+)\]/) : null;
+      if (!x) continue;
+      const raw = parseInt(x[1], 10);
+      document.getElementById('gpio-val-' + i).textContent = String(raw);
+
+      if (mode === '1') {
+        const ind = document.getElementById('gpio-ind-' + i);
+        ind.classList.toggle('on', raw === 1);
+      } else if (mode === '2') {
+        const bar = document.getElementById('gpio-bar-' + i);
+        const pct = Math.max(0, Math.min(100, (raw / 4095) * 100));
+        bar.style.width = pct + '%';
+      }
+    }
+  };
+
+  // Iniciar/parar polling — manual via botão no header de status. Não roda
+  // automaticamente pra evitar tráfego serial conflitante com outras abas.
+  const inputsStartPoll = () => {
+    if (inputsPollTimer) clearInterval(inputsPollTimer);
+    inputsPollTimer = setInterval(() => { pollLive().catch(() => {}); }, 200);
+    setStatusHeader(writer ? 'connected' : 'disconnected', '5');
+    updatePollButton(true);
+  };
+  const inputsStopPoll = () => {
+    if (inputsPollTimer) { clearInterval(inputsPollTimer); inputsPollTimer = null; }
+    setStatusHeader(writer ? 'idle' : 'disconnected');
+    updatePollButton(false);
+  };
+  const updatePollButton = (running) => {
+    const btn = document.getElementById('inputs-toggle-poll');
+    if (!btn) return;
+    const key = running ? 'inputs.btn_stop' : 'inputs.btn_start';
+    btn.dataset.i18n = key;
+    btn.textContent = t(key);
+    btn.classList.toggle('primary', !running);
+    btn.classList.toggle('danger', running);
+  };
+
+  // Botão Start/Stop polling — lê valores ao vivo só quando solicitado
+  const togglePollBtn = document.getElementById('inputs-toggle-poll');
+  if (togglePollBtn) {
+    togglePollBtn.addEventListener('click', () => {
+      if (inputsPollTimer) inputsStopPoll();
+      else inputsStartPoll();
+    });
+  }
+
+  // Hook: ao entrar na aba inputs, recarrega cfg uma vez (sem polling).
+  // Ao sair, para o poll se estiver rodando.
+  document.querySelectorAll('#sidebar-nav .sidebar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (item.dataset.tab === 'inputs') {
+        reload().catch(() => {});
+        setStatusHeader(writer ? 'idle' : 'disconnected');
+        updatePollButton(false);
+      } else {
+        inputsStopPoll();
+      }
+    });
+  });
+
+  // Expose pra fora (caso queira chamar reload depois de connect)
+  window.inputsReload = reload;
 }
 
 function wireDFUTab() {
@@ -2876,6 +3389,12 @@ function buildTabs() {
     // DFU Flash tab — re-flash via WebUSB
     if (tab.custom && tab.id === 'dfu') {
       panel.innerHTML = buildDFUHTML();
+      content.appendChild(panel);
+      return;
+    }
+    // Inputs tab — GPIO 1-4 config (button/axis) + live preview
+    if (tab.custom && tab.id === 'inputs') {
+      panel.innerHTML = buildInputsHTML();
       content.appendChild(panel);
       return;
     }
@@ -4225,6 +4744,7 @@ initDebugTab();
 wireFFBLive();
 wireConsoleTab();
 wireDFUTab();
+wireInputsTab();
 
 // i18n — wirar select de idioma e aplicar idioma persistido
 const langSelect = document.getElementById('lang-select');
