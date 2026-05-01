@@ -21,6 +21,7 @@ build/
 *.code-workspace
 .cache/
 compile_commands.json
+.venv/
 .venv
 # =============================================================================
 # Distribution archives (originals from upstream — not redistributed)
@@ -84,3 +85,9 @@ Firmware-Merged/
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/fibre-cpp/test/
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/.gitattributes
 ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/.gitattributes
+
+# =============================================================================
+# Allow CMSIS DSP libs (required for linking)
+# =============================================================================
+!ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/ThirdParty/CMSIS/Lib/GCC/libarm_cortexM4lf_math.a
+!ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware/ThirdParty/CMSIS/Lib/GCC/libarm_cortexM7lfsp_math.a
