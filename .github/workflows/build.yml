@@ -1,0 +1,39 @@
+name: Build Firmware
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout the repository and its submodules
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # 2. Install ARM GCC compiler and build essentials
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi build-essential
+
+    # 3. Build the firmware using Make
+    - name: Build Firmware
+      working-directory: ./Odrive-Wheel
+      run: make -j$(nproc)
+
+    # 4. Upload the compiled binary as an artifact
+    - name: Upload Firmware Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: odrive-wheel-firmware
+        path: ./Odrive-Wheel/build/odrive-wheel.bin
+        retention-days: 14
