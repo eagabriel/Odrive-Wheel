@@ -41,8 +41,18 @@ jobs:
       working-directory: ./Odrive-Wheel
       run: |
         set -o pipefail
-        make -j$(nproc) 2>&1 | tee build.log
-        test -f build/odrive-wheel.bin
+        if ! make -j$(nproc) 2>&1 | tee build.log; then
+          echo "::group::Build log tail"
+          tail -n 200 build.log || true
+          echo "::endgroup::"
+          exit 1
+        fi
+
+        if [ ! -f build/odrive-wheel.bin ]; then
+          echo "Missing build/odrive-wheel.bin"
+          ls -la build || true
+          exit 1
+        fi
 
     # 5. Upload build log if something failed
     - name: Upload build log
