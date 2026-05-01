@@ -5,7 +5,6 @@ on:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -13,24 +12,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout the repository and its submodules
+    # 1. Checkout the repository and its submodules with full history for versioning
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 0
 
-    # 2. Install ARM GCC compiler and build essentials
+    # 2. Install ARM GCC compiler, Make, and Python
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi build-essential
+        sudo apt-get install -y gcc-arm-none-eabi build-essential python3 python3-yaml python3-jinja2
 
-    # 3. Build the firmware using Make
+    # 3. Generate the required version.c file for the ODrive submodule
+    - name: Generate ODrive version.c
+      working-directory: ./ODrive-fw-v0.5.6/ODrive-fw-v0.5.6
+      run: |
+        mkdir -p Firmware/autogen
+        python3 tools/odrive/version.py --output Firmware/autogen/version.c
+
+    # 4. Build the firmware using Make
     - name: Build Firmware
       working-directory: ./Odrive-Wheel
       run: make -j$(nproc)
 
-    # 4. Upload the compiled binary as an artifact
+    # 5. Upload the compiled binary as an artifact
     - name: Upload Firmware Artifact
       uses: actions/upload-artifact@v4
       with:
