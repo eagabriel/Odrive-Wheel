@@ -23,7 +23,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi build-essential python3 python3-yaml python3-jinja2
+        sudo apt-get install -y gcc-arm-none-eabi build-essential python3 python3-yaml python3-jinja2 python3-jsonschema
 
     # 3. Generate ODrive autogen sources/headers (version + interfaces)
     - name: Generate ODrive autogen files
@@ -39,9 +39,20 @@ jobs:
     # 4. Build the firmware using Make
     - name: Build Firmware
       working-directory: ./Odrive-Wheel
-      run: make -j$(nproc)
+      run: |
+        set -o pipefail
+        make -j$(nproc) 2>&1 | tee build.log
+        test -f build/odrive-wheel.bin
 
-    # 5. Upload the compiled binary as an artifact
+    # 5. Upload build log if something failed
+    - name: Upload build log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: odrive-wheel-build-log
+        path: ./Odrive-Wheel/build.log
+
+    # 6. Upload the compiled binary as an artifact
     - name: Upload Firmware Artifact
       uses: actions/upload-artifact@v4
       with:
