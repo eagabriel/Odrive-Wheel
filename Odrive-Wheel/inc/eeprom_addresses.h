@@ -51,7 +51,23 @@
 #define ADR_ODRIVE_OFS_M0       0x0303
 #define ADR_ODRIVE_OFS_M1       0x0304
 
-#define NB_OF_VAR 30
+// GPIO inputs (Phase 4.x): 3 entradas por pino × 4 pinos (1-4) = 12.
+// CFG packed em uint16: bits[0:1]=mode, bits[2:7]=idx, bit[8]=invert.
+// AMIN/AMAX só usados em mode=axis.
+#define ADR_GPIO1_CFG           0x0250
+#define ADR_GPIO1_AMIN          0x0251
+#define ADR_GPIO1_AMAX          0x0252
+#define ADR_GPIO2_CFG           0x0253
+#define ADR_GPIO2_AMIN          0x0254
+#define ADR_GPIO2_AMAX          0x0255
+#define ADR_GPIO3_CFG           0x0256
+#define ADR_GPIO3_AMIN          0x0257
+#define ADR_GPIO3_AMAX          0x0258
+#define ADR_GPIO4_CFG           0x0259
+#define ADR_GPIO4_AMIN          0x025A
+#define ADR_GPIO4_AMAX          0x025B
+
+#define NB_OF_VAR 42
 extern const uint16_t VirtAddVarTab[NB_OF_VAR];
 
 #endif

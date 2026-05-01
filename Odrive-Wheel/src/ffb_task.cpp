@@ -21,6 +21,10 @@
 
 #include "odrive_bridge.h"
 
+extern "C" {
+#include "gpio_inputs.h"
+}
+
 // -------------------- Forward decls dos globals --------------------
 // Necessário pra ODriveLocalAxis (definida abaixo) referenciar s_hidffb
 // e os contadores de diagnóstico antes das suas definições.
@@ -272,6 +276,9 @@ static void ffb_thread(void *arg) {
             rpt.id = 1;
             rpt.buttons = 0;
             rpt.X = (int16_t)s_axis_raw->getScaledAxisPos();
+            // Phase 4.x — popula buttons + axes extras (RX/RY/RZ/Slider) a partir
+            // dos GPIOs 1-4 configurados em modo button/axis.
+            gpio_inputs_update_report(&rpt.buttons, &rpt.RX, &rpt.RY, &rpt.RZ, &rpt.Slider);
             // report_id=1: tud_hid_report strippa o id; payload = buttons..Slider
             tud_hid_report(1, ((uint8_t*)&rpt) + 1, sizeof(rpt) - 1);
         }
@@ -333,6 +340,10 @@ extern "C" void ffb_task_init(void) {
         }
     }
     HAL_FLASH_Lock();
+
+    // Phase 4.x — GPIO inputs (botões/eixos via GPIOs 1-4). Carrega cfg da EE
+    // e configura cada pino conforme modo (button/axis/disabled).
+    gpio_inputs_init();
 
     s_effects_calc = std::make_shared<EffectsCalculator>();
     s_hidffb = std::make_shared<HidFFB>(s_effects_calc, /*axisCount=*/1);
@@ -585,6 +596,44 @@ extern "C" void ffb_set_inertia_gain(int v){ if (s_effects_calc) s_effects_calc-
 // Phase 3.4 — getters/setters dos filtros biquad por tipo de efeito.
 // Cada filtro tem freq (Hz, cutoff lowpass) e q (Q-factor scaled por 0.01).
 // Setter aplica também aos efeitos já em execução via applyFilterChanges().
+//
+// IMPORTANTE — slot de filtro por tipo de efeito (Phase 4.x bug fix):
+//   - friction/damper/inertia → filter[CUSTOM_PROFILE_ID] (= filter[1])
+//     (consistente: restoreFlash escreve aqui, saveFlash lê daqui quando
+//      filterProfileId==CUSTOM_PROFILE_ID, setFilters lê daqui em runtime)
+//   - constant force         → filter[0]
+//     (EffectsCalculator hardcoda filter[0] em setFilters/restoreFlash/
+//      saveFlash; setter precisa escrever aqui pra valor persistir e
+//      ser aplicado em runtime — antes escrevia em filter[1] e o valor
+//      era silenciosamente ignorado).
+//
+// Macro só atende friction/damper/inertia. Constant força tem accessors
+// próprios apontando pra filter[0].
+
+extern "C" int ffb_get_filter_constant_freq(void) {
+    return s_effects_calc ? (int)s_effects_calc->getFilterStructDefault().constant.freq : 0;
+}
+extern "C" void ffb_set_filter_constant_freq(int v) {
+    if (!s_effects_calc) return;
+    if (v < 1)   v = 1;
+    if (v > 500) v = 500;
+    s_effects_calc->getFilterStructDefault().constant.freq = (uint16_t)v;
+    // Sincroniza filter[1] pra eventual refatoração futura ler consistente
+    s_effects_calc->getFilterStruct().constant.freq = (uint16_t)v;
+    s_effects_calc->applyFilterChanges();
+}
+extern "C" int ffb_get_filter_constant_q(void) {
+    return s_effects_calc ? (int)s_effects_calc->getFilterStructDefault().constant.q : 0;
+}
+extern "C" void ffb_set_filter_constant_q(int v) {
+    if (!s_effects_calc) return;
+    if (v < 1)   v = 1;
+    if (v > 500) v = 500;
+    s_effects_calc->getFilterStructDefault().constant.q = (uint16_t)v;
+    s_effects_calc->getFilterStruct().constant.q = (uint16_t)v;
+    s_effects_calc->applyFilterChanges();
+}
+
 #define FFB_FILTER_ACCESSORS(name)                                              \
     extern "C" int  ffb_get_filter_##name##_freq(void) {                       \
         return s_effects_calc ? (int)s_effects_calc->getFilterStruct().name.freq : 0; \
@@ -606,7 +655,6 @@ extern "C" void ffb_set_inertia_gain(int v){ if (s_effects_calc) s_effects_calc-
         s_effects_calc->getFilterStruct().name.q = (uint16_t)v;                \
         s_effects_calc->applyFilterChanges();                                  \
     }
-FFB_FILTER_ACCESSORS(constant)
 FFB_FILTER_ACCESSORS(friction)
 FFB_FILTER_ACCESSORS(damper)
 FFB_FILTER_ACCESSORS(inertia)
@@ -678,6 +726,15 @@ extern "C" int ffb_save_flash(void) {
         if (!Flash_Write(ADR_AXIS1_ENC_RATIO, (uint16_t)s_axis_raw->endstopStrength_)) s_last_save_errors++;
         s_last_save_writes += 6;
     }
+
+    // Phase 4.x — GPIO inputs config (12 writes: 3 entries × 4 GPIOs)
+    {
+        int g_writes = 0, g_errors = 0;
+        gpio_inputs_save(&g_writes, &g_errors);
+        s_last_save_writes += g_writes;
+        s_last_save_errors += g_errors;
+    }
+
     HAL_FLASH_Lock();
     return s_last_save_errors == 0 ? 1 : 0;
 }
