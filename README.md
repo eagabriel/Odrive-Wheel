@@ -163,6 +163,14 @@ The HTML configuration tool runs entirely in the browser via Web Serial API
 
 ![HTML config tool](docs/screenshots/03-Header.png)
 
+![iRacing overlay (Document Picture-in-Picture)](docs/screenshots/04-Iracing%20overlay.png)
+
+![Encoder tab — Zero wheel position + AS5047 preset](docs/screenshots/05-Zero%20e%20encoder.png)
+
+![Inputs tab — GPIO config (buttons / axes)](docs/screenshots/06-GPIOConfig.png)
+
+![FFB Test tab — WebHID effect controller](docs/screenshots/07-FFB%20test.png)
+
 ## Updating OpenFFBoard upstream
 
 Several FFB stack files (HidFFB, EffectsCalculator) were **forked and modified** locally in
@@ -245,3 +253,4 @@ Built iteratively, in phases:
 - **Phase 2d** — OpenFFBoard CmdParser via CDC (dual parser: ODrive ASCII + OpenFFBoard)
 - **Phase 3** — FFB persistence in emulated EEPROM (S10+S11), full HTML tool, dashboards
 - **Phase 4** — Project rename to **Odrive-Wheel**, in-browser DFU flasher (WebUSB + DfuSe), Getting Started guide
+- **Phase 5** — iRacing overlay (Document Picture-in-Picture, dark/light theme), Encoder tab actions (zero wheel position + AS5047 preset), DFU now preserves FFB EEPROM across re-flash
