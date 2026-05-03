@@ -992,6 +992,43 @@ const I18N = {
     'sidebar.group.ffb':    'Force Feedback',
     'sidebar.group.io':     'Inputs',
     'sidebar.group.tools':  'Ferramentas',
+    // Legendas de gráficos (PT)
+    'legend.position':       'posição (graus)',
+    'legend.torque':         'torque (Nm)',
+    'legend.vbus':           'vbus (V)',
+    'legend.ibus':           'ibus (A)',
+    'legend.iq':             'Iq motor (A)',
+    'legend.ibrake':         'I brake (A)',
+    // Sub-textos das ações de state (PT)
+    'act.sub_motorcal':      '(mede R + L, ~5s)',
+    'act.sub_idxsearch':     '(procura índice Z)',
+    'act.sub_enccal':        '(gira motor, ~10s)',
+    'act.sub_fullcal':       '(motor + enc)',
+    'act.sub_closedloop':    '(ativa ganho)',
+    'act.sub_lockin':        '(open-loop)',
+    'act.sub_persist':       '(persiste config)',
+    // Toasts (PT)
+    'toast.connect_first':   'Conecte primeiro',
+    'toast.connect_first_board': 'Conecte primeiro à placa',
+    'toast.gpio_min_captured': 'GPIO {n} min capturado: {v}',
+    'toast.gpio_max_captured': 'GPIO {n} max capturado: {v}',
+    'toast.hid_connected':   'FFB HID conectado',
+    'toast.hid_connect_fail':'Falha ao conectar HID',
+    'toast.no_webusb':       'WebUSB não disponível',
+    'toast.wait_then_detect':'Aguarde 2s e clique em "Procurar bootloader"',
+    'toast.flash_done':      'Firmware gravado e placa reiniciada',
+    'toast.flash_fail':      'Flash falhou',
+    'toast.save_complete':   'Save complete + re-read OK',
+    'toast.wheel_zeroed':    '✓ Posição do volante zerada',
+    'toast.wheel_zero_fail': 'Falha ao zerar posição',
+    'toast.preset_as5047_applied': '✓ Preset AS5047 aplicado — clique Salvar pra persistir',
+    // Status / log (PT)
+    'status.error':          'Erro',
+    'status.no_webserial':   'Web Serial não suportado — use Chrome/Edge',
+    'log.connect_error':     'Erro conexão',
+    // FFB Test extras
+    'fbt.no_webhid':         '❌ WebHID não suportado neste navegador. Use Chrome ou Edge.',
+    'console.legend_err':    'erro',
     'search.placeholder':   'Buscar parâmetro (ex: pole_pairs, brake, encoder)…',
     'search.no_match_here': 'Nenhum resultado para "<b>{q}</b>" nesta aba, mas outras abas têm:',
     'search.no_match_anywhere': 'Nenhum parâmetro corresponde a "<b>{q}</b>". Tente um termo mais curto, ou parte do path (ex: <code>brake</code>, <code>encoder</code>, <code>vel_limit</code>).',
@@ -1010,6 +1047,45 @@ const I18N = {
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
+    'tab.overlay': 'Overlay (iRacing)',
+    // Overlay tab (PT)
+    'ovl.title':              'Overlay de telemetria do volante',
+    'ovl.subtitle':            'Abre uma janela "always-on-top" via Document Picture-in-Picture com dois gráficos vivos: barramento DC (vbus/ibus/Iq/I-brake) e dinâmica do volante (torque + posição). Útil pra monitorar a placa enquanto o iRacing (ou qualquer jogo) roda em fullscreen.',
+    'ovl.requirements':        'Requisitos: Chrome/Edge ≥ 116 (Document Picture-in-Picture API). Conexão serial com a placa precisa estar aberta.',
+    'ovl.config_title':        'Configuração',
+    'ovl.poll_label':          'Intervalo de aquisição',
+    'ovl.poll_hint':           'Intervalos curtos (~50ms) saturam a CDC e atrasam outras leituras. 100-300ms é o sweet spot pra um overlay fluido.',
+    'ovl.window_label':        'Janela do gráfico',
+    'ovl.window_value':        '60 segundos (fixo)',
+    'ovl.panels_title':        'Painéis do overlay',
+    'ovl.panels_hint':         'Desligue o painel que não interessa pra dar todo o espaço pro outro.',
+    'ovl.enable_bus':          'Mostrar gráfico de barramento DC (vbus / ibus / Iq / I-brake)',
+    'ovl.enable_whl':          'Mostrar gráfico do volante (torque + posição)',
+    'ovl.series_title':        'Séries do gráfico de barramento',
+    'ovl.series_hint':          'Marque o que quer ver. As preferências são salvas no navegador.',
+    'ovl.series_vbus':          'vbus (V) — tensão do bus DC',
+    'ovl.series_ibus':          'ibus (A) — corrente do bus DC',
+    'ovl.series_iq':            'Iq motor (A) — corrente quadratura',
+    'ovl.series_ibr':           'I brake (A) — corrente do brake resistor',
+    'ovl.btn_open':            '⧉ Abrir overlay',
+    'ovl.btn_close':           '✕ Fechar overlay',
+    'ovl.size_label':          'Tamanho da janela',
+    'ovl.size_compact':        'Compacto (480×400)',
+    'ovl.size_normal':         'Normal (640×520)',
+    'ovl.size_large':          'Grande (800×640)',
+    'ovl.theme_label':         'Tema',
+    'ovl.theme_dark':          'Escuro',
+    'ovl.theme_light':         'Claro',
+    'ovl.status_closed':       'Overlay fechado.',
+    'ovl.status_open':         'Overlay aberto — mantenha o jogo em modo Borderless ou Windowed pra ver a janela por cima.',
+    'ovl.status_no_pip':       '❌ Document Picture-in-Picture não disponível. Use Chrome/Edge ≥ 116.',
+    'ovl.status_no_serial':    '⚠ Conecte a placa antes de abrir o overlay.',
+    'ovl.window_title':        'Odrive-Wheel — Overlay',
+    'ovl.chart1_title':        'Barramento DC',
+    'ovl.chart2_title':        'Volante (torque + posição)',
+    'ovl.legend_torque':       'torque (Nm)',
+    'ovl.legend_position':     'posição (°)',
+    'ovl.tip_iracing':         'Dica iRacing: rode o jogo em modo Borderless ou Windowed. Em Fullscreen exclusivo o Windows oculta janelas always-on-top.',
     // FFB Test section (PT)
     'fbt.title':       'Teste de FFB via WebHID',
     'fbt.subtitle':    'Envia comandos PID HID direto pelo navegador, simulando um jogo. Testa a pilha completa (HID → HidFFB → EffectsCalculator → motor) sem precisar de jogo real.',
@@ -1123,6 +1199,14 @@ const I18N = {
     'group.ffb_filt_fr': 'Friction',
     'group.ffb_filt_da': 'Damper',
     'group.ffb_filt_in': 'Inertia',
+    // Encoder tab actions
+    'encoder.zero_btn':        '⊙ Zerar posição do volante',
+    'encoder.zero_label':      'Zerar posição:',
+    'encoder.zero_hint':       'Captura a posição atual como o novo zero (centro lógico). HID position passa a reportar 0 imediatamente. Não toca no encoder do ODrive — só no offset virtual da camada FFB. NÃO persiste após reboot; pra centro permanente use phase_offset + index search.',
+    'encoder.preset_as5047_btn':    '⚙ Ativar AS5047 (preset)',
+    'encoder.preset_as5047_label':  'Preset AS5047:',
+    'encoder.preset_as5047_hint':   'Configura encoder absoluto AS5047P (montado na MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False. Os campos ficam destacados em vermelho — clique Salvar pra persistir+reboot, depois rode ENCODER_OFFSET_CALIBRATION na aba Debug; se OK, marque pre_calibrated=True e Salvar de novo.',
+    'encoder.preset_as5047_confirm':'Aplicar preset AS5047? Vai sobrescrever mode, cpr, abs_spi_cs_gpio_pin, use_index e pre_calibrated. Os campos ficam em vermelho até você clicar Salvar. Calibração antiga (phase_offset) será invalidada.',
     // Debug tab
     'dbg.refresh_all':         '↻ Atualizar tudo',
     'dbg.refresh_all_hint':    'Lê info + erros + monitor live de uma vez. Atalho: tecla R quando aba Debug ativa.',
@@ -1235,6 +1319,43 @@ const I18N = {
     'sidebar.group.ffb':    'Force Feedback',
     'sidebar.group.io':     'Inputs',
     'sidebar.group.tools':  'Tools',
+    // Chart legends (EN)
+    'legend.position':       'position (degrees)',
+    'legend.torque':         'torque (Nm)',
+    'legend.vbus':           'vbus (V)',
+    'legend.ibus':           'ibus (A)',
+    'legend.iq':             'Iq motor (A)',
+    'legend.ibrake':         'I brake (A)',
+    // Action sub-text (EN)
+    'act.sub_motorcal':      '(measures R + L, ~5s)',
+    'act.sub_idxsearch':     '(searches Z index)',
+    'act.sub_enccal':        '(spins motor, ~10s)',
+    'act.sub_fullcal':       '(motor + encoder)',
+    'act.sub_closedloop':    '(enables gain)',
+    'act.sub_lockin':        '(open-loop)',
+    'act.sub_persist':       '(persists config)',
+    // Toasts (EN)
+    'toast.connect_first':   'Connect first',
+    'toast.connect_first_board': 'Connect to the board first',
+    'toast.gpio_min_captured': 'GPIO {n} min captured: {v}',
+    'toast.gpio_max_captured': 'GPIO {n} max captured: {v}',
+    'toast.hid_connected':   'FFB HID connected',
+    'toast.hid_connect_fail':'Failed to connect HID',
+    'toast.no_webusb':       'WebUSB not available',
+    'toast.wait_then_detect':'Wait 2s, then click "Find bootloader"',
+    'toast.flash_done':      'Firmware flashed, board rebooted',
+    'toast.flash_fail':      'Flash failed',
+    'toast.save_complete':   'Save complete + re-read OK',
+    'toast.wheel_zeroed':    '✓ Wheel position zeroed',
+    'toast.wheel_zero_fail': 'Failed to zero wheel position',
+    'toast.preset_as5047_applied': '✓ AS5047 preset applied — click Save to persist',
+    // Status / log (EN)
+    'status.error':          'Error',
+    'status.no_webserial':   'Web Serial not supported — use Chrome/Edge',
+    'log.connect_error':     'Connection error',
+    // FFB Test extras
+    'fbt.no_webhid':         '❌ WebHID not supported in this browser. Use Chrome or Edge.',
+    'console.legend_err':    'error',
     'search.placeholder':   'Search parameter (e.g. pole_pairs, brake, encoder)…',
     'search.no_match_here': 'Nothing matches "<b>{q}</b>" in this tab, but other tabs have results:',
     'search.no_match_anywhere': 'No parameters match "<b>{q}</b>". Try a shorter term, or part of the path (e.g. <code>brake</code>, <code>encoder</code>, <code>vel_limit</code>).',
@@ -1252,6 +1373,45 @@ const I18N = {
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
+    'tab.overlay': 'Overlay (iRacing)',
+    // Overlay tab (EN)
+    'ovl.title':              'Wheel telemetry overlay',
+    'ovl.subtitle':            'Opens an always-on-top window via the Document Picture-in-Picture API with two live charts: DC bus (vbus/ibus/Iq/I-brake) and wheel dynamics (torque + position). Useful for watching the board while iRacing (or any game) runs in fullscreen.',
+    'ovl.requirements':        'Requirements: Chrome/Edge ≥ 116 (Document Picture-in-Picture API). Serial connection to the board must be open.',
+    'ovl.config_title':        'Configuration',
+    'ovl.poll_label':          'Acquisition interval',
+    'ovl.poll_hint':           'Short intervals (~50ms) saturate the CDC and slow other reads. 100-300ms is the sweet spot for a smooth overlay.',
+    'ovl.window_label':        'Chart window',
+    'ovl.window_value':        '60 seconds (fixed)',
+    'ovl.panels_title':        'Overlay panels',
+    'ovl.panels_hint':         'Turn off the panel you do not need to give all the space to the other.',
+    'ovl.enable_bus':          'Show DC bus chart (vbus / ibus / Iq / I-brake)',
+    'ovl.enable_whl':          'Show wheel chart (torque + position)',
+    'ovl.series_title':        'DC bus chart series',
+    'ovl.series_hint':          'Tick what you want to see. Preferences are saved in the browser.',
+    'ovl.series_vbus':          'vbus (V) — DC bus voltage',
+    'ovl.series_ibus':          'ibus (A) — DC bus current',
+    'ovl.series_iq':            'Iq motor (A) — quadrature current',
+    'ovl.series_ibr':           'I brake (A) — brake resistor current',
+    'ovl.btn_open':            '⧉ Open overlay',
+    'ovl.btn_close':           '✕ Close overlay',
+    'ovl.size_label':          'Window size',
+    'ovl.size_compact':        'Compact (480×400)',
+    'ovl.size_normal':         'Normal (640×520)',
+    'ovl.size_large':          'Large (800×640)',
+    'ovl.theme_label':         'Theme',
+    'ovl.theme_dark':          'Dark',
+    'ovl.theme_light':         'Light',
+    'ovl.status_closed':       'Overlay closed.',
+    'ovl.status_open':         'Overlay open — keep the game in Borderless or Windowed mode to see the window on top.',
+    'ovl.status_no_pip':       '❌ Document Picture-in-Picture is not available. Use Chrome/Edge ≥ 116.',
+    'ovl.status_no_serial':    '⚠ Connect the board before opening the overlay.',
+    'ovl.window_title':        'Odrive-Wheel — Overlay',
+    'ovl.chart1_title':        'DC bus',
+    'ovl.chart2_title':        'Wheel (torque + position)',
+    'ovl.legend_torque':       'torque (Nm)',
+    'ovl.legend_position':     'position (°)',
+    'ovl.tip_iracing':         'iRacing tip: run the game in Borderless or Windowed mode. Exclusive Fullscreen hides always-on-top windows on Windows.',
     // FFB Test section (EN)
     'fbt.title':       'FFB Test via WebHID',
     'fbt.subtitle':    'Sends HID PID reports straight from the browser, mimicking a game. Tests the full stack (HID → HidFFB → EffectsCalculator → motor) without needing an actual game.',
@@ -1357,6 +1517,14 @@ const I18N = {
     'group.ffb_filt_fr': 'Friction',
     'group.ffb_filt_da': 'Damper',
     'group.ffb_filt_in': 'Inertia',
+    // Encoder tab actions
+    'encoder.zero_btn':        '⊙ Zero wheel position',
+    'encoder.zero_label':      'Zero position:',
+    'encoder.zero_hint':       'Captures current position as the new zero (logical center). HID position reports 0 immediately. Does not touch ODrive encoder — only the virtual offset in the FFB layer. Does NOT persist across reboot; for permanent center use phase_offset + index search.',
+    'encoder.preset_as5047_btn':    '⚙ Activate AS5047 (preset)',
+    'encoder.preset_as5047_label':  'AS5047 preset:',
+    'encoder.preset_as5047_hint':   'Configures the absolute AS5047P encoder (mounted on MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False. Fields turn red — click Save to persist+reboot, then run ENCODER_OFFSET_CALIBRATION from the Debug tab; if it succeeds, set pre_calibrated=True and Save again.',
+    'encoder.preset_as5047_confirm':'Apply AS5047 preset? Will overwrite mode, cpr, abs_spi_cs_gpio_pin, use_index and pre_calibrated. Fields stay red until you click Save. Old calibration (phase_offset) will be invalidated.',
     // Debug tab
     'dbg.refresh_all':         '↻ Refresh all',
     'dbg.refresh_all_hint':    'Reads info + errors + live monitor at once. Shortcut: R key when Debug tab active.',
@@ -2021,7 +2189,7 @@ const SIDEBAR_GROUPS = [
   { titleKey: 'sidebar.group.io',     title: 'Inputs',
     items: ['inputs'] },
   { titleKey: 'sidebar.group.tools',  title: 'Tools',
-    items: ['debug', 'console-tab', 'dfu'] },
+    items: ['debug', 'console-tab', 'dfu', 'overlay'] },
 ];
 const TAB_ICONS = {
   'odrv':         '⚙',
@@ -2038,6 +2206,7 @@ const TAB_ICONS = {
   'console-tab':  '❯_',
   'dfu':          '⇩',
   'inputs':       '⌨',
+  'overlay':      '⧉',
 };
 
 const SCHEMA = [
@@ -2335,6 +2504,9 @@ const SCHEMA = [
   },
   {
     id: 'inputs', label: 'Inputs', prefix: '', custom: true,
+  },
+  {
+    id: 'overlay', label: 'Overlay', prefix: '', custom: true,
   }
 ];
 
@@ -2567,12 +2739,22 @@ const DFU = {
   // bStatus values (subset)
   OK: 0x00, errTARGET: 0x01, errFILE: 0x02, errWRITE: 0x03, errERASE: 0x04,
   // STM32F405 sector layout (start, size)
-  // Application = sectors 0-9 (last 2 sectors S10/S11 are EEPROM emul)
-  // We only erase 0-9 (up to 0x080BFFFF).
+  //
+  // Layout do nosso firmware:
+  //   S0       (16K) — vetores (.isr_vector)        ← apaga + grava
+  //   S1+S2    (32K) — FFB EEPROM emulada           ← PROTEGIDO (não toca)
+  //   S3..S9   (~880K) — .text + .data              ← apaga + grava
+  //   S10+S11  (256K) — ODrive NVM persistente      ← PROTEGIDO (não toca)
+  //
+  // STM32F4_SECTORS = todos os setores apagáveis pelo bootloader DfuSe.
+  // PROTECTED_RANGES = sub-ranges dentro deles que pulamos pra preservar
+  // dados persistentes que NÃO fazem parte do .bin (mas o .bin os cobre
+  // com 0xFF de gap-fill, daí precisamos pular ativamente no download
+  // também — não basta pular o erase).
   STM32F4_SECTORS: [
     { start: 0x08000000, size: 16  * 1024 }, // S0
-    { start: 0x08004000, size: 16  * 1024 }, // S1
-    { start: 0x08008000, size: 16  * 1024 }, // S2
+    { start: 0x08004000, size: 16  * 1024 }, // S1  ⚠ FFB EE (protegido)
+    { start: 0x08008000, size: 16  * 1024 }, // S2  ⚠ FFB EE (protegido)
     { start: 0x0800C000, size: 16  * 1024 }, // S3
     { start: 0x08010000, size: 64  * 1024 }, // S4
     { start: 0x08020000, size: 128 * 1024 }, // S5
@@ -2580,7 +2762,13 @@ const DFU = {
     { start: 0x08060000, size: 128 * 1024 }, // S7
     { start: 0x08080000, size: 128 * 1024 }, // S8
     { start: 0x080A0000, size: 128 * 1024 }, // S9
-    // S10 / S11 = EEPROM, NÃO apagamos
+    // S10 / S11 (0x080C0000 / 0x080E0000) = ODrive NVM, fora do .bin
+  ],
+  // Ranges que NÃO devem ser apagados nem regravados durante DFU.
+  // Cada save+ss do tool re-grava esses setores com config válido —
+  // resetar nos updates de fw faz user perder calibração + config FFB.
+  PROTECTED_RANGES: [
+    { start: 0x08004000, end: 0x0800C000, name: 'FFB EEPROM (S1+S2)' },
   ],
 };
 
@@ -2613,7 +2801,7 @@ function dfuStepError(stepEl, label) {
   stepEl.classList.remove('done');
   stepEl.classList.add('error');
   const badge = stepEl.querySelector('.badge');
-  if (badge) badge.textContent = label || '✕ erro';
+  if (badge) badge.textContent = label || ('✕ ' + t('console.legend_err'));
 }
 function dfuStepReset(stepEl) {
   stepEl.classList.remove('done', 'error');
@@ -2880,7 +3068,7 @@ function wireInputsTab() {
   // Send field change via OpenFFBoard set
   const sendSet = async (gpio, field, value) => {
     if (!writer) {
-      toast('Conecte primeiro', 'err');
+      toast(t('toast.connect_first'), 'err');
       return;
     }
     await sendOffb('gpio.' + gpio + '.' + field + '=' + value, false);
@@ -2917,7 +3105,7 @@ function wireInputsTab() {
       if (x) {
         aminIn.value = x[1];
         await sendSet(i, 'amin', x[1]);
-        toast('GPIO ' + i + ' min capturado: ' + x[1], 'ok');
+        toast(t('toast.gpio_min_captured').replace('{n}', i).replace('{v}', x[1]), 'ok');
       }
     });
     capMax.addEventListener('click', async () => {
@@ -2926,7 +3114,7 @@ function wireInputsTab() {
       if (x) {
         amaxIn.value = x[1];
         await sendSet(i, 'amax', x[1]);
-        toast('GPIO ' + i + ' max capturado: ' + x[1], 'ok');
+        toast(t('toast.gpio_max_captured').replace('{n}', i).replace('{v}', x[1]), 'ok');
       }
     });
   });
@@ -3161,8 +3349,8 @@ function buildFFBTestHTML() {
       <canvas id="fbt-chart" width="800" height="220"
               style="width:100%;height:220px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px"></canvas>
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
-        <span style="color:#ab47bc">━ posição (graus) <span id="fbt-chart-leg-pos">—</span></span>
-        <span style="color:#ef5350">━ torque (Nm) <span id="fbt-chart-leg-trq">—</span></span>
+        <span style="color:#ab47bc">━ <span data-i18n="legend.position">posição (graus)</span> <span id="fbt-chart-leg-pos">—</span></span>
+        <span style="color:#ef5350">━ <span data-i18n="legend.torque">torque (Nm)</span> <span id="fbt-chart-leg-trq">—</span></span>
         <span style="margin-left:auto;color:var(--fg-muted)" id="fbt-chart-stats">—</span>
       </div>
     </div>
@@ -3173,7 +3361,7 @@ function wireFFBTestTab() {
   if (!document.getElementById('fbt-status')) return;
   if (!('hid' in navigator)) {
     const txt = document.getElementById('fbt-status-text');
-    if (txt) txt.textContent = '❌ WebHID não suportado neste navegador. Use Chrome ou Edge.';
+    if (txt) txt.textContent = t('fbt.no_webhid');
     document.getElementById('fbt-btn-connect').disabled = true;
     return;
   }
@@ -3322,7 +3510,7 @@ function wireFFBTestTab() {
       await sendOutput(0x0D, [255]);      // DEVICE_GAIN: max
 
       setConnState(true);
-      toast('FFB HID conectado', 'ok');
+      toast(t('toast.hid_connected'), 'ok');
 
       // Listener de disconnect (cabo USB removido, etc.)
       fbtDevice.addEventListener('disconnect', () => {
@@ -3331,7 +3519,7 @@ function wireFFBTestTab() {
         for (const k in fbtRunning) fbtRunning[k] = false;
       });
     } catch (e) {
-      toast('Falha ao conectar HID: ' + e.message, 'err');
+      toast(t('toast.hid_connect_fail') + ': ' + e.message, 'err');
     }
   };
 
@@ -3591,6 +3779,703 @@ function wireFFBTestTab() {
   });
 }
 
+/* =========================================================================
+   Overlay tab — janela "always-on-top" via Document Picture-in-Picture
+   pra acompanhar telemetria do volante enquanto o iRacing (ou qualquer
+   jogo) roda em fullscreen. Dois gráficos:
+     1. Barramento DC: vbus / ibus / Iq motor / I brake (4 séries com
+        checkboxes de visibilidade)
+     2. Volante: torque (Nm) + posição (graus)
+   Janela fixa de 60s; polling configurável.
+   ========================================================================= */
+
+// Estado global do overlay — mantido fora do PiP pra sobreviver a abrir/fechar
+const overlayState = {
+  pipWin: null,            // Window do PiP (null se fechado)
+  pollTimer: null,
+  pollInFlight: false,
+  // Histórico (60s) — alimenta os gráficos
+  bus: { vbus: [], ibus: [], iq: [], ibr: [] },
+  whl: { trq: [], pos: [] },
+  // Canvas refs dentro do PiP (re-bound em cada open)
+  cvBus: null,
+  cvWhl: null,
+};
+
+// Liga/desliga painéis individualmente — escondidos via classe .hidden.
+// Painel sozinho ocupa 100% da janela do PiP (flex:1 expande); ambos = 50/50.
+function _ovlApplyPanelVisibility() {
+  const doc = overlayState.pipWin?.document;
+  if (!doc) return;
+  const showBus = document.getElementById('ovl-enable-bus')?.checked ?? true;
+  const showWhl = document.getElementById('ovl-enable-whl')?.checked ?? true;
+  const pBus = doc.getElementById('pip-panel-bus');
+  const pWhl = doc.getElementById('pip-panel-whl');
+  if (pBus) pBus.classList.toggle('hidden', !showBus);
+  if (pWhl) pWhl.classList.toggle('hidden', !showWhl);
+}
+
+function ovlMaxSamples() {
+  const interval = parseInt(document.getElementById('ovl-poll-interval')?.value, 10) || 200;
+  // Janela fixa de 60s — mín 5 samples pra evitar divisão por zero / linha colada
+  return Math.max(5, Math.ceil(60000 / interval));
+}
+function ovlPush(group, key, val) {
+  if (val === null || val === undefined || isNaN(val)) return;
+  overlayState[group][key].push(val);
+  const max = ovlMaxSamples();
+  while (overlayState[group][key].length > max) overlayState[group][key].shift();
+}
+function _ovlMin(arr) { return arr.length === 0 ? 0 : arr.reduce((a, b) => Math.min(a, b), arr[0]); }
+function _ovlMax(arr) { return arr.length === 0 ? 0 : arr.reduce((a, b) => Math.max(a, b), arr[0]); }
+
+function buildOverlayHTML() {
+  return `
+    <div class="debug-section">
+      <h3 data-i18n="ovl.title">Overlay de telemetria do volante</h3>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 10px;line-height:1.5"
+         data-i18n="ovl.subtitle">Abre uma janela "always-on-top" via Document Picture-in-Picture com dois gráficos vivos: barramento DC (vbus/ibus/Iq/I-brake) e dinâmica do volante (torque + posição). Útil pra monitorar a placa enquanto o iRacing (ou qualquer jogo) roda em fullscreen.</p>
+      <p style="color:var(--muted);font-size:11px;margin:0 0 10px"
+         data-i18n="ovl.requirements">Requisitos: Chrome/Edge ≥ 116 (Document Picture-in-Picture API). Conexão serial com a placa precisa estar aberta.</p>
+      <p style="color:#ffa726;font-size:11px;margin:0 0 6px"
+         data-i18n="ovl.tip_iracing">Dica iRacing: rode o jogo em modo Borderless ou Windowed. Em Fullscreen exclusivo o Windows oculta janelas always-on-top.</p>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="ovl.config_title">Configuração</h3>
+      <div class="live-grid" style="grid-template-columns: 200px 1fr; gap:10px 16px">
+        <div class="live-kv" style="background:transparent;border:none;padding:0;justify-content:flex-start">
+          <span class="k" data-i18n="ovl.poll_label">Intervalo de aquisição</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="ovl-poll-interval" value="200"
+                 min="50" max="2000" step="50" style="width:90px"> ms
+          <span style="color:var(--muted);font-size:11px"
+                data-i18n="ovl.poll_hint">Intervalos curtos (~50ms) saturam a CDC e atrasam outras leituras. 100-300ms é o sweet spot pra um overlay fluido.</span>
+        </div>
+
+        <div class="live-kv" style="background:transparent;border:none;padding:0;justify-content:flex-start">
+          <span class="k" data-i18n="ovl.window_label">Janela do gráfico</span>
+        </div>
+        <div style="color:var(--muted);font-size:12px"
+             data-i18n="ovl.window_value">60 segundos (fixo)</div>
+
+        <div class="live-kv" style="background:transparent;border:none;padding:0;justify-content:flex-start">
+          <span class="k" data-i18n="ovl.size_label">Tamanho da janela</span>
+        </div>
+        <div>
+          <select id="ovl-size" style="min-width:200px">
+            <option value="480x400" data-i18n="ovl.size_compact">Compacto (480×400)</option>
+            <option value="640x520" selected data-i18n="ovl.size_normal">Normal (640×520)</option>
+            <option value="800x640" data-i18n="ovl.size_large">Grande (800×640)</option>
+          </select>
+        </div>
+
+        <div class="live-kv" style="background:transparent;border:none;padding:0;justify-content:flex-start">
+          <span class="k" data-i18n="ovl.theme_label">Tema</span>
+        </div>
+        <div>
+          <select id="ovl-theme" style="min-width:200px">
+            <option value="dark" selected data-i18n="ovl.theme_dark">Escuro</option>
+            <option value="light" data-i18n="ovl.theme_light">Claro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="ovl.panels_title">Painéis do overlay</h3>
+      <p style="color:var(--muted);font-size:11px;margin:0 0 8px"
+         data-i18n="ovl.panels_hint">Desligue o painel que não interessa pra dar todo o espaço pro outro.</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <label style="cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-enable-bus" checked>
+          <span data-i18n="ovl.enable_bus">Mostrar gráfico de barramento DC (vbus / ibus / Iq / I-brake)</span>
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-enable-whl" checked>
+          <span data-i18n="ovl.enable_whl">Mostrar gráfico do volante (torque + posição)</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="ovl.series_title">Séries do gráfico de barramento</h3>
+      <p style="color:var(--muted);font-size:11px;margin:0 0 8px"
+         data-i18n="ovl.series_hint">Marque o que quer ver. As preferências são salvas no navegador.</p>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <label style="color:#4fc3f7;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-vbus" checked>
+          <span data-i18n="ovl.series_vbus">vbus (V) — tensão do bus DC</span>
+        </label>
+        <label style="color:#ffa726;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-ibus" checked>
+          <span data-i18n="ovl.series_ibus">ibus (A) — corrente do bus DC</span>
+        </label>
+        <label style="color:#66bb6a;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-iq" checked>
+          <span data-i18n="ovl.series_iq">Iq motor (A) — corrente quadratura</span>
+        </label>
+        <label style="color:#ef5350;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-ibr" checked>
+          <span data-i18n="ovl.series_ibr">I brake (A) — corrente do brake resistor</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button id="btn-ovl-open" class="primary" style="padding:10px 20px;font-size:14px"
+                data-i18n="ovl.btn_open">⧉ Abrir overlay</button>
+        <button id="btn-ovl-close" style="padding:10px 20px;font-size:14px;display:none"
+                data-i18n="ovl.btn_close">✕ Fechar overlay</button>
+        <span id="ovl-status" style="color:var(--muted);font-size:12px"
+              data-i18n="ovl.status_closed">Overlay fechado.</span>
+      </div>
+    </div>
+  `;
+}
+
+// CSS injetado no documento do PiP — minimalista, somente os canvases.
+//
+// Tema é controlado via classe .theme-dark / .theme-light no <body>. As cores
+// (background dos panels, eixos, grid, valores) vêm de CSS vars que mudam
+// junto com a classe — no JS basta atualizar body.className pra alternar.
+// Cores das séries (vbus azul, ibus laranja, etc.) ficam fixas — ficam
+// legíveis nos dois temas.
+function _ovlPipStyles() {
+  return `
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 11px;
+      overflow: hidden;
+    }
+    /* Tema escuro (default) */
+    body.theme-dark {
+      --ovl-bg:        #0e0e0e;
+      --ovl-panel:     #181818;
+      --ovl-border:    #303030;
+      --ovl-fg:        #e0e0e0;
+      --ovl-fg-muted:  #888;
+      --ovl-grid:      #2a2a2a;
+      --ovl-zeroline:  #3a3a3a;
+      color: var(--ovl-fg);
+      background: var(--ovl-bg);
+    }
+    /* Tema claro */
+    body.theme-light {
+      --ovl-bg:        #f5f5f5;
+      --ovl-panel:     #ffffff;
+      --ovl-border:    #c8c8c8;
+      --ovl-fg:        #1a1a1a;
+      --ovl-fg-muted:  #555;
+      --ovl-grid:      #d8d8d8;
+      --ovl-zeroline:  #b0b0b0;
+      color: var(--ovl-fg);
+      background: var(--ovl-bg);
+    }
+    .ovl-root {
+      display: flex; flex-direction: column;
+      height: 100vh; padding: 4px; gap: 4px;
+      position: relative;
+    }
+    .ovl-panel {
+      background: var(--ovl-panel);
+      border: 1px solid var(--ovl-border);
+      border-radius: 4px;
+      flex: 1 1 0;
+      min-height: 0;
+      position: relative;
+    }
+    .ovl-panel.hidden { display: none; }
+    .ovl-panel canvas {
+      width: 100%; height: 100%;
+      display: block;
+      background: transparent;
+    }
+    .ovl-conn {
+      position: absolute;
+      top: 4px; right: 6px;
+      font-size: 9px;
+      padding: 1px 5px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 2px;
+      color: #c0c0c0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    body.theme-light .ovl-conn {
+      background: rgba(255, 255, 255, 0.7);
+      color: #555;
+    }
+    .ovl-conn.disconnected { color: #ef5350 !important; }
+    .ovl-conn.connected { color: #2e7d32 !important; }
+  `;
+}
+
+// HTML interno da janela PiP — minimalista: dois canvases empilhados +
+// indicador de conexão flutuante. Sem títulos, sem legendas, sem checkboxes
+// (toda configuração mora na aba principal).
+function _ovlPipHTML() {
+  return `
+    <div class="ovl-root">
+      <div class="ovl-panel" id="pip-panel-bus">
+        <canvas id="pip-bus-chart"></canvas>
+      </div>
+      <div class="ovl-panel" id="pip-panel-whl">
+        <canvas id="pip-whl-chart"></canvas>
+      </div>
+      <span class="ovl-conn" id="pip-conn">—</span>
+    </div>
+  `;
+}
+
+// Lê as cores tema-aware do CSS do PiP (ou do documento principal, fallback).
+// Permite que mesmo com PiP fechado a função de draw não exploda — só não vai
+// renderizar nada porque cv é null.
+function _ovlThemeColors() {
+  const doc = overlayState.pipWin?.document || document;
+  const cs = doc.body ? getComputedStyle(doc.body) : null;
+  const v = (n, d) => (cs && cs.getPropertyValue(n).trim()) || d;
+  return {
+    fg:       v('--ovl-fg',       '#e0e0e0'),
+    fgMuted:  v('--ovl-fg-muted', '#888'),
+    grid:     v('--ovl-grid',     '#2a2a2a'),
+    zeroline: v('--ovl-zeroline', '#3a3a3a'),
+  };
+}
+
+// Desenha o gráfico de barramento (vbus separado em eixo esquerdo, ibus/iq/ibr
+// juntos no eixo direito) — mesma estrutura do drawChart() do Debug.
+// Visibilidade das séries lida da aba principal (sem checkboxes no PiP).
+function drawOvlBusChart() {
+  const cv = overlayState.cvBus;
+  if (!cv) return;
+  // Se o painel do bus está hidden, clientWidth=0 e bailamos cedo
+  const dpr = (overlayState.pipWin?.devicePixelRatio) || window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  if (cssW <= 0 || cssH <= 0) return;
+  if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+    cv.width  = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // padL/padR + padB ampliados pra acomodar texto 14px nos rótulos dos eixos
+  const padL = 60, padR = 60, padT = 10, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
+
+  const showV = document.getElementById('ovl-show-vbus')?.checked ?? true;
+  const showI = document.getElementById('ovl-show-ibus')?.checked ?? true;
+  const showQ = document.getElementById('ovl-show-iq')?.checked   ?? true;
+  const showB = document.getElementById('ovl-show-ibr')?.checked  ?? true;
+
+  const vArr = showV ? overlayState.bus.vbus : [];
+  const aArr = [
+    ...(showI ? overlayState.bus.ibus : []),
+    ...(showQ ? overlayState.bus.iq   : []),
+    ...(showB ? overlayState.bus.ibr  : [])
+  ];
+  let vMin = vArr.length ? _ovlMin(vArr) : 0;
+  let vMax = vArr.length ? _ovlMax(vArr) : 30;
+  let aMin = aArr.length ? _ovlMin(aArr) : -1;
+  let aMax = aArr.length ? _ovlMax(aArr) : 1;
+  const vPad = Math.max((vMax - vMin) * 0.1, 0.5);
+  vMin -= vPad; vMax += vPad;
+  const aPad = Math.max((aMax - aMin) * 0.1, 0.5);
+  aMin -= aPad; aMax += aPad;
+  if (vMax === vMin) vMax = vMin + 1;
+  if (aMax === aMin) aMax = aMin + 1;
+
+  // Grid + axis labels (cores via tema)
+  const th = _ovlThemeColors();
+  ctx.strokeStyle = th.grid; ctx.lineWidth = 1;
+  ctx.font = '14px monospace'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (H * i) / 4;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
+    const vL = vMax - (vMax - vMin) * i / 4;
+    const aR = aMax - (aMax - aMin) * i / 4;
+    ctx.fillStyle = '#4fc3f7'; ctx.textAlign = 'right';
+    ctx.fillText(vL.toFixed(1) + 'V', padL - 3, y);
+    ctx.fillStyle = '#ffa726'; ctx.textAlign = 'left';
+    ctx.fillText(aR.toFixed(2) + 'A', padL + W + 3, y);
+  }
+  ctx.fillStyle = th.fgMuted; ctx.textAlign = 'left';
+  ctx.fillText('-60s', padL, padT + H + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('agora', padL + W, padT + H + 14);
+
+  function plotTrace(arr, color, yMin, yMax) {
+    if (arr.length < 2) return;
+    const max = ovlMaxSamples();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let i = 0; i < arr.length; i++) {
+      const x = padL + W - ((arr.length - 1 - i) * W / (max - 1));
+      const t = (arr[i] - yMin) / (yMax - yMin);
+      const y = padT + H - t * H;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  if (showV) plotTrace(overlayState.bus.vbus, '#4fc3f7', vMin, vMax);
+  if (showI) plotTrace(overlayState.bus.ibus, '#ffa726', aMin, aMax);
+  if (showQ) plotTrace(overlayState.bus.iq,   '#66bb6a', aMin, aMax);
+  if (showB) plotTrace(overlayState.bus.ibr,  '#ef5350', aMin, aMax);
+}
+
+// Desenha o gráfico do volante (torque eixo esquerdo / posição eixo direito)
+// — mesma estrutura do drawFFBChart() do FFB Live. Sempre mostra ambas séries
+// (não tem checkbox per-série nesse gráfico — usuário desliga o painel inteiro
+// se não quiser).
+function drawOvlWhlChart() {
+  const cv = overlayState.cvWhl;
+  if (!cv) return;
+  const dpr = (overlayState.pipWin?.devicePixelRatio) || window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  if (cssW <= 0 || cssH <= 0) return;
+  if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+    cv.width  = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // padL/padR + padB ampliados pra acomodar texto 14px nos rótulos dos eixos
+  const padL = 60, padR = 60, padT = 10, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
+
+  const tArr = overlayState.whl.trq;
+  const pArr = overlayState.whl.pos;
+  let tMin = tArr.length ? _ovlMin(tArr) : -1;
+  let tMax = tArr.length ? _ovlMax(tArr) :  1;
+  let pMin = pArr.length ? _ovlMin(pArr) : -180;
+  let pMax = pArr.length ? _ovlMax(pArr) :  180;
+  const tPad = Math.max((tMax - tMin) * 0.1, 0.2);
+  tMin -= tPad; tMax += tPad;
+  const pPad = Math.max((pMax - pMin) * 0.1, 5);
+  pMin -= pPad; pMax += pPad;
+  if (tMax === tMin) tMax = tMin + 0.5;
+  if (pMax === pMin) pMax = pMin + 10;
+
+  // Linha do zero (torque) + grid via cores do tema
+  const th = _ovlThemeColors();
+  if (tMin < 0 && tMax > 0) {
+    ctx.strokeStyle = th.zeroline; ctx.lineWidth = 1;
+    const yZero = padT + H - ((0 - tMin) / (tMax - tMin)) * H;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(padL + W, yZero); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Grid
+  ctx.strokeStyle = th.grid;
+  ctx.font = '14px monospace'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (H * i) / 4;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
+    const tL = tMax - (tMax - tMin) * i / 4;
+    const pR = pMax - (pMax - pMin) * i / 4;
+    ctx.fillStyle = '#ef5350'; ctx.textAlign = 'right';
+    ctx.fillText(tL.toFixed(2) + 'Nm', padL - 3, y);
+    ctx.fillStyle = '#ab47bc'; ctx.textAlign = 'left';
+    ctx.fillText(pR.toFixed(0) + '°', padL + W + 3, y);
+  }
+  ctx.fillStyle = th.fgMuted; ctx.textAlign = 'left';
+  ctx.fillText('-60s', padL, padT + H + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('agora', padL + W, padT + H + 14);
+
+  function plotTrace(arr, color, yMin, yMax) {
+    if (arr.length < 2) return;
+    const max = ovlMaxSamples();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let i = 0; i < arr.length; i++) {
+      const x = padL + W - ((arr.length - 1 - i) * W / (max - 1));
+      const t = (arr[i] - yMin) / (yMax - yMin);
+      const y = padT + H - t * H;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  plotTrace(overlayState.whl.trq, '#ef5350', tMin, tMax);
+  plotTrace(overlayState.whl.pos, '#ab47bc', pMin, pMax);
+}
+
+// Indicador "conectado / desconectado" no canto do PiP — pra detectar
+// na hora se a serial caiu enquanto o jogo estava em fullscreen.
+function _ovlUpdateConnIndicator() {
+  const doc = overlayState.pipWin?.document;
+  if (!doc) return;
+  const el = doc.getElementById('pip-conn');
+  if (!el) return;
+  if (writer && port) {
+    el.textContent = '● serial';
+    el.classList.add('connected');
+    el.classList.remove('disconnected');
+  } else {
+    el.textContent = '✕ desconectado';
+    el.classList.add('disconnected');
+    el.classList.remove('connected');
+  }
+}
+
+// Poll único — lê todos os campos necessários e empurra na história.
+// Mesma família de comandos usada por Debug + FFB Live, mas isolado pra
+// não brigar com aqueles polls (cada um tem seu inFlight).
+async function overlayPollOnce() {
+  if (!writer || overlayState.pollInFlight) {
+    _ovlUpdateConnIndicator();
+    return;
+  }
+  overlayState.pollInFlight = true;
+  try {
+    // Bus DC fields — leitura sequencial pra respeitar a fila do pendingReplies
+    const vbus  = await readProp('vbus_voltage').catch(() => null);
+    const ibus  = await readProp('ibus').catch(() => null);
+    const ibr   = await readProp('brake_resistor_current').catch(() => null);
+    const iq    = await readProp('axis0.motor.current_control.Iq_measured').catch(() => null);
+    if (vbus !== null) ovlPush('bus', 'vbus', parseFloat(vbus));
+    if (ibus !== null) ovlPush('bus', 'ibus', parseFloat(ibus));
+    if (ibr  !== null) ovlPush('bus', 'ibr',  parseFloat(ibr));
+    if (iq   !== null) ovlPush('bus', 'iq',   parseFloat(iq));
+
+    // Volante: torque (Nm) via diag 'T' (reply: lt=N nm=X.XXXX) e posição
+    // em graus via sys.fxtest? (reply tem pos=X.XX em graus)
+    const Tr = await sendCmd('T', true).catch(() => null);
+    if (Tr) {
+      const m = Tr.match(/lt=(-?\d+)\s+nm=(-?\d+\.\d+)/);
+      if (m) ovlPush('whl', 'trq', parseFloat(m[2]));
+    }
+    const fr = await readPropOffb('sys.fxtest').catch(() => null);
+    if (fr) {
+      const m = fr.match(/ffb=(\d+)\s+pos=(-?\d+\.\d+)\s+spd=(-?\d+\.\d+)/);
+      if (m) ovlPush('whl', 'pos', parseFloat(m[2]));
+    }
+  } finally {
+    overlayState.pollInFlight = false;
+  }
+  _ovlUpdateConnIndicator();
+  drawOvlBusChart();
+  drawOvlWhlChart();
+}
+
+function _ovlPollStart() {
+  if (overlayState.pollTimer) clearInterval(overlayState.pollTimer);
+  const interval = parseInt(document.getElementById('ovl-poll-interval')?.value, 10) || 200;
+  overlayPollOnce(); // imediato
+  overlayState.pollTimer = setInterval(overlayPollOnce, interval);
+}
+function _ovlPollStop() {
+  if (overlayState.pollTimer) {
+    clearInterval(overlayState.pollTimer);
+    overlayState.pollTimer = null;
+  }
+}
+
+// Aplica tema no PiP — alterna classe theme-dark / theme-light no body.
+// CSS responde automaticamente; também redesenha os charts pra atualizar
+// cores de grid/axis (canvas não é CSS-aware).
+function _ovlApplyTheme(theme) {
+  const pip = overlayState.pipWin;
+  if (!pip || !pip.document || !pip.document.body) return;
+  pip.document.body.classList.remove('theme-dark', 'theme-light');
+  pip.document.body.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark');
+  // Re-desenha pra que grid/eixos peguem as novas CSS vars
+  drawOvlBusChart();
+  drawOvlWhlChart();
+}
+
+function _ovlSetStatus(key, color) {
+  const el = document.getElementById('ovl-status');
+  if (!el) return;
+  el.dataset.i18n = key;
+  el.textContent = t(key);
+  el.style.color = color || '';
+}
+
+async function overlayOpenPiP() {
+  // Pré-checagens
+  if (!('documentPictureInPicture' in window)) {
+    _ovlSetStatus('ovl.status_no_pip', '#ef5350');
+    toast(t('ovl.status_no_pip'), 'err');
+    return;
+  }
+  if (!writer) {
+    _ovlSetStatus('ovl.status_no_serial', '#ffa726');
+    toast(t('toast.connect_first_board'), 'warn');
+    return;
+  }
+  if (overlayState.pipWin) return; // já aberto
+
+  // Lê tamanho selecionado (formato "WxH")
+  const sizeStr = document.getElementById('ovl-size')?.value || '640x520';
+  const [w, h] = sizeStr.split('x').map(n => parseInt(n, 10));
+
+  let pip;
+  try {
+    pip = await window.documentPictureInPicture.requestWindow({
+      width:  w || 640,
+      height: h || 520,
+    });
+  } catch (e) {
+    toast('PiP: ' + e.message, 'err');
+    return;
+  }
+  overlayState.pipWin = pip;
+
+  // Title vazio — minimiza a barra de título do PiP
+  pip.document.title = '';
+
+  // Injeta CSS + HTML
+  const style = pip.document.createElement('style');
+  style.textContent = _ovlPipStyles();
+  pip.document.head.appendChild(style);
+  pip.document.body.innerHTML = _ovlPipHTML();
+
+  // Re-bind canvas refs (sem mais checkboxes inline no PiP)
+  overlayState.cvBus = pip.document.getElementById('pip-bus-chart');
+  overlayState.cvWhl = pip.document.getElementById('pip-whl-chart');
+
+  // Aplica visibilidade dos painéis baseado nos checkboxes da aba principal
+  _ovlApplyPanelVisibility();
+
+  // Quando o usuário fecha a janela (X), limpamos estado
+  pip.addEventListener('pagehide', () => {
+    _ovlPollStop();
+    overlayState.pipWin = null;
+    overlayState.cvBus = null;
+    overlayState.cvWhl = null;
+    const openBtn = document.getElementById('btn-ovl-open');
+    const closeBtn = document.getElementById('btn-ovl-close');
+    if (openBtn) openBtn.style.display = '';
+    if (closeBtn) closeBtn.style.display = 'none';
+    _ovlSetStatus('ovl.status_closed', '');
+  });
+
+  // Re-desenho on resize do PiP — Canvas precisa ser re-dimensionado
+  pip.addEventListener('resize', () => {
+    drawOvlBusChart();
+    drawOvlWhlChart();
+  });
+
+  // UI feedback
+  const openBtn = document.getElementById('btn-ovl-open');
+  const closeBtn = document.getElementById('btn-ovl-close');
+  if (openBtn) openBtn.style.display = 'none';
+  if (closeBtn) closeBtn.style.display = '';
+  _ovlSetStatus('ovl.status_open', '#66bb6a');
+
+  // Aplica tema salvo (escuro / claro)
+  const themeSel = document.getElementById('ovl-theme');
+  _ovlApplyTheme(themeSel?.value || 'dark');
+
+  // Inicia polling — re-aplica intervalo mesmo se tab principal mudou
+  _ovlPollStart();
+  // Primeiro draw imediato (sem dados ainda mostra eixos vazios)
+  drawOvlBusChart();
+  drawOvlWhlChart();
+}
+
+function overlayClosePiP() {
+  const pip = overlayState.pipWin;
+  if (!pip) return;
+  try { pip.close(); } catch (e) {}
+  // 'pagehide' handler limpa o resto
+}
+
+function wireOverlayTab() {
+  const btnOpen  = document.getElementById('btn-ovl-open');
+  const btnClose = document.getElementById('btn-ovl-close');
+  const interval = document.getElementById('ovl-poll-interval');
+  const sizeSel  = document.getElementById('ovl-size');
+  const themeSel = document.getElementById('ovl-theme');
+  if (!btnOpen) return;
+
+  btnOpen.addEventListener('click', overlayOpenPiP);
+  if (btnClose) btnClose.addEventListener('click', overlayClosePiP);
+
+  // Persistência localStorage — interval, size, theme, checkboxes
+  const KEY = 'odrive-overlay';
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+    catch (e) { return {}; }
+  })();
+  if (saved.interval) interval.value = saved.interval;
+  if (saved.size && sizeSel) sizeSel.value = saved.size;
+  if (saved.theme && themeSel) themeSel.value = saved.theme;
+  ['vbus', 'ibus', 'iq', 'ibr'].forEach(k => {
+    const cb = document.getElementById('ovl-show-' + k);
+    if (cb && typeof saved['show_' + k] === 'boolean') cb.checked = saved['show_' + k];
+  });
+  ['bus', 'whl'].forEach(k => {
+    const cb = document.getElementById('ovl-enable-' + k);
+    if (cb && typeof saved['enable_' + k] === 'boolean') cb.checked = saved['enable_' + k];
+  });
+
+  function persist() {
+    const obj = {
+      interval: interval.value,
+      size:     sizeSel?.value,
+      theme:    themeSel?.value || 'dark',
+      show_vbus: document.getElementById('ovl-show-vbus')?.checked,
+      show_ibus: document.getElementById('ovl-show-ibus')?.checked,
+      show_iq:   document.getElementById('ovl-show-iq')?.checked,
+      show_ibr:  document.getElementById('ovl-show-ibr')?.checked,
+      enable_bus: document.getElementById('ovl-enable-bus')?.checked,
+      enable_whl: document.getElementById('ovl-enable-whl')?.checked,
+    };
+    try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch (e) {}
+  }
+  interval.addEventListener('change', () => {
+    persist();
+    if (overlayState.pipWin) _ovlPollStart(); // re-arm com novo intervalo
+  });
+  if (sizeSel) sizeSel.addEventListener('change', persist);
+  if (themeSel) themeSel.addEventListener('change', () => {
+    persist();
+    _ovlApplyTheme(themeSel.value);
+  });
+  ['vbus', 'ibus', 'iq', 'ibr'].forEach(k => {
+    const cb = document.getElementById('ovl-show-' + k);
+    if (cb) cb.addEventListener('change', () => {
+      persist();
+      // Re-desenha bus chart se PiP aberto
+      if (overlayState.pipWin) drawOvlBusChart();
+    });
+  });
+  // Liga/desliga painéis inteiros — atualiza visibilidade ao vivo no PiP
+  ['bus', 'whl'].forEach(k => {
+    const cb = document.getElementById('ovl-enable-' + k);
+    if (cb) cb.addEventListener('change', () => {
+      persist();
+      if (overlayState.pipWin) {
+        _ovlApplyPanelVisibility();
+        // Aguarda layout settle antes de redesenhar (clientWidth muda quando
+        // um painel ganha 100% do espaço de outro que sumiu)
+        requestAnimationFrame(() => {
+          drawOvlBusChart();
+          drawOvlWhlChart();
+        });
+      }
+    });
+  });
+
+  // Estado inicial do botão Close (só aparece quando o PiP está aberto)
+  if (btnClose) btnClose.style.display = 'none';
+}
+
 function wireDFUTab() {
   const btnEnter = document.getElementById('dfu-btn-enter');
   const btnDetect = document.getElementById('dfu-btn-detect');
@@ -3603,13 +4488,13 @@ function wireDFUTab() {
   btnEnter.addEventListener('click', async () => {
     if (!writer) {
       dfuLog('Não conectado à placa via Web Serial.', 'err');
-      toast('Conecte primeiro à placa', 'err');
+      toast(t('toast.connect_first_board'), 'err');
       dfuStepError(document.getElementById('dfu-step1'), '✕ não conectado');
       return;
     }
     if (!('usb' in navigator)) {
       dfuLog(t('dfu.warn.no_webusb'), 'err');
-      toast('WebUSB não disponível', 'err');
+      toast(t('toast.no_webusb'), 'err');
       return;
     }
     try {
@@ -3619,7 +4504,7 @@ function wireDFUTab() {
       dfuStepDone(document.getElementById('dfu-step1'), '✓ comando enviado');
       // Try to keep serial closed so OS releases handle
       try { await disconnect(); } catch(e) {}
-      toast('Aguarde 2s e clique em "Procurar bootloader"', 'ok');
+      toast(t('toast.wait_then_detect'), 'ok');
     } catch (e) {
       dfuLog('Falha ao enviar "sd": ' + e.message, 'err');
       dfuStepError(document.getElementById('dfu-step1'));
@@ -3699,8 +4584,11 @@ function wireDFUTab() {
       if (sz < 50 * 1024) {
         dfuLog('AVISO: arquivo muito pequeno (<50 KB). Confirme que é um firmware válido.', 'err');
       }
+      // Limite máximo: até S9 = 0x080BFFFF = 768 KB (S10/S11 ficam pra ODrive NVM).
+      // Como o .bin parte de 0x08000000 com gap-fill 0xFF, tamanho efetivo
+      // é o offset máximo: vetor até fim de .text.
       if (sz > 768 * 1024) {
-        dfuLog('AVISO: arquivo muito grande (>768 KB) — pode invadir setores S10/S11 da EEPROM emulada.', 'err');
+        dfuLog('AVISO: arquivo muito grande (>768 KB) — invade S10/S11 (ODrive NVM).', 'err');
       }
       dfuStepDone(document.getElementById('dfu-step3'));
       updateFlashEnabled();
@@ -3721,11 +4609,11 @@ function wireDFUTab() {
     try {
       await dfuFlashSequence();
       dfuStepDone(document.getElementById('dfu-step4'), '✓ gravado');
-      toast('Firmware gravado e placa reiniciada', 'ok');
+      toast(t('toast.flash_done'), 'ok');
     } catch (e) {
       dfuLog('FLASH FALHOU: ' + e.message, 'err');
       dfuStepError(document.getElementById('dfu-step4'));
-      toast('Flash falhou: ' + e.message, 'err');
+      toast(t('toast.flash_fail') + ': ' + e.message, 'err');
     } finally {
       btnFlash.disabled = false;
     }
@@ -3826,11 +4714,23 @@ async function dfuFlashSequence() {
   }
   dfuLog('Estado inicial OK (state=' + st.bState + ')', 'ok');
 
-  // 1. Determine which sectors to erase (only the ones that overlap the firmware)
+  // Helper — testa se um endereço cai em alguma zona protegida (FFB EE etc.)
+  const inProtected = (addr) => DFU.PROTECTED_RANGES.some(
+    r => addr >= r.start && addr < r.end);
+
+  // 1. Determine which sectors to erase. PROTEGIDOS (FFB EE em S1+S2) são
+  //    pulados — apagar lá destrói calibração FFB + config persistida.
   const endAddr = baseAddr + totalSize;
-  const sectorsToErase = DFU.STM32F4_SECTORS.filter(s =>
+  const sectorsAll = DFU.STM32F4_SECTORS.filter(s =>
     s.start < endAddr && s.start + s.size > baseAddr
   );
+  const sectorsToErase = sectorsAll.filter(s => !inProtected(s.start));
+  const skipped = sectorsAll.filter(s => inProtected(s.start));
+  if (skipped.length > 0) {
+    dfuLog('Pulando ' + skipped.length + ' setor(es) protegido(s): ' +
+           skipped.map(s => 'S' + DFU.STM32F4_SECTORS.indexOf(s)).join(', ') +
+           ' (FFB EEPROM preservada)', 'ok');
+  }
   dfuLog('Apagando ' + sectorsToErase.length + ' setor(es) (cobre ' +
          (totalSize/1024).toFixed(1) + ' KB)...', 'info');
   setProgress(2);
@@ -3845,24 +4745,54 @@ async function dfuFlashSequence() {
   }
   dfuLog('Erase concluído.', 'ok');
 
-  // 2. Set address pointer ao início
-  dfuLog('Posicionando endereço em 0x08000000...', 'info');
-  await dfuSeSetAddress(baseAddr);
-  // Need to abort to leave the address-set state and return to dfuIDLE before download
-  try { await dfuAbort(); } catch(e) {}
-  await dfuPollUntilIdle(DFU.dfuIDLE, 5000);
-
-  // 3. Download em chunks
+  // 2. Download em "ranges contíguos" — pulamos chunks que caem em zona
+  //    protegida pra não sobrescrever a FFB EE com 0xFF de gap-fill do .bin.
+  //    DfuSe usa addr = base + (blockNum - 2) * xferSize, então sempre que
+  //    pulamos um range, precisamos re-emitir SET_ADDRESS_POINTER e zerar
+  //    o contador de blockNum local.
   const xferSize = dfuState.transferSize;
   const totalChunks = Math.ceil(totalSize / xferSize);
-  dfuLog('Gravando ' + totalSize + ' bytes em ' + totalChunks + ' chunks de ' + xferSize + ' B...', 'info');
+  dfuLog('Gravando ' + totalSize + ' bytes em ' + totalChunks +
+         ' chunks de ' + xferSize + ' B (pulando zonas protegidas)...', 'info');
 
-  // wBlockNum starts at 2 for DfuSe (0 = special cmd, 1 = reserved by ST)
+  let curBaseAddr = -1;   // último endereço setado via SET_ADDRESS
+  let curBlockOffset = 0; // contador local de blocos (0..N) relativo a curBaseAddr
+  let chunksWritten = 0;
+  let chunksSkipped = 0;
+
+  const setAddrAndIdle = async (addr) => {
+    await dfuSeSetAddress(addr);
+    try { await dfuAbort(); } catch(e) {}
+    await dfuPollUntilIdle(DFU.dfuIDLE, 5000);
+  };
+
   for (let i = 0; i < totalChunks; i++) {
     const start = i * xferSize;
     const end = Math.min(start + xferSize, totalSize);
+    const chunkAddr = baseAddr + start;
+    const chunkEndAddr = baseAddr + end;
+
+    // Skip se chunk está totalmente dentro de zona protegida.
+    // (Casos parciais não acontecem porque xferSize=1024 divide o tamanho
+    // de S1/S2=16K, e PROTECTED_RANGES está alinhado em fronteira de setor.)
+    const fullyProtected = DFU.PROTECTED_RANGES.some(
+      r => chunkAddr >= r.start && chunkEndAddr <= r.end);
+    if (fullyProtected) {
+      chunksSkipped++;
+      // Reset address — próxima escrita re-emite SET_ADDRESS no chunkAddr novo
+      curBaseAddr = -1;
+      continue;
+    }
+
+    // Re-set address sempre que reentramos numa zona escrevível depois de skip
+    if (curBaseAddr === -1) {
+      await setAddrAndIdle(chunkAddr);
+      curBaseAddr = chunkAddr;
+      curBlockOffset = 0;
+    }
+
     const chunk = fwBytes.subarray(start, end);
-    const blockNum = 2 + i;
+    const blockNum = 2 + curBlockOffset;
     await dfuControlOut(DFU.DNLOAD, blockNum, chunk);
     // Poll status: state should go DNBUSY → DNLOAD_IDLE
     let cs = await dfuGetStatus();
@@ -3873,14 +4803,17 @@ async function dfuFlashSequence() {
     if (cs.bStatus !== DFU.OK) {
       throw new Error('Download chunk ' + i + ' status=0x' + cs.bStatus.toString(16));
     }
+    curBlockOffset++;
+    chunksWritten++;
     if (i % 16 === 0 || i === totalChunks - 1) {
       const pct = 20 + 75 * (i + 1) / totalChunks;
       setProgress(pct);
       dfuLog('  chunk ' + (i+1) + '/' + totalChunks + ' (0x' +
-             (baseAddr + end).toString(16) + ')', 'info');
+             chunkEndAddr.toString(16) + ')', 'info');
     }
   }
-  dfuLog('Download completo.', 'ok');
+  dfuLog('Download completo — ' + chunksWritten + ' chunks gravados, ' +
+         chunksSkipped + ' pulados (zona protegida).', 'ok');
 
   // 4. Manifest: zero-length DNLOAD signals end-of-transfer
   dfuLog('Manifest (finalizando)...', 'info');
@@ -3938,8 +4871,8 @@ async function connect() {
       readAll().catch(e => logLine('readAll auto erro: ' + e.message, 'err'));
     }, 200);
   } catch (e) {
-    setStatus('Erro: ' + e.message, 'error');
-    logLine('Erro conexão: ' + e.message, 'err');
+    setStatus(t('status.error') + ': ' + e.message, 'error');
+    logLine(t('log.connect_error') + ': ' + e.message, 'err');
   }
 }
 
@@ -4131,7 +5064,7 @@ function buildTabs() {
           <span style="color:var(--muted);font-size:11px;margin-left:auto">
             <span class="k" style="color:var(--accent)">→</span> TX
             &nbsp;<span class="k" style="color:var(--ok)">←</span> RX
-            &nbsp;<span class="k" style="color:var(--err)">!</span> erro
+            &nbsp;<span class="k" style="color:var(--err)">!</span> <span data-i18n="console.legend_err">erro</span>
           </span>
         </div>
         <pre id="log" class="console-box"></pre>
@@ -4167,6 +5100,41 @@ function buildTabs() {
       panel.innerHTML = buildFFBTestHTML();
       content.appendChild(panel);
       return;
+    }
+    // Overlay tab — iRacing always-on-top via Document Picture-in-Picture
+    if (tab.custom && tab.id === 'overlay') {
+      panel.innerHTML = buildOverlayHTML();
+      content.appendChild(panel);
+      return;
+    }
+
+    // Encoder tab: prepend action bar com utilitários do encoder.
+    // Não vivem no SCHEMA porque são exec commands ou presets multi-campo.
+    if (tab.id === 'encoder') {
+      const actionBar = document.createElement('div');
+      actionBar.className = 'encoder-actions';
+      actionBar.style.cssText = 'grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding:10px 12px;background:#1a1a1a;border:1px solid var(--border);border-radius:6px';
+      actionBar.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="btn-zero-wheel" class="primary"
+                  style="padding:8px 16px;font-size:13px"
+                  data-i18n="encoder.zero_btn">⊙ Zerar posição do volante</button>
+          <button id="btn-preset-as5047" class="warn"
+                  style="padding:8px 16px;font-size:13px"
+                  data-i18n="encoder.preset_as5047_btn">⚙ Ativar AS5047 (preset)</button>
+        </div>
+        <div style="color:var(--muted);font-size:11px;line-height:1.5">
+          <p style="margin:2px 0">
+            <b data-i18n="encoder.zero_label">Zerar posição:</b>
+            <span data-i18n="encoder.zero_hint">Captura a posição atual como o novo zero (centro lógico). HID position passa a reportar 0 imediatamente. Não toca no encoder do ODrive — só no offset virtual da camada FFB. NÃO persiste após reboot; pra centro permanente use phase_offset + index search.</span>
+          </p>
+          <p style="margin:2px 0">
+            <b data-i18n="encoder.preset_as5047_label">Preset AS5047:</b>
+            <span data-i18n="encoder.preset_as5047_hint">Configura encoder absoluto AS5047P (montado na MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False. Os campos ficam destacados em vermelho — clique Salvar pra persistir+reboot, depois rode ENCODER_OFFSET_CALIBRATION na aba Debug; se OK, marque pre_calibrated=True e Salvar de novo.</span>
+          </p>
+        </div>
+      `;
+      panel.appendChild(actionBar);
     }
 
     tab.fields.forEach(fld => {
@@ -4246,6 +5214,72 @@ function buildTabs() {
     content.appendChild(panel);
   });
   selectTab(SCHEMA[0].id);
+
+  // Wire-up "Zerar posição" — vive aqui (não em init de tab dedicado) porque
+  // o botão é injetado dentro do panel da aba encoder em buildTabs.
+  const btnZero = document.getElementById('btn-zero-wheel');
+  if (btnZero) {
+    btnZero.addEventListener('click', async () => {
+      if (!writer) {
+        toast(t('toast.connect_first_board'), 'err');
+        return;
+      }
+      const orig = btnZero.textContent;
+      btnZero.disabled = true;
+      btnZero.textContent = '…';
+      try {
+        const r = await execPropOffb('axis.zeroenc');  // envia "axis.zeroenc!"
+        if (r !== null) {
+          toast(t('toast.wheel_zeroed'), 'ok');
+          // Refresca live monitor + chart se aba debug aberta — mostra pos=0
+          if (typeof refreshLive === 'function' &&
+              document.getElementById('poll-enable')?.checked) {
+            refreshLive();
+          }
+        } else {
+          toast(t('toast.wheel_zero_fail'), 'err');
+        }
+      } finally {
+        btnZero.textContent = orig;
+        btnZero.disabled = false;
+      }
+    });
+  }
+
+  // Wire-up "Ativar AS5047 (preset)" — preenche os campos no DOM e marca dirty;
+  // não escreve no device aqui (mantém workflow consistente: user revisa
+  // campos vermelhos e clica Salvar). Confirma antes porque mexer em
+  // mode/cpr/cs_pin invalida calibração antiga e exige re-calibrar.
+  const btnPresetAs = document.getElementById('btn-preset-as5047');
+  if (btnPresetAs) {
+    btnPresetAs.addEventListener('click', () => {
+      if (!confirm(t('encoder.preset_as5047_confirm'))) return;
+      const setField = (path, value, isBool) => {
+        const inp = document.getElementById('in-' + path);
+        if (!inp) {
+          // Path não está no SCHEMA da aba — não é fatal, só log
+          logLine('preset AS5047: field não encontrado no DOM: ' + path, 'err');
+          return;
+        }
+        if (isBool) inp.checked = !!value;
+        else inp.value = String(value);
+        markDirty(inp);
+      };
+      // Configuração específica do AS5047 (absoluto, 14-bit, paridade par via SPI3)
+      setField('axis0.encoder.config.mode',                257,    false);
+      setField('axis0.encoder.config.cpr',                 16384,  false);
+      setField('axis0.encoder.config.abs_spi_cs_gpio_pin', 7,      false);
+      // Encoder absoluto não precisa procurar index — desativa pra evitar
+      // que startup_encoder_index_search trave esperando pulso Z que não vem
+      setField('axis0.encoder.config.use_index',           false,  true);
+      // Força re-calibração — phase_offset antigo (de outro encoder/CPR) não vale
+      setField('axis0.encoder.config.pre_calibrated',      false,  true);
+
+      // Pula pra aba Encoder pra usuário ver o que mudou (caso tenha clicado de outra)
+      selectTab('encoder');
+      toast(t('toast.preset_as5047_applied'), 'ok');
+    });
+  }
 }
 
 /* =========================================================================
@@ -4364,11 +5398,11 @@ function buildFFBLiveHTML() {
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
         <label style="color:#ef5350;cursor:pointer">
           <input type="checkbox" id="ffb-chart-show-trq" checked style="vertical-align:middle">
-          ━ torque (Nm) <span id="ffb-chart-leg-trq">—</span>
+          ━ <span data-i18n="legend.torque">torque (Nm)</span> <span id="ffb-chart-leg-trq">—</span>
         </label>
         <label style="color:#ab47bc;cursor:pointer">
           <input type="checkbox" id="ffb-chart-show-pos" checked style="vertical-align:middle">
-          ━ posição (graus) <span id="ffb-chart-leg-pos">—</span>
+          ━ <span data-i18n="legend.position">posição (graus)</span> <span id="ffb-chart-leg-pos">—</span>
         </label>
         <span style="margin-left:auto;color:var(--muted)" id="ffb-chart-stats">—</span>
       </div>
@@ -4768,15 +5802,15 @@ function buildDebugHTML() {
       <h3 data-i18n="dbg.actions_title">Ações (state machine / NVM)</h3>
       <div class="action-grid">
         <button class="primary" data-act="state" data-val="1">IDLE<span class="sub">w axis0.requested_state 1</span></button>
-        <button class="warn" data-act="state" data-val="4">MOTOR_CALIBRATION<span class="sub">w ... 4 (mede R + L, ~5s)</span></button>
-        <button class="warn" data-act="state" data-val="6">ENCODER_INDEX_SEARCH<span class="sub">w ... 6 (procura índice Z)</span></button>
-        <button class="warn" data-act="state" data-val="7">ENCODER_OFFSET_CALIBRATION<span class="sub">w ... 7 (gira motor, ~10s)</span></button>
+        <button class="warn" data-act="state" data-val="4">MOTOR_CALIBRATION<span class="sub">w ... 4 <span data-i18n="act.sub_motorcal">(mede R + L, ~5s)</span></span></button>
+        <button class="warn" data-act="state" data-val="6">ENCODER_INDEX_SEARCH<span class="sub">w ... 6 <span data-i18n="act.sub_idxsearch">(procura índice Z)</span></span></button>
+        <button class="warn" data-act="state" data-val="7">ENCODER_OFFSET_CALIBRATION<span class="sub">w ... 7 <span data-i18n="act.sub_enccal">(gira motor, ~10s)</span></span></button>
         <button class="warn" data-act="state" data-val="10">ENCODER_DIR_FIND<span class="sub">w ... 10</span></button>
-        <button class="warn" data-act="state" data-val="3">FULL_CALIBRATION<span class="sub">w ... 3 (motor + enc)</span></button>
-        <button data-act="state" data-val="8">CLOSED_LOOP_CONTROL<span class="sub">w ... 8 (ativa ganho)</span></button>
-        <button data-act="state" data-val="9">LOCKIN_SPIN<span class="sub">w ... 9 (open-loop)</span></button>
+        <button class="warn" data-act="state" data-val="3">FULL_CALIBRATION<span class="sub">w ... 3 <span data-i18n="act.sub_fullcal">(motor + enc)</span></span></button>
+        <button data-act="state" data-val="8">CLOSED_LOOP_CONTROL<span class="sub">w ... 8 <span data-i18n="act.sub_closedloop">(ativa ganho)</span></span></button>
+        <button data-act="state" data-val="9">LOCKIN_SPIN<span class="sub">w ... 9 <span data-i18n="act.sub_lockin">(open-loop)</span></span></button>
         <button data-act="state" data-val="11">HOMING<span class="sub">w ... 11</span></button>
-        <button class="ok" data-act="raw" data-val="ss"><span data-i18n="act.save_nvm">Salvar NVM</span><span class="sub">ss (persiste config)</span></button>
+        <button class="ok" data-act="raw" data-val="ss"><span data-i18n="act.save_nvm">Salvar NVM</span><span class="sub">ss <span data-i18n="act.sub_persist">(persiste config)</span></span></button>
         <button class="danger" data-act="raw" data-val="se" data-confirm-i18n="act.erase_confirm" data-confirm="Apaga config + reboot. Confirma?"><span data-i18n="act.erase_reboot">Apagar + Reboot</span><span class="sub">se</span></button>
         <button data-act="raw" data-val="sr"><span data-i18n="act.reboot">Reboot</span><span class="sub">sr</span></button>
         <button data-act="clear-errors"><span data-i18n="act.clear_errors">Limpar Erros</span><span class="sub">sc</span></button>
@@ -4834,19 +5868,19 @@ function buildDebugHTML() {
       <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
         <label style="color:#4fc3f7;cursor:pointer">
           <input type="checkbox" id="chart-show-vbus" checked style="vertical-align:middle">
-          ━ vbus (V) <span id="chart-leg-vbus">—</span>
+          ━ <span data-i18n="legend.vbus">vbus (V)</span> <span id="chart-leg-vbus">—</span>
         </label>
         <label style="color:#ffa726;cursor:pointer">
           <input type="checkbox" id="chart-show-ibus" checked style="vertical-align:middle">
-          ━ ibus (A) <span id="chart-leg-ibus">—</span>
+          ━ <span data-i18n="legend.ibus">ibus (A)</span> <span id="chart-leg-ibus">—</span>
         </label>
         <label style="color:#66bb6a;cursor:pointer">
           <input type="checkbox" id="chart-show-iq" checked style="vertical-align:middle">
-          ━ Iq motor (A) <span id="chart-leg-iq">—</span>
+          ━ <span data-i18n="legend.iq">Iq motor (A)</span> <span id="chart-leg-iq">—</span>
         </label>
         <label style="color:#ef5350;cursor:pointer">
           <input type="checkbox" id="chart-show-ibr" checked style="vertical-align:middle">
-          ━ I brake (A) <span id="chart-leg-ibr">—</span>
+          ━ <span data-i18n="legend.ibrake">I brake (A)</span> <span id="chart-leg-ibr">—</span>
         </label>
         <span style="margin-left:auto;color:var(--muted)" id="chart-stats">—</span>
       </div>
@@ -5488,7 +6522,7 @@ async function saveAll() {
       try {
         await readAll();
         logLine('--- Save complete + re-read OK ---', 'rx');
-        if (typeof toast === 'function') toast('Save complete + re-read OK', 'ok');
+        if (typeof toast === 'function') toast(t('toast.save_complete'), 'ok');
       } catch (e) {
         logLine('readAll após reconnect falhou: ' + e.message, 'err');
       }
@@ -5519,6 +6553,7 @@ wireConsoleTab();
 wireDFUTab();
 wireInputsTab();
 wireFFBTestTab();
+wireOverlayTab();
 
 // i18n — wirar select de idioma e aplicar idioma persistido
 const langSelect = document.getElementById('lang-select');
@@ -5664,7 +6699,7 @@ if (searchInput) {
 }
 
 if (!('serial' in navigator)) {
-  setStatus('Web Serial não suportado — use Chrome/Edge', 'error');
+  setStatus(t('status.no_webserial'), 'error');
   document.getElementById('btn-connect').disabled = true;
 }
 </script>
