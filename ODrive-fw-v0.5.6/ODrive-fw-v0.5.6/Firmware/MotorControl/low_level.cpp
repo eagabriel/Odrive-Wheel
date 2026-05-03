@@ -312,13 +312,15 @@ float get_adc_relative_voltage_ch(uint16_t channel) {
 // IRQ Callbacks
 //--------------------------------
 
+// Phase 4.x — divisor de tensão VBUS agora é runtime via g_vbus_voltage_scale.
+// Variável definida em ffb_task.cpp (escopo global), inicializada com default
+// 19.0 (MKS XDrive Mini). Pode ser ajustada em runtime via sys.vbusdiv=N e
+// persistida em EE pra placas com divisor diferente (ODrive v3.6 oficial = 11,
+// outros clones podem variar). Cache pré-calculado pra IRQ não fazer divisão.
+extern volatile float g_vbus_voltage_scale;
+
 void vbus_sense_adc_cb(uint32_t adc_value) {
-    // MKS Odrive Mini (v3.5 compativel) tem divisor 18k/1k = 19:1, nao 11:1
-    // do ODrive v3.6 original. Confirmado via sys.adcdump: canal 6 retorna
-    // 1568 com 24V real → 1568/4095 * 3.3 * 19 ≈ 23.9V ✓ (com 11 dá 13.9V ✗).
-    constexpr float MKS_MINI_VBUS_DIVIDER = 19.0f;
-    constexpr float voltage_scale = adc_ref_voltage * MKS_MINI_VBUS_DIVIDER / adc_full_scale;
-    vbus_voltage = adc_value * voltage_scale;
+    vbus_voltage = adc_value * g_vbus_voltage_scale;
 }
 
 // @brief Sums up the Ibus contribution of each motor and updates the

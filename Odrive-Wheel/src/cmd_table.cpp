@@ -195,6 +195,21 @@ static int h_sys_eedump(uint8_t, CmdType t, const char*, char *r, size_t s) {
     return 0;
 }
 
+// Phase 4.x — sys.vbusdiv: divisor de tensão pra leitura de VBUS.
+// Default 19 (MKS XDrive Mini), ODrive v3.6 oficial = 11. Range 1-50.
+extern "C" int  ffb_get_vbus_divider(void);
+extern "C" void ffb_set_vbus_divider(int v);
+static int h_sys_vbusdiv(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) {
+        long val = parse_long(v, ffb_get_vbus_divider());
+        if (val < 1)  val = 1;
+        if (val > 50) val = 50;
+        ffb_set_vbus_divider((int)val);
+    }
+    snprintf(r, s, "%d", ffb_get_vbus_divider());
+    return 0;
+}
+
 // sys.eeformat! — escape hatch que força format completo do EE com clear de
 // error flags entre cada operação. Usar quando bootRC != 0 e sys.save! continua
 // falhando (caso típico: flash com flags PGAERR/PGSERR latched de operação
@@ -418,10 +433,18 @@ static int h_axis_fxratio(uint8_t, CmdType t, const char *v, char *r, size_t s) 
     snprintf(r, s, "%.2f", (double)ffb_get_axis_fxratio());
     return 0;
 }
+// Phase 4.x — axis.invert agora opera de verdade (era stub que só guardava
+// um inteiro local). Inverte direção lógica do volante em runtime: HID position
+// e FFB torque do jogo são negados em sincronia. Persiste em EE via
+// ADR_AXIS1_CONFIG bit 0 (sys.save!).
+extern "C" int  ffb_get_axis_invert(void);
+extern "C" void ffb_set_axis_invert(int v);
 static int h_axis_invert(uint8_t, CmdType t, const char *v, char *r, size_t s) {
-    static int s_inv = 0;
-    if (t == CMD_TYPE_SET) s_inv = parse_long(v, s_inv) ? 1 : 0;
-    snprintf(r, s, "%d", s_inv);
+    if (t == CMD_TYPE_SET) {
+        int val = parse_long(v, ffb_get_axis_invert()) ? 1 : 0;
+        ffb_set_axis_invert(val);
+    }
+    snprintf(r, s, "%d", ffb_get_axis_invert());
     return 0;
 }
 static int h_axis_drvtype(uint8_t, CmdType t, const char *v, char *r, size_t s) {
@@ -755,6 +778,7 @@ const CmdEntry cmdtable[] = {
     { "sys",   "eetest",       h_sys_eetest },        // EEPROM low-level test
     { "sys",   "eedump",       h_sys_eedump },        // EEPROM raw status
     { "sys",   "eeformat",     h_sys_eeformat },      // EEPROM force format (escape hatch)
+    { "sys",   "vbusdiv",      h_sys_vbusdiv },       // VBUS voltage divider (1-50)
     // GPIO inputs (1-4) — sintaxe: gpio.<inst>.<field>
     { "gpio",  "mode",         h_gpio_mode },         // 0/1/2 = off/button/axis
     { "gpio",  "idx",          h_gpio_idx },          // 0-63 botão, 0-3 eixo

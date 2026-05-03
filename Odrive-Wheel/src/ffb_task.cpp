@@ -79,7 +79,23 @@ public:
     int16_t expo_      = 0;
     uint8_t exposcale_ = 100;          // divisor pro expo (default 100 = 1.0)
 
+    // Phase 4.x — Inverte direção lógica do volante sem precisar trocar fios
+    // do motor nem mexer em motor.config.direction da ODrive. Quando true:
+    //   - getScaledAxisPos() retorna -pos: HID reporta direção contrária à
+    //     do encoder, então jogo "vê" o volante girando no sentido natural
+    //     pro usuário.
+    //   - setEffectTorque(t) negativa o torque vindo do jogo (em HID space)
+    //     antes de somar axis effects: motor empurra no sentido oposto ao
+    //     do encoder, o que casa com o sinal invertido visto pelo jogo.
+    // Axis effects (idleSpring/damper/friction/etc.) usam metrics nativas
+    // do encoder e não são invertidos — eles se mantêm consistentes
+    // automaticamente porque computam torque na mesma referência do motor.
+    bool inverted_ = false;
+
     void setEffectTorque(int32_t torque) override {
+        // Phase 4.x — inverte torque vindo do jogo se inverted_ ativo.
+        if (inverted_) torque = -torque;
+
         // EffectsCalculator entrega torque clipado em [-0x7FFF, +0x7FFF].
         // Soma os axis effects calculados em calculateAxisEffects (sempre ativos).
         int32_t totalTorque = torque + axisEffectTorque_;
@@ -217,7 +233,9 @@ public:
         zeroOffset_ = odrive_bridge_get_pos_turns() * 360.0f;
     }
 
-    int32_t getScaledAxisPos() const { return metrics_.pos_scaled_16b; }
+    int32_t getScaledAxisPos() const {
+        return inverted_ ? -metrics_.pos_scaled_16b : metrics_.pos_scaled_16b;
+    }
 
 private:
     metric_t metrics_{};
@@ -246,6 +264,19 @@ static volatile float s_motor_ibus_max = 0.0f;
 static volatile float s_motor_ibus_min = 0.0f;
 static volatile float s_vbus_max = 0.0f;
 static volatile float s_vbus_min = 100.0f;  // valor inicial alto pra capturar mínimo
+
+// Phase 4.x — divisor de tensão VBUS configurável.
+// Variável GLOBAL (sem static) referenciada em low_level.cpp::vbus_sense_adc_cb.
+// Inicializada com default 19 (MKS XDrive Mini) escalado pra ADC. Se EE tiver
+// valor salvo, ffb_task_init recalcula via ffb_set_vbus_divider().
+//
+// Math: voltage_scale = adc_ref_voltage * divider / adc_full_scale
+//   adc_ref_voltage = 3.3V, adc_full_scale = 4096 → scale = 3.3 * D / 4096
+//   Pra D=19: scale ≈ 0.01531 V/count → ADC=1568 → vbus = 24.0V ✓
+volatile float g_vbus_voltage_scale = 3.3f * 19.0f / 4096.0f;
+static uint8_t  s_vbus_divider = 19;
+// Forward declaration — definição completa lá embaixo junto com outros wrappers.
+extern "C" void ffb_set_vbus_divider(int v);
 
 // -------------------- FFB task --------------------
 static void ffb_thread(void *arg) {
@@ -341,6 +372,16 @@ extern "C" void ffb_task_init(void) {
     }
     HAL_FLASH_Lock();
 
+    // Phase 4.x — VBUS divider configurável. Carrega da EE (se válido) e
+    // recalcula g_vbus_voltage_scale que é lido pelo IRQ de leitura do ADC.
+    // Default 19 (MKS XDrive Mini); ODrive v3.6 oficial = 11.
+    {
+        uint16_t v;
+        if (Flash_Read(ADR_VBUS_DIVIDER, &v, false) && v != 0xFFFF && v >= 1 && v <= 50) {
+            ffb_set_vbus_divider((int)v);
+        }
+    }
+
     // Phase 4.x — GPIO inputs (botões/eixos via GPIOs 1-4). Carrega cfg da EE
     // e configura cada pino conforme modo (button/axis/disabled).
     gpio_inputs_init();
@@ -417,6 +458,10 @@ static void ffb_load_axis_params_internal(void) {
     }
     if (Flash_Read(ADR_AXIS1_ENC_RATIO, &v, false) && v != 0xFFFF && v <= 255) {
         s_axis_raw->endstopStrength_ = (uint8_t)(v & 0xFF);
+    }
+    // Phase 4.x — bitfield de flags do axis (ADR_AXIS1_CONFIG)
+    if (Flash_Read(ADR_AXIS1_CONFIG, &v, false) && v != 0xFFFF) {
+        s_axis_raw->inverted_ = (v & 0x0001) != 0;
     }
 }
 
@@ -705,6 +750,10 @@ extern "C" int ffb_save_flash(void) {
     if (!Flash_Write(0x04F0, (uint16_t)s_effects_calc->getGlobalGain())) s_last_save_errors++;
     s_last_save_writes++;
 
+    // Phase 4.x — divisor VBUS (hw config, não axis-specific).
+    if (!Flash_Write(ADR_VBUS_DIVIDER, (uint16_t)s_vbus_divider)) s_last_save_errors++;
+    s_last_save_writes++;
+
     if (s_axis_raw) {
         // Escala básica
         uint16_t r  = (uint16_t)(s_axis_raw->rangeDegrees_ < 65535.0f ? s_axis_raw->rangeDegrees_ : 65535.0f);
@@ -725,6 +774,13 @@ extern "C" int ffb_save_flash(void) {
         if (!Flash_Write(ADR_AXIS1_ENDSTOP,   (uint16_t)s_axis_raw->exposcale_)) s_last_save_errors++;
         if (!Flash_Write(ADR_AXIS1_ENC_RATIO, (uint16_t)s_axis_raw->endstopStrength_)) s_last_save_errors++;
         s_last_save_writes += 6;
+
+        // Phase 4.x — bitfield de flags do axis. Atualmente só bit 0 = inverted_.
+        // Outros bits ficam reservados pra futuras flags (ex: deadzone enable,
+        // smoothing, etc.) sem precisar de novos endereços na EE.
+        uint16_t cfgFlags = (s_axis_raw->inverted_ ? 0x0001 : 0x0000);
+        if (!Flash_Write(ADR_AXIS1_CONFIG, cfgFlags)) s_last_save_errors++;
+        s_last_save_writes++;
     }
 
     // Phase 4.x — GPIO inputs config (12 writes: 3 entries × 4 GPIOs)
@@ -854,6 +910,19 @@ extern "C" void ffb_eeformat(char *buf, int bufsize) {
 // Axis params (axis.range / axis.maxtorque / axis.fxratio) — persistem via
 // EEPROM emulada quando integrarmos esses no saveFlash futuramente. Por
 // enquanto sao runtime-only (resetam nos defaults no boot).
+extern "C" int  ffb_get_axis_invert(void) { return (s_axis_raw && s_axis_raw->inverted_) ? 1 : 0; }
+extern "C" void ffb_set_axis_invert(int v) { if (s_axis_raw) s_axis_raw->inverted_ = (v != 0); }
+
+// Phase 4.x — divisor VBUS. Setter clamp em 1-50 e recalcula scale cache
+// que é lido pelo IRQ de leitura de ADC (vbus_sense_adc_cb em low_level.cpp).
+extern "C" int ffb_get_vbus_divider(void) { return (int)s_vbus_divider; }
+extern "C" void ffb_set_vbus_divider(int v) {
+    if (v < 1)  v = 1;
+    if (v > 50) v = 50;
+    s_vbus_divider = (uint8_t)v;
+    g_vbus_voltage_scale = 3.3f * (float)s_vbus_divider / 4096.0f;
+}
+
 extern "C" float ffb_get_axis_range(void)  { return s_axis_raw ? s_axis_raw->rangeDegrees_ : 900.0f; }
 extern "C" float ffb_get_axis_maxtq(void)  { return s_axis_raw ? s_axis_raw->maxTorque_Nm_ : 5.0f;   }
 extern "C" float ffb_get_axis_fxratio(void){ return s_axis_raw ? s_axis_raw->fxRatio_      : 0.80f;  }

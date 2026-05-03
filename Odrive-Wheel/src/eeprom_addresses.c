@@ -15,6 +15,8 @@ const uint16_t VirtAddVarTab[NB_OF_VAR] = {
     ADR_GPIO2_CFG, ADR_GPIO2_AMIN, ADR_GPIO2_AMAX,
     ADR_GPIO3_CFG, ADR_GPIO3_AMIN, ADR_GPIO3_AMAX,
     ADR_GPIO4_CFG, ADR_GPIO4_AMIN, ADR_GPIO4_AMAX,
+    // Hardware (Phase 4.x)
+    ADR_VBUS_DIVIDER,
     // slots livres
     0x04F0, 0x04F1, 0x04F2,
 };

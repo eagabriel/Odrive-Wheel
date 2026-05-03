@@ -67,7 +67,12 @@
 #define ADR_GPIO4_AMIN          0x025A
 #define ADR_GPIO4_AMAX          0x025B
 
-#define NB_OF_VAR 42
+// Hardware (Phase 4.x): divisor de tensão pro VBUS sense.
+// Default 19 (MKS XDrive Mini). ODrive v3.6 oficial = 11. Range válido 1-50.
+// Armazenado como uint16 mas só usa os 8 LSBs.
+#define ADR_VBUS_DIVIDER        0x0260
+
+#define NB_OF_VAR 43
 extern const uint16_t VirtAddVarTab[NB_OF_VAR];
 
 #endif
