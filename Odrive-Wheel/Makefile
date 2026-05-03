@@ -114,6 +114,7 @@ CPP_SOURCES_LOCAL = \
   src/Filters.cpp \
   src/UsbHidHandler.cpp \
   src/PersistentStorage.cpp \
+  src/gpio_inputs.cpp \
   src/cthread.cpp \
   src/cmutex.cpp \
   src/csemaphore.cpp \
