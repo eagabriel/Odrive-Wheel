@@ -506,6 +506,117 @@
   .console-input-bar input:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ============================================================
+     FFB Test tab — WebHID effect cards + live chart
+     ============================================================ */
+  .fbt-status {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .fbt-status .led {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--fg-dim);
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .fbt-status.connected .led {
+    background: var(--ok);
+    box-shadow: 0 0 12px var(--ok);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .fbt-status .text { color: var(--fg); font-size: 13px; flex: 1; min-width: 0; }
+  .fbt-warn {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    background: rgba(245,158,11,.1);
+    border: 1px solid rgba(245,158,11,.4);
+    border-radius: var(--radius-sm);
+    color: var(--warn);
+    font-size: 12.5px;
+    display: none;
+  }
+  .fbt-warn.on { display: block; }
+  .fbt-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    transition: var(--transition);
+  }
+  .fbt-card.active {
+    border-color: rgba(99, 102, 241, .4);
+    background: linear-gradient(135deg, rgba(99,102,241,.05), transparent 50%);
+  }
+  .fbt-card h4 {
+    margin: 0; font-size: 13.5px; font-weight: 600;
+    color: var(--fg);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .fbt-card h4 .toggle {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500; color: var(--fg-muted);
+  }
+  .fbt-card h4 .toggle input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+  }
+  .fbt-card .row {
+    display: grid;
+    grid-template-columns: 80px 1fr 60px;
+    gap: 8px; align-items: center;
+  }
+  .fbt-card .row > label {
+    font-size: 12px; color: var(--fg-muted);
+  }
+  .fbt-card input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%; height: 6px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    outline: none;
+  }
+  .fbt-card input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .fbt-card .val {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent-2);
+  }
+  .fbt-actions {
+    grid-column: 1 / -1;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .fbt-chart-wrap {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .fbt-chart-wrap h3 {
+    margin: 0 0 8px; font-size: 13px; color: var(--fg-muted);
+    font-weight: 500;
+  }
+  #fbt-chart {
+    width: 100%; height: 180px;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    display: block;
+  }
+
+  /* ============================================================
      Inputs tab — GPIO cards (button/axis config + live preview)
      ============================================================ */
   .inputs-status {
@@ -895,9 +1006,35 @@ const I18N = {
     'tab.ffb-effects': 'FFB Effects',
     'tab.ffb-filters': 'FFB Filters',
     'tab.ffb-live': 'FFB Live',
+    'tab.ffb-test': 'FFB Test (WebHID)',
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
+    // FFB Test section (PT)
+    'fbt.title':       'Teste de FFB via WebHID',
+    'fbt.subtitle':    'Envia comandos PID HID direto pelo navegador, simulando um jogo. Testa a pilha completa (HID → HidFFB → EffectsCalculator → motor) sem precisar de jogo real.',
+    'fbt.connect':     '🔌 Conectar dispositivo HID',
+    'fbt.disconnect':  '✕ Desconectar HID',
+    'fbt.status_no':   'HID desconectado — clique em Conectar e aprove o STM32 HID Device.',
+    'fbt.status_yes':  'HID conectado — efeitos prontos pra acionar.',
+    'fbt.warn_state':  '⚠ Motor não está em CLOSED LOOP (state=8). Forças não chegam ao volante até armar o motor.',
+    'fbt.cf_title':    'Constant Force',
+    'fbt.cf_force':    'Força',
+    'fbt.cf_limit':    'Limite angular',
+    'fbt.cf_limit_off':'sem limite',
+    'fbt.sp_title':    'Spring (centralizadora)',
+    'fbt.da_title':    'Damper (resistência à velocidade)',
+    'fbt.fr_title':    'Friction (atrito constante)',
+    'fbt.strength':    'Intensidade',
+    'fbt.enable':      'Aplicar',
+    'fbt.panic':       '🛑 Parar tudo',
+    'fbt.chart_title': 'Posição (azul) e torque (verde) ao vivo',
+    'fbt.chart_off':   'Conecte HID + Web Serial pra ver o gráfico ao vivo.',
+    'fbt.chart_enable':'Auto-refresh',
+    'fbt.chart_once':  'Ler agora',
+    'fbt.chart_clear': 'Limpar',
+    'fbt.chart_hint':  'Lê axis.curpos? + diag T (torque em Nm) via Web Serial. Intervalo curto (~100ms) sobrecarrega CDC; 200ms é o sweet spot.',
+    'fbt.note':        'Avisos: forças aqui são reais — segure o volante. "Parar tudo" desliga todos os efeitos. Sair da aba também para automaticamente.',
     // Inputs section (PT)
     'inputs.title':       'Entradas digitais e analógicas',
     'inputs.subtitle':    'GPIOs 1-4 da MKS XDrive Mini configuráveis como botões ou eixos do joystick HID. Polling a 1 kHz.',
@@ -1111,9 +1248,35 @@ const I18N = {
     'tab.ffb-effects': 'FFB Effects',
     'tab.ffb-filters': 'FFB Filters',
     'tab.ffb-live': 'FFB Live',
+    'tab.ffb-test': 'FFB Test (WebHID)',
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
+    // FFB Test section (EN)
+    'fbt.title':       'FFB Test via WebHID',
+    'fbt.subtitle':    'Sends HID PID reports straight from the browser, mimicking a game. Tests the full stack (HID → HidFFB → EffectsCalculator → motor) without needing an actual game.',
+    'fbt.connect':     '🔌 Connect HID device',
+    'fbt.disconnect':  '✕ Disconnect HID',
+    'fbt.status_no':   'HID disconnected — click Connect and approve the STM32 HID Device.',
+    'fbt.status_yes':  'HID connected — effects ready to fire.',
+    'fbt.warn_state':  '⚠ Motor is not in CLOSED LOOP (state=8). Forces will not reach the wheel until you arm the motor.',
+    'fbt.cf_title':    'Constant Force',
+    'fbt.cf_force':    'Force',
+    'fbt.cf_limit':    'Angle limit',
+    'fbt.cf_limit_off':'unlimited',
+    'fbt.sp_title':    'Spring (auto-centering)',
+    'fbt.da_title':    'Damper (velocity resistance)',
+    'fbt.fr_title':    'Friction (constant drag)',
+    'fbt.strength':    'Strength',
+    'fbt.enable':      'Apply',
+    'fbt.panic':       '🛑 Stop everything',
+    'fbt.chart_title': 'Live position (blue) and torque (green)',
+    'fbt.chart_off':   'Connect HID + Web Serial to see the live chart.',
+    'fbt.chart_enable':'Auto-refresh',
+    'fbt.chart_once':  'Read now',
+    'fbt.chart_clear': 'Clear',
+    'fbt.chart_hint':  'Reads axis.curpos? + diag T (torque in Nm) via Web Serial. Short interval (~100ms) loads the CDC; 200ms is the sweet spot.',
+    'fbt.note':        'Warnings: forces here are real — hold the wheel. "Stop everything" disables all effects. Leaving the tab also stops them automatically.',
     // Inputs section (EN)
     'inputs.title':       'Digital and analog inputs',
     'inputs.subtitle':    'MKS XDrive Mini GPIOs 1-4 configurable as joystick buttons or axes via HID. Polled at 1 kHz.',
@@ -1411,6 +1574,8 @@ const FIELD_DESC = {
     'axis.range':         'Rotação total do volante em graus (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Torque máximo entregue ao motor em Nm. Sobe pra usar mais do motor; cuidado com mãos.',
     'axis.fxratio':       'Multiplicador final 0..1. Reduz force overall preservando dinâmicas. Default 0.80.',
+    'axis.invert':        'Inverte direção lógica do volante (sem mexer em fios). Quando ON, HID position + FFB torque do jogo são negados juntos — útil quando o motor está cabeado no sentido oposto. Persiste em EE.',
+    'sys.vbusdiv':        'Divisor de tensão do VBUS sense (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). ODrive v3.6 oficial = 11. Valor errado afeta proteção de overvoltage e cálculo do brake — confira com multímetro depois de ajustar.',
     'axis.idlespring':    'Mola centralizadora SÓ quando jogo desligado (FFB inativo). 0=desativado.',
     'axis.axisdamper':    'Damper SEMPRE ativo, somado ao FFB do jogo. Adiciona "peso" ao volante.',
     'axis.axisinertia':   'Inertia SEMPRE ativa, baseada em aceleração. Sensação de "massa".',
@@ -1542,6 +1707,8 @@ const FIELD_DESC = {
     'axis.range':         'Total wheel rotation in degrees (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Max torque delivered to motor in Nm. Raise to use more of motor; mind your hands.',
     'axis.fxratio':       'Final multiplier 0..1. Scales force overall while preserving dynamics. Default 0.80.',
+    'axis.invert':        'Reverses wheel logical direction (no rewiring needed). When ON, HID position + game FFB torque are negated together — useful when motor is wired the opposite way. Persists to EEPROM.',
+    'sys.vbusdiv':        'VBUS sense voltage divider (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). Official ODrive v3.6 = 11. Wrong value affects overvoltage protection and brake calculation — verify with a multimeter after changing.',
     'axis.idlespring':    'Centering spring ONLY when game is off (FFB inactive). 0=disabled.',
     'axis.axisdamper':    'Damper ALWAYS active, added to game FFB. Adds "weight" to wheel.',
     'axis.axisinertia':   'Inertia ALWAYS active, based on acceleration. "Mass" feel.',
@@ -1580,6 +1747,7 @@ const FIELD_RANGE = {
   'config.dc_max_positive_current':       '0–100 A',
   'config.dc_max_negative_current':       '-100..0 A',
   'config.max_regen_current':             '0–100 A',
+  'sys.vbusdiv':                          '1–50',
   // ODrive — Comm
   'config.uart_a_baudrate':               '9600–921600',
   'config.uart_b_baudrate':               '9600–921600',
@@ -1830,6 +1998,15 @@ const ENUM_GPIO_MODE = {
 const f = (name, type, opts) => ({ name, type, opts });
 const F = (name) => f(name, 'float');
 const I = (name) => f(name, 'int');
+// ICMD: campo cross-namespace — força path completo + protocolo,
+// independente de prefix/protocol da aba. Útil pra colocar comandos
+// OpenFFBoard (ex: sys.vbusdiv) dentro da aba ODrive (que usa odrv ASCII).
+const ICMD = (displayName, fullPath, protocol, type) => ({
+  name: displayName,
+  type: type || 'int',
+  _path: fullPath,
+  _protocol: protocol || 'offb',
+});
 const B = (name) => f(name, 'bool');
 const E = (name, opts) => f(name, 'enum', opts);
 const RO = (name, type) => ({ name, type, readonly: true });
@@ -1840,7 +2017,7 @@ const SIDEBAR_GROUPS = [
   { titleKey: 'sidebar.group.odrive', title: 'ODrive',
     items: ['odrv', 'axis0', 'motor', 'encoder', 'controller'] },
   { titleKey: 'sidebar.group.ffb',    title: 'Force Feedback',
-    items: ['ffb-wheel', 'ffb-effects', 'ffb-filters', 'ffb-live'] },
+    items: ['ffb-wheel', 'ffb-effects', 'ffb-filters', 'ffb-live', 'ffb-test'] },
   { titleKey: 'sidebar.group.io',     title: 'Inputs',
     items: ['inputs'] },
   { titleKey: 'sidebar.group.tools',  title: 'Tools',
@@ -1857,6 +2034,7 @@ const TAB_ICONS = {
   'ffb-effects':  '✦',
   'ffb-filters':  '≋',
   'ffb-live':     '◔',
+  'ffb-test':     '⚒',
   'console-tab':  '❯_',
   'dfu':          '⇩',
   'inputs':       '⌨',
@@ -1877,6 +2055,10 @@ const SCHEMA = [
       F('dc_max_positive_current'),
       F('dc_max_negative_current'),
       F('max_regen_current'),
+      // Phase 4.x — divisor de tensão pro VBUS sense. Vive em sys.vbusdiv
+      // (cmdparser OpenFFBoard) mas mostrado aqui na seção de power por
+      // afinidade semântica. Default 19 (MKS XDrive Mini), v3.6 oficial = 11.
+      ICMD('vbus_divider', 'sys.vbusdiv', 'offb', 'int'),
 
       { group: 'Comunicação' },
       B('enable_i2c_a'),
@@ -2091,6 +2273,7 @@ const SCHEMA = [
       F('range'),         // graus rotação total (default 900)
       F('maxtorque'),     // Nm cap (default 5.0, max recomendado 17 pelo motor)
       F('fxratio'),       // 0..1 — multiplicador final (default 0.80)
+      B('invert'),        // inverte direção lógica (HID pos + FFB torque) sem mexer em fios
 
       { group: 'Axis effects sempre-ativos (somam ao FFB do jogo)' },
       I('idlespring'),    // mola centralizadora quando FFB OFF (0-255, default 0)
@@ -2140,6 +2323,9 @@ const SCHEMA = [
   },
   {
     id: 'ffb-live', label: 'FFB Live', prefix: '', custom: true,
+  },
+  {
+    id: 'ffb-test', label: 'FFB Test (WebHID)', prefix: '', custom: true,
   },
   {
     id: 'console-tab', label: 'Console', prefix: '', custom: true,
@@ -2827,6 +3013,584 @@ function wireInputsTab() {
   window.inputsReload = reload;
 }
 
+/* =========================================================================
+   FFB Test tab — WebHID effect controller.
+
+   Envia reports HID PID direto pelo navegador (sem mudança de firmware),
+   simulando o que um jogo faria. WebHID acessa a interface HID do nosso
+   composite USB device em paralelo ao Web Serial (que continua usando a
+   interface CDC). Os dois APIs convivem.
+
+   Report IDs (de inc/ffb_defs.h):
+     0x01  SET_EFFECT_REPORT          (12 bytes)
+     0x03  SET_CONDITION_REPORT       (14 bytes)
+     0x05  SET_CONSTANT_FORCE_REPORT  (3 bytes)
+     0x0A  EFFECT_OPERATION_REPORT    (3 bytes)
+     0x0C  DEVICE_CONTROL_REPORT      (1 byte, bitmask: bit0=enable_actuators,
+                                        bit2=stop_all, bit3=reset)
+     0x0D  DEVICE_GAIN_REPORT         (1 byte, 0-255)
+     0x11  NEW_EFFECT_REPORT          (3 bytes, FEATURE) — não usamos: blocos
+                                        1-4 alocados sequencialmente pelo
+                                        firmware quando recebe SET_EFFECT.
+
+   Effect types (HID PID spec):
+     1 = CONSTANT
+     8 = SPRING
+     9 = DAMPER
+     11 = FRICTION
+   ========================================================================= */
+const FBT_VID = 0x1209, FBT_PID = 0x0D40;
+const FBT_BLOCK = { cf: 1, sp: 2, da: 3, fr: 4 };
+const FBT_TYPE  = { cf: 1, sp: 8, da: 9, fr: 11 };
+let fbtDevice = null;          // HIDDevice
+let fbtConnected = false;
+let fbtRunning = { cf: false, sp: false, da: false, fr: false }; // effect started?
+let fbtChartTimer = null;
+let fbtChartHist = { pos: [], trq: [] };
+const FBT_CHART_LEN = 200;     // pontos no buffer
+
+function buildFFBTestHTML() {
+  return `
+    <div class="debug-section" style="grid-column:1/-1;">
+      <h3 data-i18n="fbt.title">Teste de FFB via WebHID</h3>
+      <p style="color:var(--fg-muted);font-size:13px;margin:0;" data-i18n="fbt.subtitle">
+        Envia comandos PID HID direto pelo navegador, simulando um jogo.
+      </p>
+    </div>
+
+    <div class="fbt-status" id="fbt-status">
+      <div class="led"></div>
+      <div class="text" id="fbt-status-text" data-i18n="fbt.status_no">HID desconectado.</div>
+      <button id="fbt-btn-connect" class="primary" data-i18n="fbt.connect">🔌 Conectar HID</button>
+      <button id="fbt-btn-disconnect" data-i18n="fbt.disconnect" style="display:none">✕ Desconectar</button>
+    </div>
+
+    <div class="fbt-warn" id="fbt-warn-state" data-i18n="fbt.warn_state">
+      ⚠ Motor não está em CLOSED LOOP. Forças não chegam ao volante.
+    </div>
+
+    <!-- Constant Force -->
+    <div class="fbt-card" id="fbt-card-cf">
+      <h4>
+        <span data-i18n="fbt.cf_title">Constant Force</span>
+        <label class="toggle">
+          <span data-i18n="fbt.enable">Aplicar</span>
+          <input type="checkbox" id="fbt-cf-enable">
+        </label>
+      </h4>
+      <div class="row">
+        <label data-i18n="fbt.cf_force">Força</label>
+        <input type="range" id="fbt-cf-force" min="-100" max="100" step="1" value="0">
+        <span class="val" id="fbt-cf-force-val">0%</span>
+      </div>
+      <div class="row">
+        <label data-i18n="fbt.cf_limit">Limite ang.</label>
+        <input type="range" id="fbt-cf-limit" min="0" max="180" step="1" value="0">
+        <span class="val" id="fbt-cf-limit-val">—</span>
+      </div>
+    </div>
+
+    <!-- Spring -->
+    <div class="fbt-card" id="fbt-card-sp">
+      <h4>
+        <span data-i18n="fbt.sp_title">Spring</span>
+        <label class="toggle">
+          <span data-i18n="fbt.enable">Aplicar</span>
+          <input type="checkbox" id="fbt-sp-enable">
+        </label>
+      </h4>
+      <div class="row">
+        <label data-i18n="fbt.strength">Intensidade</label>
+        <input type="range" id="fbt-sp-str" min="0" max="100" step="1" value="50">
+        <span class="val" id="fbt-sp-str-val">50%</span>
+      </div>
+    </div>
+
+    <!-- Damper -->
+    <div class="fbt-card" id="fbt-card-da">
+      <h4>
+        <span data-i18n="fbt.da_title">Damper</span>
+        <label class="toggle">
+          <span data-i18n="fbt.enable">Aplicar</span>
+          <input type="checkbox" id="fbt-da-enable">
+        </label>
+      </h4>
+      <div class="row">
+        <label data-i18n="fbt.strength">Intensidade</label>
+        <input type="range" id="fbt-da-str" min="0" max="100" step="1" value="50">
+        <span class="val" id="fbt-da-str-val">50%</span>
+      </div>
+    </div>
+
+    <!-- Friction -->
+    <div class="fbt-card" id="fbt-card-fr">
+      <h4>
+        <span data-i18n="fbt.fr_title">Friction</span>
+        <label class="toggle">
+          <span data-i18n="fbt.enable">Aplicar</span>
+          <input type="checkbox" id="fbt-fr-enable">
+        </label>
+      </h4>
+      <div class="row">
+        <label data-i18n="fbt.strength">Intensidade</label>
+        <input type="range" id="fbt-fr-str" min="0" max="100" step="1" value="50">
+        <span class="val" id="fbt-fr-str-val">50%</span>
+      </div>
+    </div>
+
+    <div class="fbt-actions">
+      <button id="fbt-panic" class="danger" data-i18n="fbt.panic">🛑 Parar tudo</button>
+      <span style="color:var(--fg-dim);font-size:11.5px;flex:1" data-i18n="fbt.note">
+        Forças aqui são reais — segure o volante.
+      </span>
+    </div>
+
+    <div class="fbt-chart-wrap">
+      <h3 data-i18n="fbt.chart_title">Posição (azul) e torque (verde) ao vivo</h3>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+        <span class="poll-dot" id="fbt-poll-dot"></span>
+        <label><input type="checkbox" id="fbt-poll-enable">
+          <span data-i18n="fbt.chart_enable">Auto-refresh</span></label>
+        <input type="number" id="fbt-poll-interval" value="200" min="50" max="2000" step="50" style="width:80px"> ms
+        <button id="fbt-poll-once" data-i18n="fbt.chart_once">Ler agora</button>
+        <button id="fbt-chart-clear" data-i18n="fbt.chart_clear">Limpar</button>
+        <span style="color:var(--fg-dim);font-size:11px;margin-left:auto" data-i18n="fbt.chart_hint">
+          Lê axis.curpos? + axis.curtorque? via Web Serial.
+        </span>
+      </div>
+      <canvas id="fbt-chart" width="800" height="220"
+              style="width:100%;height:220px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px"></canvas>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;flex-wrap:wrap;align-items:center">
+        <span style="color:#ab47bc">━ posição (graus) <span id="fbt-chart-leg-pos">—</span></span>
+        <span style="color:#ef5350">━ torque (Nm) <span id="fbt-chart-leg-trq">—</span></span>
+        <span style="margin-left:auto;color:var(--fg-muted)" id="fbt-chart-stats">—</span>
+      </div>
+    </div>
+  `;
+}
+
+function wireFFBTestTab() {
+  if (!document.getElementById('fbt-status')) return;
+  if (!('hid' in navigator)) {
+    const txt = document.getElementById('fbt-status-text');
+    if (txt) txt.textContent = '❌ WebHID não suportado neste navegador. Use Chrome ou Edge.';
+    document.getElementById('fbt-btn-connect').disabled = true;
+    return;
+  }
+
+  // ---------- Helpers de envio HID ----------
+  const sendOutput = async (reportId, data) => {
+    if (!fbtDevice) return;
+    try { await fbtDevice.sendReport(reportId, new Uint8Array(data)); }
+    catch (e) { console.warn('HID OUT erro:', e); }
+  };
+  // sendFeature mantido pra futuro (NEW_EFFECT) mas não usamos por agora.
+
+  // ---------- Construtores de report (byte layouts do nosso descriptor) ----------
+  // SET_EFFECT_REPORT (id 0x01) — 12 bytes
+  const buildSetEffect = (blockIdx, type, durationMs = 0xFFFF, gain = 255) => [
+    blockIdx, type,
+    durationMs & 0xFF, (durationMs >> 8) & 0xFF,    // Duration LE
+    0, 0,                                            // TriggerRepeatInterval
+    0, 0,                                            // SamplePeriod (0 = use default)
+    0, 0,                                            // StartDelay
+    gain,                                            // Gain
+    0,                                               // TriggerButton
+  ];
+
+  // SET_CONSTANT_FORCE_REPORT (id 0x05) — 3 bytes
+  const buildConstantForce = (blockIdx, magnitudeS16) => {
+    const m = magnitudeS16 & 0xFFFF;
+    return [blockIdx, m & 0xFF, (m >> 8) & 0xFF];
+  };
+
+  // SET_CONDITION_REPORT (id 0x03) — 14 bytes
+  // Layout: [blockIdx, paramOffset(4)|typeSpecOffset(4),
+  //          cpOffset_lo, cpOffset_hi,
+  //          posCoef_lo, posCoef_hi, negCoef_lo, negCoef_hi,
+  //          posSat_lo, posSat_hi, negSat_lo, negSat_hi,
+  //          deadBand_lo, deadBand_hi]
+  const buildCondition = (blockIdx, posCoef, negCoef = null) => {
+    if (negCoef === null) negCoef = posCoef;
+    const cp = 0;       // center position offset
+    const ps = 0x7FFF;  // pos saturation max
+    const ns = 0x7FFF;  // neg saturation max
+    const db = 0;       // dead band
+    const i16 = (v) => [v & 0xFF, (v >> 8) & 0xFF];
+    return [
+      blockIdx,
+      0x00,             // paramBlockOffset=0, typeSpecOffsets=0|0
+      ...i16(cp),
+      ...i16(posCoef), ...i16(negCoef),
+      ...i16(ps), ...i16(ns),
+      ...i16(db),
+    ];
+  };
+
+  // EFFECT_OPERATION_REPORT (id 0x0A) — 3 bytes
+  // op: 1=Start, 2=StartSolo, 3=Stop
+  const buildOp = (blockIdx, op, loopCount = 1) => [blockIdx, op, loopCount];
+
+  // ---------- Lifecycle dos efeitos ----------
+  // Strength slider 0-100% → coeficiente HID 0..32767 (signed, mas spring/damper/friction só usam 0..32767 positivo na prática)
+  const pctToCoef = (pct) => Math.round((pct / 100) * 0x7FFF);
+
+  const ensureSetup = async (key) => {
+    // Configura SET_EFFECT pra esse slot (necessário antes de SET_CONSTANT/CONDITION)
+    const blockIdx = FBT_BLOCK[key];
+    const type = FBT_TYPE[key];
+    await sendOutput(0x01, buildSetEffect(blockIdx, type));
+  };
+
+  const updateForce = async (key) => {
+    if (!fbtConnected) return;
+    if (key === 'cf') {
+      const force = parseInt(document.getElementById('fbt-cf-force').value, 10);
+      const limit = parseInt(document.getElementById('fbt-cf-limit').value, 10);
+      let mag = Math.round((force / 100) * 0x7FFF);
+      // Limite angular: aplicado client-side, vamos fazer poll separado
+      // (vide updateCFAngleLimit). Aqui só envia magnitude raw.
+      // Convert to int16 signed range
+      if (mag > 32767) mag = 32767; if (mag < -32767) mag = -32767;
+      await sendOutput(0x05, buildConstantForce(FBT_BLOCK.cf, mag));
+    } else {
+      const elId = 'fbt-' + key + '-str';
+      const pct = parseInt(document.getElementById(elId).value, 10);
+      const coef = pctToCoef(pct);
+      await sendOutput(0x03, buildCondition(FBT_BLOCK[key], coef));
+    }
+  };
+
+  const startEffect = async (key) => {
+    if (!fbtConnected || fbtRunning[key]) return;
+    await ensureSetup(key);
+    await updateForce(key);
+    await sendOutput(0x0A, buildOp(FBT_BLOCK[key], 1, 0));   // Start, infinite loop
+    fbtRunning[key] = true;
+    document.getElementById('fbt-card-' + key).classList.add('active');
+  };
+
+  const stopEffect = async (key) => {
+    if (!fbtConnected || !fbtRunning[key]) return;
+    await sendOutput(0x0A, buildOp(FBT_BLOCK[key], 3, 0));   // Stop
+    fbtRunning[key] = false;
+    document.getElementById('fbt-card-' + key).classList.remove('active');
+  };
+
+  const stopAll = async () => {
+    for (const k of ['cf','sp','da','fr']) {
+      const cb = document.getElementById('fbt-' + k + '-enable');
+      if (cb) cb.checked = false;
+      await stopEffect(k);
+    }
+    if (fbtConnected) {
+      await sendOutput(0x0C, [0x04]);  // DEVICE_CONTROL: stop_all_effects (bit 2)
+    }
+  };
+
+  // ---------- Connect / Disconnect ----------
+  const setConnState = (on) => {
+    fbtConnected = on;
+    const box = document.getElementById('fbt-status');
+    const txt = document.getElementById('fbt-status-text');
+    const btnC = document.getElementById('fbt-btn-connect');
+    const btnD = document.getElementById('fbt-btn-disconnect');
+    if (on) {
+      box.classList.add('connected');
+      txt.textContent = t('fbt.status_yes');
+      btnC.style.display = 'none';
+      btnD.style.display = '';
+    } else {
+      box.classList.remove('connected');
+      txt.textContent = t('fbt.status_no');
+      btnC.style.display = '';
+      btnD.style.display = 'none';
+    }
+  };
+
+  const hidConnect = async () => {
+    try {
+      const devices = await navigator.hid.requestDevice({
+        filters: [{ vendorId: FBT_VID, productId: FBT_PID }]
+      });
+      if (!devices || devices.length === 0) return;
+      fbtDevice = devices[0];
+      if (!fbtDevice.opened) await fbtDevice.open();
+
+      // Setup inicial: enable actuators + max gain
+      await sendOutput(0x0C, [0x01]);     // DEVICE_CONTROL: enable_actuators (bit 0)
+      await sendOutput(0x0D, [255]);      // DEVICE_GAIN: max
+
+      setConnState(true);
+      toast('FFB HID conectado', 'ok');
+
+      // Listener de disconnect (cabo USB removido, etc.)
+      fbtDevice.addEventListener('disconnect', () => {
+        setConnState(false);
+        fbtDevice = null;
+        for (const k in fbtRunning) fbtRunning[k] = false;
+      });
+    } catch (e) {
+      toast('Falha ao conectar HID: ' + e.message, 'err');
+    }
+  };
+
+  const hidDisconnect = async () => {
+    await stopAll();
+    if (fbtDevice && fbtDevice.opened) {
+      try { await fbtDevice.close(); } catch(e) {}
+    }
+    fbtDevice = null;
+    setConnState(false);
+  };
+
+  document.getElementById('fbt-btn-connect').addEventListener('click', hidConnect);
+  document.getElementById('fbt-btn-disconnect').addEventListener('click', hidDisconnect);
+  document.getElementById('fbt-panic').addEventListener('click', stopAll);
+
+  // ---------- Wiring de cada effect card ----------
+  for (const key of ['cf','sp','da','fr']) {
+    const enableCb = document.getElementById('fbt-' + key + '-enable');
+    enableCb.addEventListener('change', async () => {
+      if (enableCb.checked) await startEffect(key);
+      else                  await stopEffect(key);
+    });
+  }
+
+  // CF sliders
+  const cfForce = document.getElementById('fbt-cf-force');
+  const cfForceVal = document.getElementById('fbt-cf-force-val');
+  const cfLimit = document.getElementById('fbt-cf-limit');
+  const cfLimitVal = document.getElementById('fbt-cf-limit-val');
+  cfForce.addEventListener('input', () => {
+    cfForceVal.textContent = cfForce.value + '%';
+    if (fbtRunning.cf) updateForce('cf');
+  });
+  cfLimit.addEventListener('input', () => {
+    cfLimitVal.textContent = cfLimit.value === '0' ? t('fbt.cf_limit_off') : (cfLimit.value + '°');
+  });
+  cfLimitVal.textContent = t('fbt.cf_limit_off');
+
+  // Strength sliders pra Spring/Damper/Friction
+  for (const key of ['sp','da','fr']) {
+    const sl = document.getElementById('fbt-' + key + '-str');
+    const v  = document.getElementById('fbt-' + key + '-str-val');
+    sl.addEventListener('input', () => {
+      v.textContent = sl.value + '%';
+      if (fbtRunning[key]) updateForce(key);
+    });
+  }
+
+  // ---------- Live chart (canvas) ----------
+  // Mesma estrutura do drawFFBChart() do FFB Live: DPR-aware, auto-scale com
+  // padding de 10%, eixos torque (esq, vermelho) e posição (dir, roxo), grid
+  // horizontal de 4 níveis com labels, linha de zero pra torque, time axis.
+  const _fbtMin = (arr) => arr.length ? arr.reduce((a,b) => Math.min(a,b), arr[0]) : 0;
+  const _fbtMax = (arr) => arr.length ? arr.reduce((a,b) => Math.max(a,b), arr[0]) : 0;
+
+  const drawChart = () => {
+    const cv = document.getElementById('fbt-chart');
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = cv.clientWidth, cssH = cv.clientHeight;
+    if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
+      cv.width  = Math.round(cssW * dpr);
+      cv.height = Math.round(cssH * dpr);
+    }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const padL = 60, padR = 60, padT = 14, padB = 22;
+    const W = cssW - padL - padR;
+    const H = cssH - padT - padB;
+    if (W <= 0 || H <= 0) return;
+
+    // Auto-scale: torque eixo esquerdo (Nm), posição eixo direito (graus)
+    const tArr = fbtChartHist.trq;
+    const pArr = fbtChartHist.pos;
+    let tMin = tArr.length ? _fbtMin(tArr) : -1;
+    let tMax = tArr.length ? _fbtMax(tArr) :  1;
+    let pMin = pArr.length ? _fbtMin(pArr) : -180;
+    let pMax = pArr.length ? _fbtMax(pArr) :  180;
+    const tPad = Math.max((tMax - tMin) * 0.1, 0.2);
+    tMin -= tPad; tMax += tPad;
+    const pPad = Math.max((pMax - pMin) * 0.1, 5);
+    pMin -= pPad; pMax += pPad;
+    if (tMax === tMin) tMax = tMin + 0.5;
+    if (pMax === pMin) pMax = pMin + 10;
+
+    // Linha do zero (torque) — destaca valor central pra ver simetria
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    if (tMin < 0 && tMax > 0) {
+      const yZero = padT + H - ((0 - tMin) / (tMax - tMin)) * H;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(padL + W, yZero); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Grid + labels
+    ctx.strokeStyle = '#333';
+    ctx.fillStyle = '#888'; ctx.font = '10px monospace';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (H * i) / 4;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
+      const tL = tMax - (tMax - tMin) * i / 4;
+      const pR = pMax - (pMax - pMin) * i / 4;
+      ctx.fillStyle = '#ef5350'; ctx.textAlign = 'right';
+      ctx.fillText(tL.toFixed(2) + 'Nm', padL - 4, y);
+      ctx.fillStyle = '#ab47bc'; ctx.textAlign = 'left';
+      ctx.fillText(pR.toFixed(0) + '°', padL + W + 4, y);
+    }
+    // Time axis labels
+    const interval = parseInt(document.getElementById('fbt-poll-interval')?.value, 10) || 200;
+    const windowMs = FBT_CHART_LEN * interval;
+    const windowLabel = windowMs >= 1000 ? '-' + (windowMs / 1000).toFixed(0) + 's'
+                                          : '-' + windowMs + 'ms';
+    ctx.fillStyle = '#888'; ctx.textAlign = 'left';
+    ctx.fillText(windowLabel, padL, padT + H + 12);
+    ctx.textAlign = 'right';
+    ctx.fillText('agora', padL + W, padT + H + 12);
+
+    // Plot traces — desenha do mais novo (direita) pro mais velho (esquerda)
+    const plotTrace = (arr, color, yMin, yMax) => {
+      if (arr.length < 2) return;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < arr.length; i++) {
+        const x = padL + W - ((arr.length - 1 - i) * W / (FBT_CHART_LEN - 1));
+        const y = padT + H - ((arr[i] - yMin) / (yMax - yMin)) * H;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    };
+    plotTrace(tArr, '#ef5350', tMin, tMax);
+    plotTrace(pArr, '#ab47bc', pMin, pMax);
+
+    // Legenda + stats
+    const lastT = tArr.length ? tArr[tArr.length - 1] : null;
+    const lastP = pArr.length ? pArr[pArr.length - 1] : null;
+    const setLegend = (id, val, unit, dec) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val !== null ? val.toFixed(dec) + unit : '—';
+    };
+    setLegend('fbt-chart-leg-trq', lastT, ' Nm', 3);
+    setLegend('fbt-chart-leg-pos', lastP, '°', 1);
+    const stats = document.getElementById('fbt-chart-stats');
+    if (stats) stats.textContent = `${tArr.length} samples / ${FBT_CHART_LEN} max @ ${interval}ms`;
+  };
+
+  // ---------- Poll unificado: lê pos + torque, atualiza chart + aplica angle limit ----------
+  // Importante: GETs do OpenFFBoard cmdparser PRECISAM do sufixo "?".
+  // Sem ele, parser retorna "unknown command" e nada acontece (foi o bug
+  // do angle limit não funcionar — sendCmd('axis.curpos') retornava undefined).
+  let fbtPolling = false;
+  const pollOnce = async () => {
+    if (!writer || fbtPolling) return;
+    fbtPolling = true;
+    const dot = document.getElementById('fbt-poll-dot');
+    if (dot) dot.classList.add('on');
+    try {
+      // Posição: cmdparser OpenFFBoard, retorna graus float em formato [.|valor]
+      const pr = await sendCmd('axis.curpos?', true).catch(() => null);
+      const mp = pr && pr.match(/\|(-?\d+\.?\d*)/);
+      // Torque: usa comando 'T' (diag ASCII custom) que retorna 'lt=INT nm=FLOAT'.
+      // Lê o campo nm (em Nm) — mesmo que FFB Live usa, garante eixo correto.
+      // Antes a gente lia axis.curtorque? que devolvia int raw 0-32767 e o gráfico
+      // mostrava "10000Nm" (era o int magnitude HID, não Nm).
+      const tr = await sendCmd('T', true).catch(() => null);
+      const mt = tr && tr.match(/nm=(-?\d+\.?\d*)/);
+
+      let posDeg = null;
+      if (mp) {
+        posDeg = parseFloat(mp[1]);
+        fbtChartHist.pos.push(posDeg);
+        while (fbtChartHist.pos.length > FBT_CHART_LEN) fbtChartHist.pos.shift();
+      }
+      if (mt) {
+        fbtChartHist.trq.push(parseFloat(mt[1]));
+        while (fbtChartHist.trq.length > FBT_CHART_LEN) fbtChartHist.trq.shift();
+      }
+      drawChart();
+
+      // Angle limit do Constant Force — usa a mesma leitura de posição
+      if (fbtRunning.cf && posDeg !== null) {
+        const limit = parseInt(cfLimit.value, 10);
+        if (limit > 0 && Math.abs(posDeg) > limit) {
+          // Fora do range: zera magnitude
+          await sendOutput(0x05, buildConstantForce(FBT_BLOCK.cf, 0));
+        } else {
+          // Dentro do range (ou sem limite): aplica magnitude do slider
+          await updateForce('cf');
+        }
+      }
+    } finally {
+      fbtPolling = false;
+      if (dot) dot.classList.remove('on');
+    }
+  };
+
+  const startPoll = () => {
+    if (fbtChartTimer) clearInterval(fbtChartTimer);
+    const intEl = document.getElementById('fbt-poll-interval');
+    const interval = parseInt(intEl?.value, 10) || 200;
+    fbtChartTimer = setInterval(() => { pollOnce().catch(() => {}); }, interval);
+  };
+  const stopPoll = () => {
+    if (fbtChartTimer) { clearInterval(fbtChartTimer); fbtChartTimer = null; }
+    const dot = document.getElementById('fbt-poll-dot');
+    if (dot) dot.classList.remove('on');
+  };
+
+  // Wire dos controles do chart
+  const pollEnable = document.getElementById('fbt-poll-enable');
+  const pollInterval = document.getElementById('fbt-poll-interval');
+  const pollOnceBtn = document.getElementById('fbt-poll-once');
+  const chartClearBtn = document.getElementById('fbt-chart-clear');
+  if (pollEnable) {
+    pollEnable.addEventListener('change', () => {
+      if (pollEnable.checked) startPoll();
+      else stopPoll();
+    });
+  }
+  if (pollInterval) {
+    pollInterval.addEventListener('change', () => {
+      if (pollEnable && pollEnable.checked) startPoll();   // restarta com novo intervalo
+    });
+  }
+  if (pollOnceBtn) {
+    pollOnceBtn.addEventListener('click', () => pollOnce().catch(() => {}));
+  }
+  if (chartClearBtn) {
+    chartClearBtn.addEventListener('click', () => {
+      fbtChartHist.pos = [];
+      fbtChartHist.trq = [];
+      drawChart();
+    });
+  }
+
+  // ---------- Tab activation hooks ----------
+  document.querySelectorAll('#sidebar-nav .sidebar-item').forEach(item => {
+    item.addEventListener('click', async () => {
+      if (item.dataset.tab === 'ffb-test') {
+        // Verifica se motor está em closed loop (warning amarelo)
+        try {
+          const r = await sendCmd('r axis0.current_state', true);
+          const v = parseInt((r || '').trim().split(/\s+/).pop(), 10);
+          const warn = document.getElementById('fbt-warn-state');
+          if (warn) warn.classList.toggle('on', v !== 8);
+        } catch(e) {}
+      } else {
+        // Saiu da aba — para tudo: poll + efeitos HID
+        stopPoll();
+        if (pollEnable) pollEnable.checked = false;
+        if (fbtConnected) await stopAll();
+      }
+    });
+  });
+}
+
 function wireDFUTab() {
   const btnEnter = document.getElementById('dfu-btn-enter');
   const btnDetect = document.getElementById('dfu-btn-detect');
@@ -3398,6 +4162,12 @@ function buildTabs() {
       content.appendChild(panel);
       return;
     }
+    // FFB Test tab — WebHID effect controller
+    if (tab.custom && tab.id === 'ffb-test') {
+      panel.innerHTML = buildFFBTestHTML();
+      content.appendChild(panel);
+      return;
+    }
 
     tab.fields.forEach(fld => {
       if (fld.group) {
@@ -3414,7 +4184,10 @@ function buildTabs() {
         panel.appendChild(g);
         return;
       }
-      const path = tab.prefix + fld.name;
+      // Phase 4.x — fld._path/_protocol override (ICMD helper) permite encaixar
+      // comandos OpenFFBoard (ex: sys.vbusdiv) dentro da aba ODrive sem precisar
+      // mover pra outra seção.
+      const path = (fld._path !== undefined) ? fld._path : (tab.prefix + fld.name);
       const labelEl = document.createElement('label');
       labelEl.dataset.fieldPath = path;
       // Tooltip: descrição + path técnico no final
@@ -3448,7 +4221,7 @@ function buildTabs() {
       input.id = 'in-' + path;
       input.dataset.path = path;
       input.dataset.type = fld.type;
-      input.dataset.protocol = tab.protocol || 'odrv';
+      input.dataset.protocol = fld._protocol || tab.protocol || 'odrv';
       input.dataset.currentServerValue = '';
       input.addEventListener('input', () => markDirty(input));
       input.addEventListener('change', () => markDirty(input));
@@ -4745,6 +5518,7 @@ wireFFBLive();
 wireConsoleTab();
 wireDFUTab();
 wireInputsTab();
+wireFFBTestTab();
 
 // i18n — wirar select de idioma e aplicar idioma persistido
 const langSelect = document.getElementById('lang-select');
