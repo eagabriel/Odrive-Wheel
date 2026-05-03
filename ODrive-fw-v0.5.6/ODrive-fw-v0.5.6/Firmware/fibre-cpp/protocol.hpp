@@ -184,6 +184,37 @@ static bool to_string(const T& value, char * buffer, size_t length, int) {
     snprintf(buffer, length, format_traits_t<T>::fmtp, value);
     return true;
 }
+// Phase 4.x — Odrive-Wheel patch: newlib-nano (que estamos linkando via
+// -specs=nano.specs) não suporta '%llu' / '%lld'. snprintf devolve literalmente
+// "lu" / "ld" no buffer. Sintoma: 'r serial_number' retorna "lu" em vez do
+// número de 12 dígitos. Especialização manual evita o printf 64-bit.
+template<typename T = unsigned long long>
+static bool to_string(const unsigned long long& value, char * buffer, size_t length, int) {
+    if (length == 0) return false;
+    char tmp[21]; int idx = 20;
+    tmp[idx] = '\0';
+    if (value == 0) { tmp[--idx] = '0'; }
+    else {
+        unsigned long long v = value;
+        while (v > 0 && idx > 0) { tmp[--idx] = '0' + (char)(v % 10); v /= 10; }
+    }
+    size_t n = 20 - idx;
+    if (n + 1 > length) n = length - 1;
+    for (size_t i = 0; i < n; ++i) buffer[i] = tmp[idx + i];
+    buffer[n] = '\0';
+    return true;
+}
+template<typename T = long long>
+static bool to_string(const long long& value, char * buffer, size_t length, int) {
+    if (length == 0) return false;
+    if (value < 0) {
+        if (length < 2) { buffer[0] = '\0'; return false; }
+        buffer[0] = '-';
+        return to_string<unsigned long long>(
+            (unsigned long long)(-(value + 1)) + 1ULL, buffer + 1, length - 1, 0);
+    }
+    return to_string<unsigned long long>((unsigned long long)value, buffer, length, 0);
+}
 // Special case for float because printf promotes float to double, and we get warnings
 template<typename T = float>
 static bool to_string(const float& value, char * buffer, size_t length, int) {

@@ -192,7 +192,11 @@ public:
 
     void update() {
         float turns = odrive_bridge_get_pos_turns();
-        float degrees = turns * 360.0f;
+        // zeroOffset_ é a posição (em graus) capturada na última chamada de
+        // axis.zeroenc!. Subtraindo aqui, todo o pipeline downstream (pos_f,
+        // pos_scaled_16b, metrics_.posDegrees, endstops, speed/accel)
+        // automaticamente trabalha em torno do "novo zero".
+        float degrees = turns * 360.0f - zeroOffset_;
         float halfRange = rangeDegrees_ / 2.0f;
 
         float pos_f = degrees / halfRange;
@@ -228,8 +232,11 @@ public:
     }
 
     void zeroEncoder() {
-        // Zera o offset interno chamando reset position. Implementação simples:
-        // captura position atual como zero virtual.
+        // Captura posição atual em graus como o "novo zero" lógico. O offset
+        // é aplicado em update() — todo o pipeline (HID position, FFB endstops,
+        // diag pos=...) passa a reportar 0 imediatamente após chamar isto.
+        // Não toca no encoder do ODrive (shadow_count continua incrementando
+        // monotonicamente), só no offset virtual da camada FFB.
         zeroOffset_ = odrive_bridge_get_pos_turns() * 360.0f;
     }
 
@@ -242,7 +249,7 @@ private:
     float pending_torque_     = 0.0f;
     int32_t axisEffectTorque_ = 0;       // calculado em calculateAxisEffects
     int32_t lastTorque_       = 0;       // pra slew rate limit
-    float zeroOffset_         = 0.0f;    // offset de zeroEncoder (TODO: aplicar)
+    float zeroOffset_         = 0.0f;    // offset (graus) aplicado em update()
 
 public:
     void reset_ffb_state() {
