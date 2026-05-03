@@ -39,6 +39,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: ${{ false }} # Pages disabled for this repo (enable Pages to re-activate)
     runs-on: ubuntu-latest
     environment:
       name: github-pages

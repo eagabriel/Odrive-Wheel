@@ -1,0 +1,71 @@
+name: Build Firmware
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout the repository and its submodules with full history for versioning
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    # 2. Install ARM GCC compiler, Make, and Python
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi build-essential python3 python3-yaml python3-jinja2 python3-jsonschema
+
+    # 3. Generate ODrive autogen files
+    - name: Generate ODrive autogen files
+      working-directory: ./ODrive-fw-v0.5.6/ODrive-fw-v0.5.6/Firmware
+      run: |
+        mkdir -p autogen
+        python3 ../tools/odrive/version.py --output autogen/version.c
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/interfaces_template.j2 --output autogen/interfaces.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/function_stubs_template.j2 --output autogen/function_stubs.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --generate-endpoints ODrive --template fibre-cpp/endpoints_template.j2 --output autogen/endpoints.hpp
+        python3 interface_generator_stub.py --definitions odrive-interface.yaml --template fibre-cpp/type_info_template.j2 --output autogen/type_info.hpp
+
+    # 4. Build the firmware using Make
+    - name: Build Firmware
+      working-directory: ./Odrive-Wheel
+      run: |
+        set -o pipefail
+        if ! make -j$(nproc) 2>&1 | tee build.log; then
+          echo "::group::Build log tail"
+          tail -n 200 build.log || true
+          echo "::endgroup::"
+          exit 1
+        fi
+
+        if [ ! -f build/odrive-wheel.bin ]; then
+          echo "Missing build/odrive-wheel.bin"
+          ls -la build || true
+          exit 1
+        fi
+
+    # 5. Upload build log if something failed
+    - name: Upload build log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: odrive-wheel-build-log
+        path: ./Odrive-Wheel/build.log
+
+    # 6. Upload the compiled binary as an artifact
+    - name: Upload Firmware Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: odrive-wheel-firmware
+        path: ./Odrive-Wheel/build/odrive-wheel.bin
+        retention-days: 14
