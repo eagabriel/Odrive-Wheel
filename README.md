@@ -49,6 +49,18 @@ full **HID Force Feedback** support to use the motor as a sim racing wheel.
   </a>
 </p>
 
+<p align="center">
+  <a href="https://discord.com/channels/704355326291607614/1499185654033158305" target="_blank">
+    <img src="https://img.shields.io/badge/Discussion%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"
+         alt="Project discussion on Discord" height="40">
+  </a>
+</p>
+
+<p align="center">
+  <sub>Questions, build logs, tuning tips and bug reports —
+  <a href="https://discord.com/channels/704355326291607614/1499185654033158305">join the project thread on Discord</a>.</sub>
+</p>
+
 > 💛 **Open-source, maintained on personal time.** If this firmware saved
 > you a few hundred bucks on a commercial wheelbase, please consider
 > [becoming a GitHub Sponsor](https://github.com/sponsors/eagabriel) or
@@ -58,6 +70,11 @@ full **HID Force Feedback** support to use the motor as a sim racing wheel.
 Based on:
 - [ODrive Firmware v0.5.6](https://github.com/odriverobotics/ODrive) (motor control)
 - [OpenFFBoard](https://github.com/Ultrawipf/OpenFFBoard) (FFB stack: HidFFB + EffectsCalculator)
+
+Community contributions:
+- [@aksc857-stack](https://github.com/aksc857-stack) — MT6835 21-bit SPI encoder driver, and the split of axis position invert from FFB torque invert
+- [@TelksBr](https://github.com/TelksBr) — [ODrive-Wheel-Forge](https://github.com/TelksBr/ODrive-Wheel-Forge): USB HID PID compatibility fix suite, thermal telemetry, and the threaded MT6835 read path
+- [@simachines](https://github.com/simachines) — autogen tooling backup
 
 ## 🚀 Quick start
 
