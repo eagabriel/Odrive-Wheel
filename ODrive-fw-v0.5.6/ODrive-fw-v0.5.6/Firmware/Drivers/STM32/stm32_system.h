@@ -17,6 +17,9 @@ extern "C" {
 
 // Uncomment the following line to sacrifice 1kB of RAM for the ability to
 // monitor the number of times each interrupt fires.
+// NOTA: habilitar isto quebrava a enumeração USB (Code 43) neste HW — causa
+// não identificada, mas é o único delta ativo no boot. O verdict do sys.spidmatest!
+// vem do contador próprio spi_dma_test_cb_count_, então não precisamos disto.
 //#define ENABLE_IRQ_COUNTER
 
 #ifdef ENABLE_IRQ_COUNTER

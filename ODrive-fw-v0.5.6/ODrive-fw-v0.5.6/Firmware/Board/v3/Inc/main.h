@@ -72,7 +72,7 @@
 #define TIM_APB1_CLOCK_HZ 84000000
 #define TIM_APB1_PERIOD_CLOCKS 4096
 #define TIM_APB1_DEADTIME_CLOCKS 40
-#define TIM_1_8_RCR 2
+#define TIM_1_8_RCR 2   // 8 kHz (défaut prouvé sûr — 84e021a). 1 = 12 kHz causait TIMER_UPDATE_MISSED, 0 = 24 kHz
 
 #define M0_nCS_Pin GPIO_PIN_13
 #define M0_nCS_GPIO_Port GPIOC

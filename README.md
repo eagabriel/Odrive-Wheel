@@ -72,8 +72,8 @@ Based on:
 - [OpenFFBoard](https://github.com/Ultrawipf/OpenFFBoard) (FFB stack: HidFFB + EffectsCalculator)
 
 Community contributions:
-- [@aksc857-stack](https://github.com/aksc857-stack) — MT6835 21-bit SPI encoder driver, and the split of axis position invert from FFB torque invert
-- [@TelksBr](https://github.com/TelksBr) — [ODrive-Wheel-Forge](https://github.com/TelksBr/ODrive-Wheel-Forge): USB HID PID compatibility fix suite, thermal telemetry, and the threaded MT6835 read path
+- [@aksc857-stack](https://github.com/aksc857-stack) — MT6835 21-bit SPI encoder: driver, threaded read path, atomic SPI arbiter guard, chip register access and CLI. Also velocity/acceleration from the encoder PLL, and the split of axis position invert from FFB torque invert
+- [@TelksBr](https://github.com/TelksBr) — [ODrive-Wheel-Forge](https://github.com/TelksBr/ODrive-Wheel-Forge): USB HID PID compatibility fix suite and thermal telemetry
 - [@simachines](https://github.com/simachines) — autogen tooling backup
 
 ## 🚀 Quick start
