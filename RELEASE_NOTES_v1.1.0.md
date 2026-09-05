@@ -58,4 +58,4 @@ Phase inductance measurement used to reject anything above 4 mH, failing calibra
 
 **Questions and bug reports:** [join the discussion on Discord](https://discord.com/channels/704355326291607614/1499185654033158305)
 
-Thanks to [@aksc857-stack](https://github.com/aksc857-stack) for the MT6835 driver and the invert split, and to [@TelksBr](https://github.com/TelksBr) ([ODrive-Wheel-Forge](https://github.com/TelksBr/ODrive-Wheel-Forge)) for the HID PID fix suite, thermal telemetry and the threaded encoder read.
+Thanks to [@aksc857-stack](https://github.com/aksc857-stack) for the MT6835 encoder work — driver, threaded read path, atomic SPI arbiter guard and chip register CLI — plus velocity and acceleration from the encoder PLL and the invert split; and to [@TelksBr](https://github.com/TelksBr) ([ODrive-Wheel-Forge](https://github.com/TelksBr/ODrive-Wheel-Forge)) for the HID PID fix suite and thermal telemetry.
