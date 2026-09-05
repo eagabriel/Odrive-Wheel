@@ -90,11 +90,19 @@ public:
     // Axis effects (idleSpring/damper/friction/etc.) usam metrics nativas
     // do encoder e não são invertidos — eles se mantêm consistentes
     // automaticamente porque computam torque na mesma referência do motor.
-    bool inverted_ = false;
+    // Duas flags de inversão INDEPENDENTES (antes era uma só que fazia
+    // pos+torque juntos, o que amarra o comportamento e não serve pra
+    // casos como FFFSake Forwarder — inverte só o FFB mantendo pos ok):
+    //   axisInverted_ → getScaledAxisPos() retorna -pos (axis.invert)
+    //   ffbInverted_  → setEffectTorque() nega o torque   (axis.ffbinvert)
+    bool axisInverted_ = false;
+    bool ffbInverted_  = false;
 
     void setEffectTorque(int32_t torque) override {
-        // Phase 4.x — inverte torque vindo do jogo se inverted_ ativo.
-        if (inverted_) torque = -torque;
+        // Inverte torque vindo do jogo se ffbInverted_ ativo (independente
+        // de axisInverted_ — permite casos onde pos está correta mas FFB
+        // veio invertido pela stack do jogo).
+        if (ffbInverted_) torque = -torque;
 
         // EffectsCalculator entrega torque clipado em [-0x7FFF, +0x7FFF].
         // Soma os axis effects calculados em calculateAxisEffects (sempre ativos).
@@ -236,14 +244,26 @@ public:
         }
 
         const float dt = 0.001f;
-        float new_speed = (degrees - metrics_.posDegrees) / dt;
-        float new_accel = (new_speed - metrics_.speed) / dt;
+        // Velocidade vem da PLL do encoder (vel_estimate, turns/s → deg/s) em
+        // vez de derivada bruta da posição. A derivada dupla do count bruto
+        // amplifica o ruído do LSB do encoder em ~10⁶ no accel, obrigando
+        // current_control_bandwidth ficar baixo (~100) só pra mascarar o
+        // chiado no motor. Com a PLL como fonte, encoder.config.bandwidth vira
+        // o knob real de ruído/latência dos efeitos de velocidade (damper/
+        // friction/inertia — axis e jogo).
+        float new_speed = odrive_bridge_get_vel_estimate() * 360.0f;
+        // Accel: UMA derivada da velocidade já filtrada pela PLL, mais um
+        // low-pass de 1ª ordem (~100 Hz @ 1 kHz) pra suavizar os degraus
+        // residuais da PLL antes de multiplicar pelos gains de inertia.
+        const float ACCEL_LPF_ALPHA = 0.386f;  // dt/(dt + 1/(2π·100Hz))
+        float raw_accel = (new_speed - metrics_.speed) / dt;
+        accelLpf_ += ACCEL_LPF_ALPHA * (raw_accel - accelLpf_);
 
         metrics_.posDegrees = degrees;
         metrics_.pos_f = pos_f;
         metrics_.pos_scaled_16b = (int32_t)(pos_f * 32767.0f);
         metrics_.speed = new_speed;
-        metrics_.accel = new_accel;
+        metrics_.accel = accelLpf_;
 
         // Aplica pending_torque_ no motor SEMPRE (não condicionado ao FFB do
         // jogo estar ativo). Razão: EffectsCalculator::calculateEffects() chama
@@ -270,7 +290,7 @@ public:
     }
 
     int32_t getScaledAxisPos() const {
-        return inverted_ ? -metrics_.pos_scaled_16b : metrics_.pos_scaled_16b;
+        return axisInverted_ ? -metrics_.pos_scaled_16b : metrics_.pos_scaled_16b;
     }
 
     // zeroOffset_ é public pra ffb_load/save_flash conseguir persistir.
@@ -284,6 +304,7 @@ private:
     float pending_torque_     = 0.0f;
     int32_t axisEffectTorque_ = 0;       // calculado em calculateAxisEffects
     int32_t lastTorque_       = 0;       // pra slew rate limit
+    float accelLpf_           = 0.0f;    // LPF 1ª ordem ~100 Hz sobre d(speed)/dt
 
 public:
     void reset_ffb_state() {
@@ -477,6 +498,24 @@ extern "C" void ffb_init_storage_early(void) {
         }
     }
 
+    // EQ por banda — load dos ganhos persistidos. Valores armazenados em
+    // décimos de dB (int16 reinterpretado pela leitura uint16). 0xFFFF =
+    // nunca escrito → fica em flat (default do EqCascade). Range válido:
+    // -120..+120 (= ±12.0 dB).
+    if (s_effects_calc) {
+        const uint16_t eqAddrs[3] = { ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD };
+        for (uint8_t band = 0; band < 3; ++band) {
+            uint16_t raw = 0xFFFF;
+            if (!Flash_Read(eqAddrs[band], &raw, false) || raw == 0xFFFF) continue;
+            int16_t signed_x10 = (int16_t)raw;
+            if (signed_x10 < -120 || signed_x10 > 120) continue;
+            const float gainDb = (float)signed_x10 / 10.0f;
+            for (uint8_t axis = 0; axis < MAX_AXIS; ++axis) {
+                s_effects_calc->getEqCascade(axis).setGain((EqCascade::Band)band, gainDb);
+            }
+        }
+    }
+
     s_storage_initialized = true;
 }
 
@@ -573,8 +612,15 @@ static void ffb_load_axis_params_internal(void) {
         }
     }
     // Phase 4.x — bitfield de flags do axis (ADR_AXIS1_CONFIG)
+    //   bit 0 = axisInverted_  (posição HID invertida)
+    //   bit 1 = ffbInverted_   (torque FFB invertido) — novo
+    // Compat com config antiga: bit 0 solto = comportamento herdado
+    // (invertia posição, ficava aplicando o mesmo bit implicitamente no
+    // torque via lógica antiga). Aqui só carregamos axis; usuário aciona
+    // o novo ffbinvert explicitamente pela UI.
     if (Flash_Read(ADR_AXIS1_CONFIG, &v, false) && v != 0xFFFF) {
-        s_axis_raw->inverted_ = (v & 0x0001) != 0;
+        s_axis_raw->axisInverted_ = (v & 0x0001) != 0;
+        s_axis_raw->ffbInverted_  = (v & 0x0002) != 0;
     }
     // zeroOffset_ — split em 2 slots uint16 reconstruindo um float32.
     // Inicial 0.0f no construtor é o default seguro (sem offset).
@@ -692,6 +738,33 @@ extern "C" int32_t  ffb_diag_last_torque(void)    { return s_diag_last_torque_in
 extern "C" int      ffb_diag_active_effects(void) { return ffb_count_active_effects(); }
 extern "C" float    ffb_diag_pending_torque(void) { return s_axis_raw ? s_axis_raw->getMetrics()->torque / (float)0x7FFF * (s_axis_raw->maxTorque_Nm_ * s_axis_raw->fxRatio_) : 0.0f; }
 extern "C" int      ffb_diag_ffb_active_flag(void){ return (s_hidffb && s_hidffb->getFfbActive()) ? 1 : 0; }
+
+// EQ por banda — bridge pro cmd_table.cpp. Band: 0=GRIP, 1=CHASSIS, 2=ROAD.
+// Set vai pros dois axes (mesma config). Get lê do axis 0 (canônico).
+// Freq/Q são read-only — expostos pra UI conseguir mostrar onde cada banda
+// está centrada sem hardcodar em dois lugares.
+extern "C" void ffb_eq_set_gain_db(int band, float gainDb) {
+    if (!s_effects_calc) return;
+    if (band < 0 || band >= EqCascade::BAND_COUNT) return;
+    for (uint8_t axis = 0; axis < MAX_AXIS; ++axis) {
+        s_effects_calc->getEqCascade(axis).setGain((EqCascade::Band)band, gainDb);
+    }
+}
+extern "C" float ffb_eq_get_gain_db(int band) {
+    if (!s_effects_calc) return 0.0f;
+    if (band < 0 || band >= EqCascade::BAND_COUNT) return 0.0f;
+    return s_effects_calc->getEqCascade(0).getGain((EqCascade::Band)band);
+}
+extern "C" float ffb_eq_get_freq_hz(int band) {
+    if (!s_effects_calc) return 0.0f;
+    if (band < 0 || band >= EqCascade::BAND_COUNT) return 0.0f;
+    return s_effects_calc->getEqCascade(0).getFreq((EqCascade::Band)band);
+}
+extern "C" float ffb_eq_get_q(int band) {
+    if (!s_effects_calc) return 0.0f;
+    if (band < 0 || band >= EqCascade::BAND_COUNT) return 0.0f;
+    return s_effects_calc->getEqCascade(0).getQ((EqCascade::Band)band);
+}
 
 // Encontra o N-ésimo effect com state != INACTIVE (n=0 → primeiro, n=1 →
 // segundo, etc). Retorna ponteiro ou nullptr quando não há mais.
@@ -899,6 +972,20 @@ extern "C" int ffb_save_flash(void) {
         s_last_save_writes++;
     }
 
+    // EQ por banda — persiste ganhos em décimos de dB como int16
+    // reinterpretado pra uint16 (Flash API só aceita uint16). Lê do
+    // axis 0 porque os dois axes têm o mesmo ganho (só estado interno
+    // difere). EqCascade clamps em ±12 dB → range guaranteed em ±120.
+    if (s_effects_calc) {
+        const uint16_t eqAddrs[3] = { ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD };
+        for (uint8_t band = 0; band < 3; ++band) {
+            const float dB = s_effects_calc->getEqCascade(0).getGain((EqCascade::Band)band);
+            const int16_t x10 = (int16_t)(dB * 10.0f);
+            if (!Flash_Write(eqAddrs[band], (uint16_t)x10)) s_last_save_errors++;
+            s_last_save_writes++;
+        }
+    }
+
     if (s_axis_raw) {
         // Escala básica
         uint16_t r  = (uint16_t)(s_axis_raw->rangeDegrees_ < 65535.0f ? s_axis_raw->rangeDegrees_ : 65535.0f);
@@ -922,10 +1009,13 @@ extern "C" int ffb_save_flash(void) {
         if (!Flash_Write(ADR_AXIS1_ENC_RATIO, esPack)) s_last_save_errors++;
         s_last_save_writes += 6;
 
-        // Phase 4.x — bitfield de flags do axis. Atualmente só bit 0 = inverted_.
-        // Outros bits ficam reservados pra futuras flags (ex: deadzone enable,
-        // smoothing, etc.) sem precisar de novos endereços na EE.
-        uint16_t cfgFlags = (s_axis_raw->inverted_ ? 0x0001 : 0x0000);
+        // Phase 4.x — bitfield de flags do axis.
+        //   bit 0 = axisInverted_ (posição HID)
+        //   bit 1 = ffbInverted_  (torque FFB)
+        // Bits 2..15 reservados pra futuras flags (deadzone, smoothing, etc.)
+        // sem precisar de novos endereços na EE.
+        uint16_t cfgFlags = (s_axis_raw->axisInverted_ ? 0x0001 : 0x0000)
+                          | (s_axis_raw->ffbInverted_  ? 0x0002 : 0x0000);
         if (!Flash_Write(ADR_AXIS1_CONFIG, cfgFlags)) s_last_save_errors++;
         s_last_save_writes++;
 
@@ -1069,8 +1159,10 @@ extern "C" void ffb_eeformat(char *buf, int bufsize) {
 // Axis params (axis.range / axis.maxtorque / axis.fxratio) — persistem via
 // EEPROM emulada quando integrarmos esses no saveFlash futuramente. Por
 // enquanto sao runtime-only (resetam nos defaults no boot).
-extern "C" int  ffb_get_axis_invert(void) { return (s_axis_raw && s_axis_raw->inverted_) ? 1 : 0; }
-extern "C" void ffb_set_axis_invert(int v) { if (s_axis_raw) s_axis_raw->inverted_ = (v != 0); }
+extern "C" int  ffb_get_axis_invert(void) { return (s_axis_raw && s_axis_raw->axisInverted_) ? 1 : 0; }
+extern "C" void ffb_set_axis_invert(int v) { if (s_axis_raw) s_axis_raw->axisInverted_ = (v != 0); }
+extern "C" int  ffb_get_ffb_invert(void)  { return (s_axis_raw && s_axis_raw->ffbInverted_)  ? 1 : 0; }
+extern "C" void ffb_set_ffb_invert(int v) { if (s_axis_raw) s_axis_raw->ffbInverted_  = (v != 0); }
 
 // Phase 4.x — divisor VBUS. Setter clamp em 1-50 e recalcula scale cache
 // que é lido pelo IRQ de leitura de ADC (vbus_sense_adc_cb em low_level.cpp).

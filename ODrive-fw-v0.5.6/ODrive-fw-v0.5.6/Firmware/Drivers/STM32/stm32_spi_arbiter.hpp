@@ -89,6 +89,12 @@ private:
     
     SPI_HandleTypeDef* hspi_;
     SpiTask* task_list_ = nullptr;
+    // Re-entrancy guard for the polled transfer(): a preempting caller (ISR or
+    // higher-priority thread) must not re-init the SPI peripheral over an
+    // in-flight transfer — that hangs the bus. Accessed only through
+    // __atomic_exchange_n/__atomic_store_n (see transfer()) because multiple
+    // threads share this path since the MT6835 encoder read moved to a thread.
+    volatile bool in_transfer_ = false;
 };
 
 #endif // __STM32_SPI_ARBITER_HPP

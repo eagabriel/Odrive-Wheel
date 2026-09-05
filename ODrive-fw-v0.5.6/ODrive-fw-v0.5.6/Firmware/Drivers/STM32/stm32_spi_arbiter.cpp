@@ -90,11 +90,36 @@ void Stm32SpiArbiter::transfer_async(SpiTask* task) {
 bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
     if (!hspi_) return false;
 
-    // Reconfigura SPI se necessario (mesma logica do start() original)
+    // Re-entrancy guard. A higher-priority caller (encoder read in sampling_cb
+    // or the MT6835 encoder thread) can preempt a lower-priority transfer
+    // (DRV8301 fault check). If it does, skip rather than touch the peripheral
+    // mid-transfer — a re-init over an in-flight transfer corrupts the SPI and
+    // hangs the bus. Critical for mode-3 encoders (MT6835) whose config differs
+    // from the DRV (mode 1), forcing a re-config on every switch. A skipped
+    // encoder read is harmless (counts as a COM miss; the PLL interpolates).
+    // Atomic exchange (not test-then-set): with several *threads* sharing this
+    // path (encoder thread + axis thread) a context switch between the check
+    // and the store could let both proceed — same idiom as acquire_task().
+    if (__atomic_exchange_n(&in_transfer_, true, __ATOMIC_ACQUIRE)) return false;
+
+    // Reconfiguração LEVE do SPI (só CR1/CR2), NÃO HAL_SPI_DeInit/Init.
+    // O MT6835 (SPI mode 3) e o DRV8301 (mode 1) diferem só na polaridade do
+    // clock, então a config muda a cada switch encoder<->DRV. Um DeInit/Init
+    // completo refaz MspInit (GPIO + clock + DMA) e, chamado a 8 kHz no ISR de
+    // alta prioridade, sufoca a CPU e derruba o loop USB/FFB — o HID OUT caía
+    // de ~670 Hz pra 2-45 Hz. GPIO/clock/DMA já foram inicializados no boot
+    // (MX_SPI3_Init); só precisamos reescrever os registros de protocolo,
+    // exatamente como HAL_SPI_Init faz, mas sem o MspInit. Custa alguns
+    // registradores (<1 µs) em vez de dezenas de µs.
     if (!equals(config, hspi_->Init)) {
-        HAL_SPI_DeInit(hspi_);
+        __HAL_SPI_DISABLE(hspi_);
         hspi_->Init = config;
-        HAL_SPI_Init(hspi_);
+        WRITE_REG(hspi_->Instance->CR1,
+                  (config.Mode | config.Direction | config.DataSize |
+                   config.CLKPolarity | config.CLKPhase | (config.NSS & SPI_CR1_SSM) |
+                   config.BaudRatePrescaler | config.FirstBit | config.CRCCalculation));
+        WRITE_REG(hspi_->Instance->CR2,
+                  (((config.NSS >> 16U) & SPI_CR2_SSOE) | config.TIMode));
         __HAL_SPI_ENABLE(hspi_);
     }
 
@@ -114,6 +139,7 @@ bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const
     // Release CS
     ncs_gpio.write(true);
 
+    __atomic_store_n(&in_transfer_, false, __ATOMIC_RELEASE);
     return st == HAL_OK;
 }
 

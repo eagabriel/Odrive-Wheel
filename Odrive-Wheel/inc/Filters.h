@@ -40,6 +40,7 @@ public:
     float getFc() const;
     void setQ(float Q);
     float getQ() const;
+    float dcGain() const; // |H(z=1)| — ganho em 0 Hz, pra normalização de cascatas
     void calcBiquad(void);
 
 protected:

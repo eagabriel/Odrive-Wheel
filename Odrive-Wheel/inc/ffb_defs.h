@@ -305,7 +305,9 @@ typedef struct
 	uint16_t deadBand = 0;
 
 	bool isActive(){ // Condition is active if either coefficient is not zero
-		return (positiveCoefficient != 0 && positiveSaturation != 0) || (negativeCoefficient != 0 && negativeSaturation != 0);
+		// Saturation=0 in DirectInput means "no saturation limit" (100%),
+		// not "muted". Treat as active whenever any coefficient is set.
+		return (positiveCoefficient != 0) || (negativeCoefficient != 0);
 	}
 } FFB_Effect_Condition;
 

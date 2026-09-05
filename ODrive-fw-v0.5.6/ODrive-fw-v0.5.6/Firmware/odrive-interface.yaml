@@ -1614,6 +1614,9 @@ valuetypes:
       SPI_ABS_MA732:
         value: 0x104
         doc: MagAlpha MA732 magnetic encoder
+      SPI_ABS_MT6835:
+        value: 0x105
+        doc: MagnTek MT6835 21-bit magnetic encoder (SPI burst read, cpr = 2097152)
 
   ODrive.Controller.ControlMode:
     values:

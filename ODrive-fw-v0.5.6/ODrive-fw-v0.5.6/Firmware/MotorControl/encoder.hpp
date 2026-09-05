@@ -143,8 +143,11 @@ public:
     Stm32Gpio abs_spi_cs_gpio_;
     uint32_t abs_spi_cr1;
     uint32_t abs_spi_cr2;
-    uint16_t abs_spi_dma_tx_[1] = {0xFFFF};
-    uint16_t abs_spi_dma_rx_[1];
+    // 3 words: AS5047/MA732/etc. use only [0] (length=1). MT6835 burst read uses
+    // all 3 (length=3): [0]=command 0xA003, [1]/[2]=clock-out words for the
+    // 4 data bytes (regs 0x003..0x006). See abs_spi_cb()/sample_now().
+    uint16_t abs_spi_dma_tx_[3] = {0xFFFF, 0x0000, 0x0000};
+    uint16_t abs_spi_dma_rx_[3];
     Stm32SpiArbiter::SpiTask spi_task_;
 
     // MKS XDrive Mini debug — contadores expostos pra command sys.encraw!
@@ -165,6 +168,31 @@ public:
     uint16_t diaagc_raw_           = 0;  // valor cru da última leitura DIAAGC
     uint32_t diaagc_update_count_  = 0;  // # de leituras DIAAGC bem-sucedidas
     uint16_t abs_spi_cmd_phase_    = 0;  // contador interno pra interleaving
+
+    // MT6835 (21-bit) — snapshot do STATUS[2:0] da última leitura de ângulo válida.
+    //   bit[0] = Rotation Over Speed Warning
+    //   bit[1] = Weak Magnetic Field Warning (magneto longe/fraco)
+    //   bit[2] = Under Voltage Warning
+    // Exposto pra inspeção via sys.encraw! / debug; warnings não bloqueiam o FFB.
+    uint8_t  mt6835_status_        = 0;
+
+    // MT6835 — acesso a registro único (trama 24 bits, DataSize 8-bit).
+    // Chamável só de contexto de thread (setup, command handlers) — tem retry
+    // com osDelay. Ver implementação em encoder.cpp.
+    bool mt6835_transfer24(uint8_t cmd, uint16_t addr, uint8_t data_in, uint8_t* data_out);
+    bool mt6835_read_reg(uint16_t addr, uint8_t* val);
+    bool mt6835_write_reg(uint16_t addr, uint8_t val);
+    bool mt6835_auto_set_zero();      // ZERO_POS ← posição atual (volátil)
+    bool mt6835_program_eeprom();     // persiste register map (aguardar 6 s!)
+
+    // Diag do boot (setup()): comm verificada por CRC + HYST zerado com sucesso.
+    bool mt6835_boot_comm_ok_  = false;
+    bool mt6835_hyst_zeroed_   = false;
+
+    // Pausa das leituras de ângulo da thread (ticks osKernelSysTick). Usado
+    // pelo program EEPROM: datasheet 7.6.6 proíbe qualquer operação SPI por
+    // >= 6 s após o comando. A thread pula leituras enquanto now < este tick.
+    volatile uint32_t mt6835_spi_pause_until_tick_ = 0;
 
     constexpr float getCoggingRatio(){
         return 1.0f / 3600.0f;

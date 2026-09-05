@@ -15,7 +15,8 @@
 //   0x0001 — layout inicial (S10/S11, 128K pages)
 //   0x0002 — layout movido pra S1/S2 (16K pages) após colisão com ODrive NVM
 //   0x0003 — adicionados ADR_GPIO_AXIS_FLAGS + ADR_GPIO_AXIS_FREQ_X10 (NB_OF_VAR 45→47)
-#define EE_LAYOUT_VERSION       0x0003
+//   0x0004 — adicionados ADR_AXIS_EQ_WEIGHT/CHASSIS/ROAD (NB_OF_VAR 47→50)
+#define EE_LAYOUT_VERSION       0x0004
 
 // System / meta
 #define ADR_SYSTEM_MARKER       0x0001
@@ -89,9 +90,18 @@
 #define ADR_GPIO_AXIS_FLAGS     0x0270
 #define ADR_GPIO_AXIS_FREQ_X10  0x0271
 
-// 47 entradas: 4 system + 7 ffb + 12 axis (10 + 2 ZEROOFS) + 5 odrive
+// EQ por banda (WEIGHT/CHASSIS/ROAD). Ganhos em DÉCIMOS de dB pra preservar
+// 0.1 dB de resolução num int16 (range -120..+120 = ±12 dB). 0 = flat.
+// Tipo, centro e Q de cada banda hardcoded no firmware (EqCascade.cpp),
+// não persistido. Sentinel 0xFFFF = nunca escrito (default flat).
+#define ADR_AXIS_EQ_WEIGHT      0x0272
+#define ADR_AXIS_EQ_CHASSIS     0x0273
+#define ADR_AXIS_EQ_ROAD        0x0274
+
+// 50 entradas: 4 system + 7 ffb + 12 axis (10 + 2 ZEROOFS) + 5 odrive
 //             + 15 gpio (5 pinos × 3 campos) + 1 vbus_divider + 2 axis_proc
-#define NB_OF_VAR 47
+//             + 3 axis_eq
+#define NB_OF_VAR 50
 extern const uint16_t VirtAddVarTab[NB_OF_VAR];
 
 #endif

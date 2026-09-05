@@ -111,6 +111,7 @@ CPP_SOURCES_LOCAL = \
   src/cmd_table.cpp \
   src/HidFFB.cpp \
   src/EffectsCalculator.cpp \
+  src/EqCascade.cpp \
   src/Filters.cpp \
   src/UsbHidHandler.cpp \
   src/PersistentStorage.cpp \
@@ -288,7 +289,7 @@ OPT ?= -O2
 # --- Flags -------------------------------------------------------------------
 COMMON_FLAGS = $(MCU) $(DEFS) $(INCLUDES) $(OPT) \
                -Wall -fdata-sections -ffunction-sections -g -gdwarf-2 \
-               -ffast-math -fno-finite-math-only
+               -ffast-math -fno-finite-math-only -fno-math-errno
 
 CFLAGS   = $(COMMON_FLAGS) -std=gnu11 -MMD -MP -MF"$(@:%.o=%.d)"
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 -Wno-register -fno-use-cxa-atexit -MMD -MP -MF"$(@:%.o=%.d)"

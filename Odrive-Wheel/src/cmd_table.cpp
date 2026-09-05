@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <cstdlib>
+#include <cmath>
 
 extern "C" {
 
@@ -72,9 +73,27 @@ static int h_sys_cmdinfo(uint8_t, CmdType t, const char*, char *r, size_t s) {
     return 0;
 }
 
+// FET thermistor onboard em °C. NaN vira "0.0" pra não quebrar parsers.
 static int h_sys_temp(uint8_t, CmdType t, const char*, char *r, size_t s) {
     if (t != CMD_TYPE_GET) return -1;
-    strncpy(r, "25", s); // placeholder — TODO ler termistor FET
+    float temp = odrive_bridge_get_fet_temp();
+    if (std::isnan(temp)) {
+        snprintf(r, s, "0.0");
+    } else {
+        snprintf(r, s, "%.1f", temp);
+    }
+    return 0;
+}
+
+// Motor thermistor offboard (NTC via GPIO). NaN vira "0.0".
+static int h_sys_motortemp(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_GET) return -1;
+    float temp = odrive_bridge_get_motor_temp();
+    if (std::isnan(temp)) {
+        snprintf(r, s, "0.0");
+    } else {
+        snprintf(r, s, "%.1f", temp);
+    }
     return 0;
 }
 
@@ -451,12 +470,25 @@ static int h_axis_fxratio(uint8_t, CmdType t, const char *v, char *r, size_t s) 
 // ADR_AXIS1_CONFIG bit 0 (sys.save!).
 extern "C" int  ffb_get_axis_invert(void);
 extern "C" void ffb_set_axis_invert(int v);
+extern "C" int  ffb_get_ffb_invert(void);
+extern "C" void ffb_set_ffb_invert(int v);
 static int h_axis_invert(uint8_t, CmdType t, const char *v, char *r, size_t s) {
     if (t == CMD_TYPE_SET) {
         int val = parse_long(v, ffb_get_axis_invert()) ? 1 : 0;
         ffb_set_axis_invert(val);
     }
     snprintf(r, s, "%d", ffb_get_axis_invert());
+    return 0;
+}
+// axis.ffbinvert — inverte APENAS o torque FFB do jogo (independente de
+// axis.invert que só afeta a posição HID). Útil pra FFFSake Forwarder e
+// stacks que já mandam FFB com sinal trocado.
+static int h_axis_ffbinvert(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) {
+        int val = parse_long(v, ffb_get_ffb_invert()) ? 1 : 0;
+        ffb_set_ffb_invert(val);
+    }
+    snprintf(r, s, "%d", ffb_get_ffb_invert());
     return 0;
 }
 static int h_axis_drvtype(uint8_t, CmdType t, const char *v, char *r, size_t s) {
@@ -585,6 +617,44 @@ static int h_axis_gpioautocal(uint8_t, CmdType t, const char *v, char *r, size_t
     snprintf(r, s, "%d", axis_proc_get_autorange_enabled());
     return 0;
 }
+
+// EQ por banda — bridge pra ffb_eq_* (ver ffb_task.cpp).
+extern "C" {
+    void  ffb_eq_set_gain_db(int band, float gainDb);
+    float ffb_eq_get_gain_db(int band);
+    float ffb_eq_get_freq_hz(int band);
+    float ffb_eq_get_q(int band);
+}
+
+// Macro pra reduzir copy/paste — gera handlers de get/set pro ganho de cada
+// banda. Band: 0=WEIGHT (low-shelf), 1=CHASSIS (peak), 2=ROAD (high-shelf).
+// Valor em dB com 0.1 de resolução, clamped pelo EqCascade a ±12.
+#define EQ_GAIN_HANDLER(name, band_id) \
+    static int h_axis_eq##name(uint8_t, CmdType t, const char *v, char *r, size_t s) { \
+        if (t == CMD_TYPE_SET) ffb_eq_set_gain_db(band_id, parse_float(v, ffb_eq_get_gain_db(band_id))); \
+        snprintf(r, s, "%.1f", (double)ffb_eq_get_gain_db(band_id)); \
+        return 0; \
+    }
+EQ_GAIN_HANDLER(weight,  0)
+EQ_GAIN_HANDLER(chassis, 1)
+EQ_GAIN_HANDLER(road,    2)
+#undef EQ_GAIN_HANDLER
+
+// Read-only — centro e Q de cada banda. UI usa pra plotar a resposta sem
+// duplicar os valores hardcoded no firmware.
+#define EQ_INFO_HANDLER(name, band_id, fn, fmt) \
+    static int h_axis_eq##name(uint8_t, CmdType t, const char*, char *r, size_t s) { \
+        if (t != CMD_TYPE_GET) return -1; \
+        snprintf(r, s, fmt, (double)fn(band_id)); \
+        return 0; \
+    }
+EQ_INFO_HANDLER(weightfreq,  0, ffb_eq_get_freq_hz, "%.2f")
+EQ_INFO_HANDLER(chassisfreq, 1, ffb_eq_get_freq_hz, "%.2f")
+EQ_INFO_HANDLER(roadfreq,    2, ffb_eq_get_freq_hz, "%.2f")
+EQ_INFO_HANDLER(weightq,     0, ffb_eq_get_q,       "%.2f")
+EQ_INFO_HANDLER(chassisq,    1, ffb_eq_get_q,       "%.2f")
+EQ_INFO_HANDLER(roadq,       2, ffb_eq_get_q,       "%.2f")
+#undef EQ_INFO_HANDLER
 
 // Live readouts (read-only)
 static int h_axis_curtorque(uint8_t, CmdType t, const char*, char *r, size_t s) {
@@ -821,6 +891,76 @@ static int h_sys_encraw(uint8_t, CmdType t, const char*, char *r, size_t s) {
     return 0;
 }
 
+// ==================== MT6835 (encoder mode 261) ====================
+// Acesso direto ao register map do chip (datasheet cap. 10) + comandos.
+// Escritas em registro são VOLÁTEIS (register map recarrega da EEPROM no
+// power-on) — pra persistir, sys.mteeprom! depois (e aguardar 6 s ligado).
+//
+// sys.mtread=<addr>          → lê registro (ex.: sys.mtread=0x011 → BW)
+// sys.mtwrite=<addr> <val>   → escreve registro (aceita "addr val" ou "addr:val")
+// sys.mtzero!                → ZERO_POS ← posição atual (recusa motor armado)
+// sys.mteeprom!              → persiste register map na EEPROM (recusa armado;
+//                              pausa leituras de ângulo 6.5 s — datasheet 7.6.6)
+// sys.mtstatus?              → boot check + STATUS warnings + estado da auto-cal
+
+static int h_sys_mtread(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t != CMD_TYPE_SET) return -1;   // "SET" carrega o endereço como valor
+    long addr = parse_long(v, -1);
+    int val = odrive_bridge_mt6835_read_reg((int)addr);
+    if (val < 0) { strncpy(r, "FAIL", s); return -1; }
+    snprintf(r, s, "reg[0x%03lX]=0x%02X", (unsigned long)addr, (unsigned)val);
+    return 0;
+}
+
+static int h_sys_mtwrite(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t != CMD_TYPE_SET || !v) return -1;
+    char *end = nullptr;
+    long addr = strtol(v, &end, 0);
+    if (end == v) return -1;
+    while (*end == ' ' || *end == ':' || *end == ',') end++;
+    const char *v2 = end;
+    long val = strtol(v2, &end, 0);
+    if (end == v2) return -1;
+    if (!odrive_bridge_mt6835_write_reg((int)addr, (int)val)) {
+        strncpy(r, "FAIL", s);
+        return -1;
+    }
+    // Read-back como confirmação (a escrita é assíncrona do ponto de vista do
+    // host — devolver o valor relido evita "escreveu no vazio" silencioso).
+    int rb = odrive_bridge_mt6835_read_reg((int)addr);
+    snprintf(r, s, "reg[0x%03lX]=0x%02X", (unsigned long)addr, (unsigned)(rb < 0 ? 0xFF : rb));
+    return 0;
+}
+
+static int h_sys_mtzero(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_EXEC && t != CMD_TYPE_GET) return -1;
+    int ok = odrive_bridge_mt6835_set_zero();
+    strncpy(r, ok ? "OK (volatil - sys.mteeprom! para persistir)"
+                  : "FAIL (motor armado? mode!=261? ack!=0x55?)", s);
+    return ok ? 0 : -1;
+}
+
+static int h_sys_mteeprom(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_EXEC && t != CMD_TYPE_GET) return -1;
+    int ok = odrive_bridge_mt6835_program_eeprom();
+    strncpy(r, ok ? "OK - NAO desligar por 6s (leituras pausadas 6.5s)"
+                  : "FAIL (motor armado? ack!=0x55?)", s);
+    return ok ? 0 : -1;
+}
+
+static int h_sys_mtstatus(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_EXEC && t != CMD_TYPE_GET) return -1;
+    struct mt6835_snap_t snap;
+    odrive_bridge_mt6835_get_status(&snap);
+    if (!snap.is_mt6835) { strncpy(r, "N/A (encoder mode != 261)", s); return 0; }
+    static const char *cal_names[] = {"none", "running", "failed", "ok"};
+    snprintf(r, s, "boot=%d hyst0=%d overspeed=%d weakfield=%d undervolt=%d cal=%s",
+             snap.boot_ok, snap.hyst_zeroed, snap.overspeed, snap.weak_field,
+             snap.undervolt,
+             (snap.cal_state >= 0 && snap.cal_state <= 3) ? cal_names[snap.cal_state] : "read_fail");
+    return 0;
+}
+
 // fxtest — diagnóstico FFB sumarizado em uma linha
 extern int   ffb_is_active(void);
 extern float ffb_get_pending_torque_nm(void);
@@ -860,6 +1000,7 @@ const CmdEntry cmdtable[] = {
     { "sys",   "heapfree",     h_sys_heapfree },
     { "sys",   "cmdinfo",      h_sys_cmdinfo },
     { "sys",   "temp",         h_sys_temp },
+    { "sys",   "motortemp",    h_sys_motortemp },
 
     { "main",  "hidrate",      h_main_hidrate },
     { "main",  "cfrate",       h_main_cfrate },
@@ -892,7 +1033,8 @@ const CmdEntry cmdtable[] = {
     { "axis",  "range",         h_axis_range },
     { "axis",  "maxtorque",     h_axis_maxtorque },
     { "axis",  "fxratio",       h_axis_fxratio },
-    { "axis",  "invert",        h_axis_invert },
+    { "axis",  "invert",        h_axis_invert },       // inverte só a posição HID
+    { "axis",  "ffbinvert",     h_axis_ffbinvert },    // inverte só o torque FFB
     { "axis",  "drvtype",       h_axis_drvtype },
     { "axis",  "enctype",       h_axis_enctype },
     { "axis",  "pos",           h_axis_pos },
@@ -915,6 +1057,16 @@ const CmdEntry cmdtable[] = {
     { "axis",  "gpiofiltf",     h_axis_gpiofiltf },      // cutoff do filter em Hz (default 60)
     { "axis",  "gpioautocal",   h_axis_gpioautocal },    // habilita autocal global (atualiza AMIN/AMAX)
     { "axis",  "anticogcal",    h_axis_anticogcal },     // dispara anticogging calibration
+    // EQ por banda (WEIGHT/CHASSIS/ROAD) — ver EqCascade
+    { "axis",  "eqweight",      h_axis_eqweight },       // ganho em dB, [-12, +12], default 0
+    { "axis",  "eqchassis",     h_axis_eqchassis },
+    { "axis",  "eqroad",        h_axis_eqroad },
+    { "axis",  "eqweightfreq",  h_axis_eqweightfreq },   // read-only: 5.00 Hz (low-shelf)
+    { "axis",  "eqchassisfreq", h_axis_eqchassisfreq },  // read-only: 12.00 Hz (peak)
+    { "axis",  "eqroadfreq",    h_axis_eqroadfreq },     // read-only: 25.00 Hz (high-shelf)
+    { "axis",  "eqweightq",     h_axis_eqweightq },      // read-only: 0.70
+    { "axis",  "eqchassisq",    h_axis_eqchassisq },     // read-only: 1.00
+    { "axis",  "eqroadq",       h_axis_eqroadq },        // read-only: 0.70
     // Live readouts (read-only)
     { "axis",  "curtorque",     h_axis_curtorque },
     { "axis",  "curpos",        h_axis_curpos },
@@ -955,6 +1107,11 @@ const CmdEntry cmdtable[] = {
     { "sys",   "ping",         h_sys_ping },
     { "sys",   "encraw",       h_sys_encraw },        // Encoder SPI debug counters
     { "sys",   "magnet",       h_sys_magnet },        // AS5047 DIAAGC (magnet status)
+    { "sys",   "mtread",       h_sys_mtread },        // MT6835 lê registro (sys.mtread=<addr>)
+    { "sys",   "mtwrite",      h_sys_mtwrite },       // MT6835 escreve registro (sys.mtwrite=<addr> <val>)
+    { "sys",   "mtzero",       h_sys_mtzero },        // MT6835 ZERO_POS ← posição atual
+    { "sys",   "mteeprom",     h_sys_mteeprom },      // MT6835 persiste register map (aguardar 6 s!)
+    { "sys",   "mtstatus",     h_sys_mtstatus },      // MT6835 boot/warnings/auto-cal
     { "sys",   "fxtest",       h_sys_fxtest },
 
     // odrv.* (read-only; Configurator não escreve hardware aqui)

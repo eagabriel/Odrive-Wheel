@@ -2,6 +2,7 @@
 #include "odrive_main.h"
 #include <Drivers/STM32/stm32_system.h>
 #include <bitset>
+#include <cmsis_os.h>   // osDelay no retry do mt6835_transfer24
 
 Encoder::Encoder(TIM_HandleTypeDef* timer, Stm32Gpio index_gpio,
                  Stm32Gpio hallA_gpio, Stm32Gpio hallB_gpio, Stm32Gpio hallC_gpio,
@@ -15,6 +16,11 @@ Encoder::Encoder(TIM_HandleTypeDef* timer, Stm32Gpio index_gpio,
 static void enc_index_cb_wrapper(void* ctx) {
     reinterpret_cast<Encoder*>(ctx)->enc_index_cb();
 }
+
+// Option A (MT6835) — kick do semáforo da thread de leitura SPI, definido em
+// Odrive-Wheel/src/odrive_bridge.cpp. Chamado do update() (control loop IRQ de
+// baixa prioridade — CMSIS permitido), NUNCA do sampling_cb (prio-0, proibido).
+extern "C" void odrive_bridge_enc_spi_kick(void);
 
 // Contadores de diagnostico do callback do Z — expostos via ASCII pelo
 // nosso firmware (axis.zhits?, axis.zglitch?). Vivem aqui como statics
@@ -50,7 +56,8 @@ void Encoder::setup() {
         .Mode = SPI_MODE_MASTER,
         .Direction = SPI_DIRECTION_2LINES,
         .DataSize = SPI_DATASIZE_16BIT,
-        .CLKPolarity = (mode_ == MODE_SPI_ABS_AEAT || mode_ == MODE_SPI_ABS_MA732) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW,
+        // MT6835 usa SPI mode 3 (CPOL=1, CPHA=1) per datasheet 7.6.2; AEAT/MA732 também CPOL=1.
+        .CLKPolarity = (mode_ == MODE_SPI_ABS_AEAT || mode_ == MODE_SPI_ABS_MA732 || mode_ == MODE_SPI_ABS_MT6835) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW,
         .CLKPhase = SPI_PHASE_2EDGE,
         .NSS = SPI_NSS_SOFT,
         // MKS XDrive Mini: a 2.6 MHz (/16) o MISO chega no STM32 com edges
@@ -59,11 +66,13 @@ void Encoder::setup() {
         // ~1.5 µs por bit, tempo de sobra pra settling. Custo: ~20% CPU no
         // ISR de 8 kHz (era 5% em /16) — aceitável.
         // Alinhado com DRV8301 (drv8301.cpp:14) — /16 = 2.625 MHz no SPI3.
-        // Evita re-init do periférico SPI a cada switch entre encoder/DRV
-        // (spi_arbiter compara config completa; se baud difere, faz
-        // HAL_SPI_DeInit + Init que custa CPU e pode gerar glitches no clock).
         // 6 µs por transação polled — sobra muito tempo no ISR de 8 kHz.
-        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16,
+        // MT6835: lê 3 frames por transação (vs 1 do AS5047), então a /16 ela
+        // bloqueia ~3x mais tempo. Aceita SCK até 16.67 MHz (datasheet 7.6.2),
+        // então usamos /4 (10.5 MHz) pra cortar o tempo ao máximo. /2 (21 MHz)
+        // passaria do limite. Se aparecerem CRC fails (pty subindo em
+        // sys.encraw!), baixar pra /8 e, se persistir, /16.
+        .BaudRatePrescaler = (mode_ == MODE_SPI_ABS_MT6835) ? SPI_BAUDRATEPRESCALER_4 : SPI_BAUDRATEPRESCALER_16,
         .FirstBit = SPI_FIRSTBIT_MSB,
         .TIMode = SPI_TIMODE_DISABLE,
         .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
@@ -72,6 +81,19 @@ void Encoder::setup() {
 
     if (mode_ == MODE_SPI_ABS_MA732) {
         abs_spi_dma_tx_[0] = 0x0000;
+    }
+
+    if (mode_ == MODE_SPI_ABS_MT6835) {
+        // Burst Read Angle (datasheet 7.6.9): comando C3~C0=1010 (0xA) + endereço
+        // 0x003 → palavra de 16 bits 0xA003. Depois do comando o chip emite em
+        // sequência os regs 0x003,0x004,0x005,0x006 (4 bytes). Lemos tudo numa
+        // única transação de 3×16 bits (CS fica baixo o tempo todo):
+        //   word0 (TX 0xA003): comando; MISO=Hi-Z → RX0 descartado
+        //   word1 (TX 0x0000): RX1 = [reg0x003][reg0x004]  (ANGLE[20:13],[12:5])
+        //   word2 (TX 0x0000): RX2 = [reg0x005][reg0x006]  (ANGLE[4:0]+STATUS, CRC8)
+        abs_spi_dma_tx_[0] = 0xA003;
+        abs_spi_dma_tx_[1] = 0x0000;
+        abs_spi_dma_tx_[2] = 0x0000;
     }
 
     if(mode_ & MODE_FLAG_ABS){
@@ -105,6 +127,38 @@ void Encoder::setup() {
                                    (uint8_t*)abs_spi_dma_tx_,
                                    (uint8_t*)abs_spi_dma_rx_,
                                    1, /*timeout_ms=*/5);
+        }
+
+        // MT6835 boot init. Roda ANTES da enc_spi_thread existir (rtos_main
+        // chama encoder.setup() antes de odrive_bridge_start_enc_thread) —
+        // sem contenção no barramento aqui.
+        if (mode_ == MODE_SPI_ABS_MT6835) {
+            // (a) Verificação de comunicação: até 3 burst reads validadas por
+            // CRC (mais forte que ler USER_ID — um MISO preso em 0 devolveria
+            // um "dado" plausível, mas nunca um CRC válido). Falha aqui não
+            // bloqueia o boot — sys.encraw! conta CRC fail em runtime.
+            for (int i = 0; i < 3 && !mt6835_boot_comm_ok_; ++i) {
+                uint32_t ok_before = abs_spi_ok_count_;
+                abs_spi_start_transaction();
+                mt6835_boot_comm_ok_ = (abs_spi_ok_count_ != ok_before);
+            }
+
+            // (b) HYST = 0 (reg 0x00D bits[2:0] = 0x4, datasheet 10.7). O
+            // default de fábrica (0x7 = 0.011°) é uma zona morta de ~64 counts
+            // em 2^21 a cada inversão de sentido — indesejável pra FFB. Escrita
+            // VOLÁTIL (register map recarrega da EEPROM no power-on), então
+            // reaplicada a cada boot e sem desgaste de EEPROM. RMW preserva
+            // ROT_DIR (bit 3) e os bits MagnTek Use Only (7:4).
+            uint8_t reg0d = 0;
+            if (mt6835_boot_comm_ok_ && mt6835_read_reg(0x00D, &reg0d)) {
+                if ((reg0d & 0x07) == 0x04) {
+                    mt6835_hyst_zeroed_ = true;
+                } else if (mt6835_write_reg(0x00D, (uint8_t)((reg0d & ~0x07) | 0x04))) {
+                    uint8_t rb = 0;
+                    mt6835_hyst_zeroed_ = mt6835_read_reg(0x00D, &rb)
+                                          && (rb & 0x07) == 0x04;
+                }
+            }
         }
 
         if (axis_->controller_.config_.anticogging.pre_calibrated) {
@@ -578,6 +632,16 @@ void Encoder::sample_now() {
             abs_spi_start_transaction();
             // Do nothing
         } break;
+        case MODE_SPI_ABS_MT6835: {
+            // Option A: leitura SPI do MT6835 roda na thread dedicada
+            // (enc_spi_thread, odrive_bridge.cpp), FORA deste ISR prio-0, pra
+            // não estrangular USB/FFB. Aqui NÃO tocamos no SPI; marcamos
+            // pos_updated=true pra o update() usar o pos_abs_ em cache sem
+            // contar COM fail. Sincronização via semáforo kickado no update()
+            // (8 kHz, atraso constante ≈ 1 período). CRC fails ficam nos
+            // contadores da thread (sys.encraw!). PLL interpola a 8 kHz.
+            abs_spi_pos_updated_ = true;
+        } break;
 
         default: {
            set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
@@ -613,10 +677,14 @@ bool Encoder::abs_spi_start_transaction() {
         // IRQ). DRV8301 já foi migrado pra polled; encoder estava esquecido.
         // length=1 = 1× transação de 16 bits (DataSize=16BIT no spi_task_.config).
         // Em /16 baud (~2.6 MHz) cada transação leva ~6 µs — barato no ISR de 8 kHz.
+        // MT6835 (burst read 21 bits) precisa de 3 words: 1 comando + 2 words de
+        // dados (4 bytes). CS fica baixo a transação inteira (NSS soft), então o
+        // chip emite 0x003..0x006 continuamente conforme o protocolo burst.
+        size_t spi_len = (mode_ == MODE_SPI_ABS_MT6835) ? 3 : 1;
         bool ok = spi_arbiter_->transfer(spi_task_.config, abs_spi_cs_gpio_,
                                          (uint8_t*)abs_spi_dma_tx_,
                                          (uint8_t*)abs_spi_dma_rx_,
-                                         1, /*timeout_ms=*/2);
+                                         spi_len, /*timeout_ms=*/2);
         abs_spi_cb(ok);
     }
     return true;
@@ -637,8 +705,86 @@ uint8_t cui_parity(uint16_t v) {
     return ~v & 3;
 }
 
+// MT6835 CRC8 (datasheet 7.6.8): polinômio X^8+X^2+X+1 (0x07), aplicado sobre os
+// 24 bits ANGLE[20:0]+STATUS[2:0] = bytes dos regs 0x003,0x004,0x005, com o MSB
+// (ANGLE[20]) entrando primeiro. Init=0x00, sem reflexão, sem XOR final
+// (CRC-8/SMBUS). Retorna o CRC esperado pra comparar com o reg 0x006.
+uint8_t mt6835_crc8(uint8_t b0, uint8_t b1, uint8_t b2) {
+    const uint8_t data[3] = {b0, b1, b2};
+    uint8_t crc = 0x00;
+    for (int i = 0; i < 3; ++i) {
+        crc ^= data[i];
+        for (int bit = 0; bit < 8; ++bit) {
+            if (crc & 0x80)
+                crc = (uint8_t)((crc << 1) ^ 0x07);
+            else
+                crc = (uint8_t)(crc << 1);
+        }
+    }
+    return crc;
+}
+
+// ============================ MT6835 register access =========================
+// Transação genérica de 24 bits (datasheet 7.6.3): [cmd C3~C0 | addr A11~A0 |
+// data 8b]. O DataSize normal é 16-bit (frames do burst read); aqui trocamos
+// pra 8-bit (3 bytes) só nesta transação — o arbiter reescreve CR1 quando a
+// config difere, e volta na próxima leitura de ângulo.
+// Comandos: 0x3=read, 0x6=write, 0x5=auto-set-zero, 0xC=program EEPROM.
+// Pros dois últimos o byte de resposta é o ack (0x55 = OK).
+//
+// Retry: transfer() polled retorna false se o barramento está tomado. Com a
+// thread lendo ângulo a 8 kHz (~6% duty), colisão é provável. Retenta com
+// osDelay(1); chamável só de contexto de thread (setup, command handlers).
+bool Encoder::mt6835_transfer24(uint8_t cmd, uint16_t addr, uint8_t data_in, uint8_t* data_out) {
+    if (mode_ != MODE_SPI_ABS_MT6835)
+        return false;
+
+    SPI_InitTypeDef config = spi_task_.config;
+    config.DataSize = SPI_DATASIZE_8BIT;
+
+    uint8_t tx[3] = {
+        (uint8_t)((cmd << 4) | ((addr >> 8) & 0x0F)),
+        (uint8_t)(addr & 0xFF),
+        data_in,
+    };
+    uint8_t rx[3] = {0, 0, 0};
+
+    bool ok = false;
+    for (int attempt = 0; attempt < 10 && !ok; ++attempt) {
+        if (attempt > 0)
+            osDelay(1);
+        ok = spi_arbiter_->transfer(config, abs_spi_cs_gpio_, tx, rx, 3, /*timeout_ms=*/5);
+    }
+    if (ok && data_out)
+        *data_out = rx[2];
+    return ok;
+}
+
+bool Encoder::mt6835_read_reg(uint16_t addr, uint8_t* val) {
+    return mt6835_transfer24(0x3, addr, 0x00, val);
+}
+
+bool Encoder::mt6835_write_reg(uint16_t addr, uint8_t val) {
+    return mt6835_transfer24(0x6, addr, val, nullptr);
+}
+
+// Auto Setting Zero-Position (datasheet 7.6.7): grava a posição atual no
+// registro ZERO_POS[11:0] (volátil até um Program EEPROM). Ack 0x55 = sucesso.
+bool Encoder::mt6835_auto_set_zero() {
+    uint8_t ack = 0;
+    return mt6835_transfer24(0x5, 0x000, 0x00, &ack) && ack == 0x55;
+}
+
+// Program EEPROM (datasheet 7.6.6): persiste TODO o register map. Ack 0x55 =
+// aceito. ATENÇÃO: aguardar >= 6 s antes de desligar, sem nenhuma outra
+// operação SPI. Caller garante motor desarmado e avisa o usuário do delay.
+bool Encoder::mt6835_program_eeprom() {
+    uint8_t ack = 0;
+    return mt6835_transfer24(0xC, 0x000, 0x00, &ack) && ack == 0x55;
+}
+
 void Encoder::abs_spi_cb(bool success) {
-    uint16_t pos;
+    uint32_t pos;  // 14 bits (AMS/CUI/...) ou 21 bits (MT6835)
 
     if (!success) {
         abs_spi_fail_xfer_++;
@@ -712,6 +858,33 @@ void Encoder::abs_spi_cb(bool success) {
         case MODE_SPI_ABS_MA732: {
             uint16_t rawVal = abs_spi_dma_rx_[0];
             pos = (rawVal >> 2) & 0x3fff;
+        } break;
+
+        case MODE_SPI_ABS_MT6835: {
+            // RX[0] = resposta ao comando (MISO Hi-Z) → descarta.
+            // RX[1] = [reg0x003][reg0x004], RX[2] = [reg0x005][reg0x006].
+            uint8_t b003 = abs_spi_dma_rx_[1] >> 8;          // ANGLE[20:13]
+            uint8_t b004 = abs_spi_dma_rx_[1] & 0xFF;        // ANGLE[12:5]
+            uint8_t b005 = abs_spi_dma_rx_[2] >> 8;          // ANGLE[4:0]<<3 | STATUS[2:0]
+            uint8_t crc  = abs_spi_dma_rx_[2] & 0xFF;        // CRC[7:0]
+
+            // Diag inofensivo: expõe o 1º word de dados ([reg0x003][reg0x004]) em
+            // `last` pra sys.encraw! (em vez da phase comando, que é Hi-Z).
+            abs_spi_last_rx_ = abs_spi_dma_rx_[1];
+
+            // CRC8 é o juiz da integridade (não há paridade nessa parte). Se falhar,
+            // REJEITA a amostra (não atualiza pos_abs_): posição-lixo NÃO chega no
+            // FOC → motor não trava. O spi_error_rate em update() sobe e dispara
+            // ERROR_ABS_SPI_COM_FAIL com histerese se for persistente.
+            // abs_spi_fail_parity_ = contador de CRC fail (visível em sys.encraw!).
+            if (mt6835_crc8(b003, b004, b005) != crc) {
+                abs_spi_fail_parity_++;
+                goto done;
+            }
+
+            pos = ((uint32_t)b003 << 13) | ((uint32_t)b004 << 5) | (b005 >> 3);
+            mt6835_status_ = b005 & 0x07;  // overspeed / weak-field / undervoltage warnings
+            abs_spi_ok_count_++;
         } break;
 
         default: {
@@ -849,9 +1022,10 @@ bool Encoder::update() {
         
         case MODE_SPI_ABS_RLS:
         case MODE_SPI_ABS_AMS:
-        case MODE_SPI_ABS_CUI: 
+        case MODE_SPI_ABS_CUI:
         case MODE_SPI_ABS_AEAT:
-        case MODE_SPI_ABS_MA732: {
+        case MODE_SPI_ABS_MA732:
+        case MODE_SPI_ABS_MT6835: {
             if (abs_spi_pos_updated_ == false) {
                 // Low pass filter the error
                 spi_error_rate_ += current_meas_period * (1.0f - spi_error_rate_);
@@ -879,6 +1053,13 @@ bool Encoder::update() {
             delta_enc = mod(delta_enc, config_.cpr);
             if (delta_enc > config_.cpr/2) {
                 delta_enc -= config_.cpr;
+            }
+
+            // Option A (MT6835): pos_abs_ já foi consumido acima — kicka a
+            // thread pra ler a próxima amostra agora, assim ela chega fresca
+            // pro próximo ciclo (atraso constante ≈ 1 período de 125 µs).
+            if (mode_ == MODE_SPI_ABS_MT6835) {
+                odrive_bridge_enc_spi_kick();
             }
 
         }break;

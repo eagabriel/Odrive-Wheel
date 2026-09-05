@@ -32,8 +32,11 @@
 #include "CommandHandler.h"
 #include "thread.hpp"
 #include <vector>
+#include <array>
 #include <functional>
 #include "FastAvg.h"
+#include "constants.h"
+#include "EqCascade.h"
 
 // Stubs do ChoosableClass do OpenFFBoard
 #ifdef __cplusplus
@@ -153,6 +156,13 @@ public:
 		}
 	}
 
+	// EQ por banda (GRIP/CHASSIS/ROAD) — aplicado por axis sobre a SOMA
+	// dos efeitos, antes do clip final em calculateEffects(). Em flat
+	// (todos os ganhos 0 dB) é bypass — zero impacto pra quem não usa.
+	EqCascade& getEqCascade(uint8_t axis) {
+		return (axis < MAX_AXIS) ? eq_[axis] : eq_[0];
+	}
+
 	// Thread impl
 	void Run();
 
@@ -172,6 +182,11 @@ private:
 	uint8_t filterProfileId = 0;
 	uint32_t calcfrequency = 1000; 		// HID frequency 1khz
 	const float qfloatScaler = 0.01;
+
+	// EQ por axis. Estado independente (z1/z2 dos biquads) por canal, mesma
+	// config de ganho aplicada nos dois — set vai via getEqCascade(axis)
+	// pra cada um. Em flat (default) é bypass interno do EqCascade.
+	std::array<EqCascade, MAX_AXIS> eq_;
 
 	// Rescale factor for conditional effect to boost or decrease the intensity
 	uint8_t global_gain = 0xff;

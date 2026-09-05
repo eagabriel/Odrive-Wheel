@@ -528,8 +528,12 @@ bool Motor::measure_phase_inductance(float test_voltage) {
 
     config_.phase_inductance = control_law.get_inductance();
     
-    // TODO arbitrary values set for now
-    if (!(config_.phase_inductance >= 2e-6f && config_.phase_inductance <= 4000e-6f)) {
+    // Range: 2 µH a 25 mH. Upper bump de 4 mH (stock ODrive) → 25 mH pra
+    // acomodar motores de alta indutância (baixa kV, gimbals grandes) que
+    // apareceram nos usuários do fork. O comentário "TODO arbitrary values"
+    // do stock reflete que os limites são heurísticos — 25 mH cobre motores
+    // reais até ~50 kV rating sem sobrar espaço pra medições anômalas.
+    if (!(config_.phase_inductance >= 2e-6f && config_.phase_inductance <= 25000e-6f)) {
         error_ |= ERROR_PHASE_INDUCTANCE_OUT_OF_RANGE;
         success = false;
     }

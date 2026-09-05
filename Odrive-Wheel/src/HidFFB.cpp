@@ -147,9 +147,18 @@ void HidFFB::hidOut(uint8_t report_id, hid_report_type_t report_type, uint8_t co
 			set_effect_operation((FFB_EffOp_Data_t*)report);
 			break;
 		}
-		case HID_ID_BLKFRREP: // Free a block
+		case HID_ID_BLKFRREP: // Free a block (PID Block Free Report)
 		{
-			effects_calc->free_effect(report[1]-1);
+			// Bug 5: decrementa used_effects e atualiza ramPoolAvailable pra
+			// evitar underflow do pool após várias criações/liberações num jogo.
+			uint8_t eid = report[1];
+			if (eid > 0 && eid <= effects.size()) {
+				effects_calc->free_effect(eid - 1);
+				if (used_effects > 0) {
+					used_effects--;
+				}
+				blockLoad_report.ramPoolAvailable = (effects.size() - used_effects) * sizeof(FFB_Effect);
+			}
 			break;
 		}
 
@@ -174,17 +183,19 @@ uint16_t HidFFB::hidGet(uint8_t report_id, hid_report_type_t report_type,uint8_t
 	uint8_t id = report_id - FFB_ID_OFFSET;
 
 	switch(id){
+	case HID_ID_STATE:
+		// Bug 2: PID State Report (Report ID 2). Forza, ACC e vários utilitários
+		// DirectInput chamam GetForceFeedbackState() antes de mandar efeitos —
+		// se responder zero, entendem "unpowered" e desligam o FFB.
+		buffer[0] = this->reportFFBStatus.status;
+		return 1;
 	case HID_ID_BLKLDREP:
-		//printf("Get Block Report\n");
 		// Notice: first byte ID is not present in the reply buffer because it is handled by tinyusb internally!
 		memcpy(buffer,&this->blockLoad_report,sizeof(FFB_BlockLoad_Feature_Data_t));
 		return sizeof(FFB_BlockLoad_Feature_Data_t);
-		break;
 	case HID_ID_POOLREP:
-		//printf("Get Pool Report\n");
 		memcpy(buffer,&this->pool_report,sizeof(FFB_PIDPool_Feature_Data_t));
 		return sizeof(FFB_PIDPool_Feature_Data_t);
-		break;
 	default:
 		break;
 	}
@@ -224,21 +235,28 @@ void HidFFB::set_filters(FFB_Effect *effect){
 
 void HidFFB::ffb_control(uint8_t cmd){
 
-	if(cmd & 0x01){ //enable
+	if(cmd & 0x01){ // Enable Actuators
 		start_FFB();
-	}if(cmd & 0x02){ //disable
+	}
+	if(cmd & 0x02){ // Disable Actuators
 		stop_FFB();
-	}if(cmd & 0x04){ //stop
-		stop_FFB();
-		//start_FFB();
-	}if(cmd & 0x08){ //reset
-		//ffb_active = true;
+	}
+	if(cmd & 0x04){ // Stop All Effects
+		// Bug 6: precisa realmente PARAR os efeitos ativos (não só stop_FFB()).
+		// Sem isso, ao resetar carro/respawn os efeitos voltam a tocar juntos
+		// quando o jogo manda Continue.
+		for(auto& effect : effects){
+			effect.state = 0;
+		}
+	}
+	if(cmd & 0x08){ // Reset
 		stop_FFB();
 		reset_ffb();
-		// reset effects
-	}if(cmd & 0x10){ //pause
+	}
+	if(cmd & 0x10){ // Pause
 		stop_FFB();
-	}if(cmd & 0x20){ //continue
+	}
+	if(cmd & 0x20){ // Continue
 		start_FFB();
 	}
 }
@@ -336,16 +354,22 @@ void HidFFB::set_effect(FFB_SetEffect_t* effect){
 		effect_p->axisMagnitudes[0] = directionEnable ? sin(phaseX) : (effect->enableAxis & X_AXIS_ENABLE ? (effect->directionX - 18000.0f) / 18000.0f : 0); // Angular vector if dirEnable used otherwise linear or 0 if axis enabled
 		effect_p->axisMagnitudes[1] = directionEnable ? -cos(phaseX) : (effect->enableAxis & Y_AXIS_ENABLE ? -(effect->directionY - 18000.0f) / 18000.0f : 0);
 
-		// Single-axis wheel fix: a fórmula polar acima dá sin(0°)=0 quando o
-		// game manda direção "north" (default do ForceTest e de muitos jogos
-		// de corrida). Em volantes de 1 eixo, isso descarta toda a força no
-		// componente Y inutilizado. Quando os 2 eixos ficam zerados após a
-		// computação, redireciona pra axis 0 com sinal de cos(phaseX) (que é
-		// o que ia pro Y), preservando direção via positiva/negativa.
-		if (effect_p->axisMagnitudes[0] == 0.0f && effect_p->axisMagnitudes[1] == 0.0f) {
-			float fallback = directionEnable ? cosf(phaseX) : 1.0f;
-			if (fallback == 0.0f) fallback = 1.0f; // último recurso
-			effect_p->axisMagnitudes[0] = fallback;
+		// Single-axis wheel fix (Bug 1): em volantes de 1 eixo, se a direção
+		// polar for Norte (0°) ou Sul (180°), sin(phaseX) = 0 e toda a força
+		// vai pra axisMagnitudes[1] (eixo Y inexistente), zerando o torque.
+		// Redireciona pro eixo 0 usando -cosf(phaseX) que preserva o sinal.
+		// Em multi-axis a lógica antiga (só ambos zerados) segue valendo.
+		if (axisCount == 1) {
+			if (effect_p->axisMagnitudes[0] == 0.0f) {
+				float fallback = directionEnable ? -cosf(phaseX) :
+				                 (effect->enableAxis & Y_AXIS_ENABLE ? -(effect->directionY - 18000.0f) / 18000.0f : 1.0f);
+				if (fallback == 0.0f) fallback = 1.0f;
+				effect_p->axisMagnitudes[0] = fallback;
+			}
+		} else {
+			if (effect_p->axisMagnitudes[0] == 0.0f && effect_p->axisMagnitudes[1] == 0.0f) {
+				effect_p->axisMagnitudes[0] = 1.0f;
+			}
 		}
 	}
 
@@ -383,7 +407,12 @@ void HidFFB::set_condition(FFB_SetCondition_Data_t *cond){
 	if(cond->effectBlockIndex == 0 || cond->effectBlockIndex > effects.size()){
 		return;
 	}
-	uint8_t axis = std::min(axisCount,cond->parameterBlockOffset);
+	// Bug 10: parameterBlockOffset empacota axis nos 4 bits inferiores + ordinal
+	// nos 4 superiores. Sem mask, jogos da Codemasters (DiRT/F1/GRID) mandavam
+	// valores >= 16 e a mola/damper caía num eixo inexistente.
+	uint8_t axis = (axisCount > 0)
+	    ? std::min<uint8_t>((uint8_t)(axisCount - 1), (uint8_t)(cond->parameterBlockOffset & 0x03))
+	    : 0;
 
 	FFB_Effect *effect = &effects[cond->effectBlockIndex - 1];
 	effect->conditions[axis].cpOffset = cond->cpOffset;
@@ -393,12 +422,15 @@ void HidFFB::set_condition(FFB_SetCondition_Data_t *cond){
 	effect->conditions[axis].positiveSaturation = cond->positiveSaturation;
 	effect->conditions[axis].deadBand = cond->deadBand;
 
-//	if(effect->conditions[axis].positiveSaturation == 0){
-//		effect->conditions[axis].positiveSaturation = 0x7FFF;
-//	}
-//	if(effect->conditions[axis].negativeSaturation == 0){
-//		effect->conditions[axis].negativeSaturation = 0x7FFF;
-//	}
+	// Bug 3 (entrada): promove sat=0 → 0x7FFF na chegada quando coeff != 0,
+	// pra bater com a semântica DirectInput ("sem limite"). Complementa a
+	// mesma promoção feita no clip do EffectsCalculator.
+	if(effect->conditions[axis].positiveSaturation == 0 && effect->conditions[axis].positiveCoefficient != 0){
+		effect->conditions[axis].positiveSaturation = 0x7FFF;
+	}
+	if(effect->conditions[axis].negativeSaturation == 0 && effect->conditions[axis].negativeCoefficient != 0){
+		effect->conditions[axis].negativeSaturation = 0x7FFF;
+	}
 
 	if(axis>0 && axis < MAX_AXIS && effect->conditions[axis].isActive()){ // Workaround when direction enable is set but multiple conditions are defined... Resets direction and uses conditions again
 		effect->useSingleCondition = false;
@@ -492,7 +524,8 @@ void HidFFB::reset_ffb(){
 	for(uint8_t i=0;i<effects.size();i++){
 		effects_calc->free_effect(i);
 	}
-	//this->reportFFBStatus.effectBlockIndex = 1;
 	this->reportFFBStatus.status = (HID_ACTUATOR_POWER) | (HID_ENABLE_ACTUATORS);
-	used_effects = 1;
+	// Bônus (par com Bug 5): reset limpo do contador e do pool disponível.
+	used_effects = 0;
+	blockLoad_report.ramPoolAvailable = effects.size() * sizeof(FFB_Effect);
 }

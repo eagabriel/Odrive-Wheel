@@ -23,4 +23,6 @@ const uint16_t VirtAddVarTab[NB_OF_VAR] = {
     // GPIO axis processor (AnalogAxisProcessing port)
     ADR_GPIO_AXIS_FLAGS,
     ADR_GPIO_AXIS_FREQ_X10,
+    // EQ por banda (gains em décimos de dB)
+    ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD,
 };

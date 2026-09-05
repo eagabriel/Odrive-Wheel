@@ -50,6 +50,19 @@ float Biquad::getQ() const {
 }
 
 /**
+ * Ganho da resposta em DC (z = 1): H(1) = (a0+a1+a2) / (1+b1+b2).
+ * Vale pra qualquer tipo de biquad — não precisa saber qual foi configurado.
+ * Usado por cascatas que normalizam o ganho de banda-base (ver EqCascade).
+ */
+float Biquad::dcGain() const {
+	const float den = 1.0f + b1 + b2;
+	// Polo em z=1 (integrador puro) — H(DC) diverge. Nenhum dos tipos usados
+	// aqui chega nisso, mas devolve unity em vez de inf/NaN por segurança.
+	if (fabsf(den) < 1e-12f) return 1.0f;
+	return (a0 + a1 + a2) / den;
+}
+
+/**
  * Calculates one step of the filter and returns the output
  */
 float Biquad::process(float in) {

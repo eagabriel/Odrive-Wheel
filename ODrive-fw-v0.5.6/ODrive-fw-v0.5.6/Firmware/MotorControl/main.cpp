@@ -19,6 +19,9 @@ osSemaphoreId sem_can;
 // Phase 2c — FFB task entrypoint (defined in src/ffb_task.cpp, extern "C")
 extern "C" void ffb_task_init(void);
 
+// Option A — encoder SPI read thread (defined in src/odrive_bridge.cpp)
+extern "C" void odrive_bridge_start_enc_thread(void);
+
 // Phase 4.x — early EE init + vbus_divider load. PRECISA rodar antes de
 // start_general_purpose_adc() — caso contrário a IRQ vbus_sense_adc_cb
 // roda com g_vbus_voltage_scale default (divider 19) escalando ADC errado
@@ -611,6 +614,11 @@ static void rtos_main(void*) {
     // ffb_task_init creates HidFFB/EffectsCalculator and spawns 1 kHz thread
     // that bridges HID effects to axes[0].controller_.input_torque_.
     ffb_task_init();
+
+    // Option A — spawn da thread de leitura do encoder MT6835 (SPI mode 261).
+    // Tira leitura de 24 bits do ISR prio-0 pra thread AboveNormal, evitando
+    // que MT6835 estrangule USB/FFB. No-op se o encoder não estiver em MT6835.
+    odrive_bridge_start_enc_thread();
 
     // Main thread finished starting everything and can delete itself now (yes this is legal).
     vTaskDelete(defaultTaskHandle);
