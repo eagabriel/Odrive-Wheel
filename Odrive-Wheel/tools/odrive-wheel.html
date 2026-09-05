@@ -318,6 +318,12 @@
   }
   .group:first-child { margin-top: 0; padding-top: 0; }
 
+  /* Advanced sections — escondidas por default. Toggle no Debug tab
+     adiciona body.show-advanced pra exibir. Tanto o cabeçalho .group
+     quanto os .field que o seguem (até o próximo .group) recebem a
+     classe .advanced-section pelo renderer. */
+  body:not(.show-advanced) .advanced-section { display: none; }
+
   /* Each .field becomes a card */
   .field {
     background: var(--bg-card);
@@ -1742,7 +1748,7 @@
   <div class="header-actions">
     <!-- Sponsor / BuyMeACoffee links (à esquerda do Connect) -->
     <span class="tool-version" title="HTML tool version"
-          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px">V0.18</span>
+          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.26</span>
     <a href="https://www.buymeacoffee.com/eduardogabq" target="_blank" rel="noopener"
        title="Buy Me a Coffee" data-i18n-title="btn.bmc_tip"
        style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;background:#FFDD00;text-decoration:none;font-size:18px;line-height:1"
@@ -1781,6 +1787,25 @@
     </span>
   </div>
 </header>
+
+<!-- ============== Bulk-read progress (gate) ===========================
+     Aparece durante readAll() pra:
+       1. Avisar o usuário que o tool está fazendo um burst de leituras
+          e que polls periódicos (encoder check etc) ficam pausados pra
+          evitar interleaving de respostas no canal serial.
+       2. Mostrar progresso real (X de N).
+     Hidden por default. _showBulkProgress / _hideBulkProgress controlam.
+============================================================== -->
+<div id="bulk-progress" style="display:none;position:sticky;top:0;left:0;right:0;z-index:9999;background:linear-gradient(180deg,rgba(0,0,0,0.92),rgba(0,0,0,0.85));border-bottom:1px solid var(--accent);padding:6px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#fff">
+  <div style="display:flex;align-items:center;gap:10px;max-width:1400px;margin:0 auto">
+    <span style="font-size:14px">⏳</span>
+    <span id="bulk-progress-text" data-i18n="bulk.label">Lendo parâmetros do device…</span>
+    <span id="bulk-progress-count" style="font-family:ui-monospace,Consolas,monospace;color:#ffd54f;min-width:80px;text-align:right">0/0</span>
+    <div style="flex:1;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;border:1px solid var(--border)">
+      <div id="bulk-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width 0.15s ease-out"></div>
+    </div>
+  </div>
+</div>
 
 <!-- ============== Hidden legacy tab nav (compat with buildTabs JS) ============== -->
 <nav id="tabs" style="display:none"></nav>
@@ -1870,6 +1895,7 @@ const I18N = {
     'btn.import': 'Importar config',
     'status.disconnected': 'Desconectado',
     'status.connected': 'Conectado',
+    'bulk.label':       'Lendo parâmetros do device…',
     // Sidebar groups
     'sidebar.group.start':  'Início Rápido',
     'sidebar.group.odrive': 'ODrive',
@@ -1964,6 +1990,7 @@ const I18N = {
     'tab.encoder': 'Encoder',
     'tab.controller': 'Controller',
     'tab.debug': 'Debug / Status',
+    'tab.profiles': 'Perfis',
     'tab.ffb-wheel': 'FFB Wheel',
     'tab.ffb-effects': 'FFB Effects',
     'tab.ffb-filters': 'FFB Filters',
@@ -2200,6 +2227,56 @@ const I18N = {
     'fr.zone_texture':          'textura',
     'fr.label_bw':              'i_bw',
     'fr.no_cal':                'sem calibração — rode Performance Test',
+    // EQ por banda (PT) — painel na aba FFB Filters
+    'eq.title':                 '🎚 EQ por banda',
+    'eq.subtitle':              '— realça ou atenua faixas de frequência do FFB',
+    'eq.intro':                 'O EQ aplica 3 biquads em série na cadeia do Constant Force: <b>low-shelf</b> (WEIGHT), <b>peak</b> (CHASSIS) e <b>high-shelf</b> (ROAD), com centros pensados pra sim racing. Default <b>flat</b> (todos em 0 dB) = bypass interno, comportamento idêntico ao firmware sem EQ. Mudanças vão pro device em tempo real — não precisa Salvar pra testar, só pra persistir após reboot.',
+    'eq.band_weight':           'WEIGHT',
+    'eq.band_chassis':          'CHASSIS',
+    'eq.band_road':             'ROAD',
+    'eq.hint_weight':           'peso / slip lento',
+    'eq.hint_chassis':          'suspensão / body roll',
+    'eq.hint_road':             'textura / kerbs',
+    'eq.btn_reset':             '↺ Reset flat',
+    'eq.btn_fetch':             '⟳ Ler do device',
+    'eq.chart_hint':            'Resposta acumulada dos 3 peaks (eixo X log: 0.5–200 Hz)',
+
+    // ---- Perfis de tuning FFB ----
+    'prof.folder_title':        '🗂 Pasta de perfis',
+    'prof.folder_hint':         'Escolha uma pasta no seu computador para guardar os perfis. A pasta é lembrada entre sessões — ao reabrir a ferramenta basta reconceder o acesso com um clique. Como são arquivos comuns, dá para fazer backup, sincronizar via Drive/OneDrive ou enviar para outra pessoa.',
+    'prof.btn_folder':          '📁 Escolher pasta…',
+    'prof.btn_reload':          '↻ Recarregar',
+    'prof.fs_warn':             '⚠ Este navegador não expõe a File System Access API. Os perfis ficam salvos no armazenamento local do navegador e somem se você limpar os dados do site. Use Exportar para guardar cópias.',
+    'prof.list_title':          'Perfis salvos',
+    'prof.list_hint':           'Um perfil guarda o ajuste de pilotagem: as três abas de FFB (Wheel, Effects, Filters), as bandas do EQ e três parâmetros de tuning (largura de banda do encoder, limite de corrente e largura de banda do controle de corrente). Identidade do hardware — polos do motor, resistência, modo e calibração do encoder — fica de fora de propósito, para que trocar de perfil nunca quebre a calibração.',
+    'prof.btn_apply':           '▶ Aplicar no volante',
+    'prof.btn_new':             '＋ Salvar atual como…',
+    'prof.btn_update':          '↻ Sobrescrever',
+    'prof.btn_rename':          '✎ Renomear',
+    'prof.btn_del':             '🗑 Excluir',
+    'prof.btn_export':          '⬇ Exportar arquivo',
+    'prof.btn_import':          '⬆ Importar arquivo',
+    'prof.apply_note':          'Aplicar escreve os valores na placa mas <b>não grava na memória permanente</b>. Teste à vontade: se não gostar, basta reiniciar a placa para voltar ao que estava gravado. Se aprovar, use o botão Salvar no topo da página.',
+    'prof.empty':               'Nenhum perfil nesta pasta ainda. Ajuste o FFB como quiser e use "Salvar atual como…".',
+    'prof.no_folder':           'Escolha uma pasta para começar a salvar perfis.',
+    'prof.no_folder_short':     'nenhuma pasta',
+    'prof.prompt_new':          'Nome do perfil (ex.: Rally chuva, GT3 seco, Kart):',
+    'prof.prompt_rename':       'Novo nome do perfil:',
+    'prof.confirm_update':      'Sobrescrever "{name}" com os valores atuais da tela?',
+    'prof.confirm_del':         'Excluir o perfil "{name}"? O arquivo será removido da pasta.',
+    'prof.confirm_import':      'Aplicar o perfil "{name}" ({n} campos) no volante?\n\nOs valores vão para a placa mas NÃO são gravados na memória permanente, e o perfil não entra na sua lista — use "Salvar atual como…" depois se quiser guardá-lo.',
+    'prof.warn_partial':        'Apenas {n} campos têm valor preenchido. Isso normalmente significa que a ferramenta ainda não leu a configuração da placa — conecte e clique em Atualizar (↻) no topo antes de salvar, senão o perfil sai pela metade.\n\nSalvar mesmo assim?',
+    'prof.err_empty':           'Nenhum campo capturado — abra as abas de FFB pelo menos uma vez.',
+    'prof.err_not_profile':     'Este arquivo não é um perfil válido.',
+    'prof.log_folder_set':      'pasta definida:',
+    'prof.log_loaded':          'perfil(is) carregado(s)',
+    'prof.log_saved':           'perfil "{name}" salvo com {n} campos',
+    'prof.log_updated':         'perfil "{name}" sobrescrito',
+    'prof.log_renamed':         'renomeado para "{name}"',
+    'prof.log_deleted':         'perfil "{name}" excluído',
+    'prof.log_needs_permission':'pasta anterior encontrada — clique Recarregar para reconceder o acesso',
+
+    'eq.toast_no_serial':       'sem serial — abra Conectar primeiro',
     // Overlay tab (PT)
     'ovl.title':              'Overlay de telemetria do volante',
     'ovl.subtitle':            'Abre uma janela "always-on-top" via Document Picture-in-Picture com dois gráficos vivos: barramento DC (vbus/ibus/Iq/I-brake) e dinâmica do volante (torque + posição). Dados vêm direto do HID a 1 kHz nativo — pode rodar em paralelo com o iRacing (ou qualquer jogo) sem disputar nada.',
@@ -2422,12 +2499,19 @@ const I18N = {
     'setup.step6_desc':        'Edite os campos abaixo conforme o seu encoder. Defaults são pra ABZ incremental (caso mais comum — encoder externo no eixo do motor). Se você usa o AS5047P onboard da MKS, mude apenas mode=257, cpr=16384 e abs_spi_cs_gpio_pin=7. Os hints à direita explicam cada campo.',
     'setup.step6_apply':       '✓ Aplicar valores',
     'setup.step6_save':        'Save',
-    'setup.step6_save_hint':   '← AS5047 (absoluto) precisa Salvar + reboot pra trocar de modo antes dos passos 7/8',
+    'setup.step6_save_hint':   '← Salvar + reboot pra config do encoder ter efeito antes dos passos 7/8',
     'setup.step6_open':        '→ Abrir aba Encoder',
 
     'setup.step7_title':       'Passo 7 — Calibrar motor',
     'setup.step7_desc':        'Mede resistência R e indutância L de fase. O motor NÃO gira mas FAZ UM SOM DE BEEP (injeta pulsos de tensão pra medir R e L). Demora ~5s. Antes de rodar, limpa erros automaticamente (sc) pra evitar bloqueio por estado anterior. Após terminar, axis0.motor.is_calibrated fica True e os valores medidos aparecem no painel verde abaixo.',
     'setup.step7_action':      '▶ Rodar MOTOR_CALIBRATION (state=4)',
+    'setup.step8_enc_title':   '🧭 Verifique o encoder antes de calibrar',
+    'setup.step8_enc_hint':    'Gire o volante manualmente. A agulha abaixo deve rodar em tempo real e a contagem mudar. Se nada acontece, o encoder não está sendo lido — confira o cabo e o modo na aba Encoder antes de rodar o ENCODER_OFFSET_CALIBRATION.',
+    'setup.step8_enc_pos':     'pos_estimate:',
+    'setup.step8_enc_count':   'shadow_count:',
+    'setup.step8_enc_ready':   'is_ready:',
+    'setup.step8_enc_idle':    'aguardando serial…',
+    'setup.step8_enc_live':    'live (1 Hz)',
     'setup.step7_result_title':'Valores medidos pós-cal',
 
     'setup.step8_title':       'Passo 8 — Calibrar offset do encoder',
@@ -2507,12 +2591,12 @@ const I18N = {
     'setup.hint.requested_current_range':'A — ≥ current_lim + margin',
     'setup.hint.current_control_bandwidth':'rad/s — banda do PI de corrente. 200 = suave/seguro · 1000 = agressivo (servo industrial)',
     // Encoder
-    'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS',
-    'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits)',
+    'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS · 261 MT6835 (21b SPI, /4 auto, thread FreeRTOS, CRC-8 · zero via Debug → sys.mtzero+mteeprom)',
+    'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits) · MT6835 = 2097152 (21 bits)',
     'setup.hint.enc_direction':          '1 ou -1 — use ENCODER_DIR_FIND (state=10) pra detectar',
-    'setup.hint.enc_bandwidth':          'Hz do PLL — ABZ típico 100-500',
+    'setup.hint.enc_bandwidth':          'Hz do PLL — ABZ típico 100-500 · MT6835/AS5047 pode ir a 1000-2000 (agora vira o knob real de ruído dos efeitos de velocidade)',
     'setup.hint.enc_use_index':          'true só se tem pulso Z (incremental ABZ)',
-    'setup.hint.enc_cs_pin':             'GPIO do CS quando mode é SPI_ABS_* — AS5047 onboard MKS = 7',
+    'setup.hint.enc_cs_pin':             'GPIO do CS quando mode é SPI_ABS_* — AS5047 onboard MKS = 7 · MT6835 no port SPI da ODESC V4.2 = 6',
     'setup.hint.enc_pre_calibrated':     'false até calibrar (passo 8) · true depois (passo 9)',
     // FFB
     'setup.hint.ffb_range':              'graus lock-to-lock — 900 default sim racing',
@@ -2690,6 +2774,9 @@ const I18N = {
     // Debug tab
     'dbg.refresh_all':         '↻ Atualizar tudo',
     'dbg.refresh_all_hint':    'Lê info + erros + monitor live de uma vez. Atalho: tecla R quando aba Debug ativa.',
+    'dbg.advanced_show':       '⚙ Mostrar seções avançadas',
+    'dbg.advanced_hide':       '⚙ Esconder seções avançadas',
+    'dbg.advanced_hint':       'Esconde por default seções raramente usadas em sim racing (Communication, Operating mode, Calibration/General Lockin, Sensorless, ACIM, Circular position, Homing). Estado persiste no navegador.',
     'dbg.info_title':          'Info do Device',
     'dbg.read_info':           'Ler Info',
     'dbg.actions_title':       'Ações (state machine / NVM)',
@@ -2803,6 +2890,7 @@ const I18N = {
     'btn.import': 'Import config',
     'status.disconnected': 'Disconnected',
     'status.connected': 'Connected',
+    'bulk.label':       'Reading parameters from device…',
     'sidebar.group.start':  'Quick Start',
     'sidebar.group.odrive': 'ODrive',
     'sidebar.group.ffb':    'Force Feedback',
@@ -2895,6 +2983,7 @@ const I18N = {
     'tab.encoder': 'Encoder',
     'tab.controller': 'Controller',
     'tab.debug': 'Debug / Status',
+    'tab.profiles': 'Profiles',
     'tab.ffb-wheel': 'FFB Wheel',
     'tab.ffb-effects': 'FFB Effects',
     'tab.ffb-filters': 'FFB Filters',
@@ -3120,6 +3209,56 @@ const I18N = {
     'fr.zone_texture':          'texture',
     'fr.label_bw':              'i_bw',
     'fr.no_cal':                'no calibration — run Performance Test',
+    // Band EQ (EN) — panel in the FFB Filters tab
+    'eq.title':                 '🎚 Band EQ',
+    'eq.subtitle':              '— boost or attenuate frequency ranges of the FFB',
+    'eq.intro':                 'The EQ applies 3 biquads in series in the Constant Force chain: <b>low-shelf</b> (WEIGHT), <b>peak</b> (CHASSIS) and <b>high-shelf</b> (ROAD), with centers chosen for sim racing. Default <b>flat</b> (all at 0 dB) = internal bypass, behavior identical to the firmware without EQ. Changes go to the device in real time — no Save required for testing, only for persisting after reboot.',
+    'eq.band_weight':           'WEIGHT',
+    'eq.band_chassis':          'CHASSIS',
+    'eq.band_road':             'ROAD',
+    'eq.hint_weight':           'weight / slow slip',
+    'eq.hint_chassis':          'suspension / body roll',
+    'eq.hint_road':             'texture / curbs',
+    'eq.btn_reset':             '↺ Reset flat',
+    'eq.btn_fetch':             '⟳ Read from device',
+    'eq.chart_hint':            'Cumulative response of the 3 peaks (X-axis log: 0.5–200 Hz)',
+
+    // ---- FFB tuning profiles ----
+    'prof.folder_title':        '🗂 Profiles folder',
+    'prof.folder_hint':         'Pick a folder on your computer to store profiles. The folder is remembered between sessions — when you reopen the tool just re-grant access with one click. They are ordinary files, so you can back them up, sync them through Drive/OneDrive, or send them to someone else.',
+    'prof.btn_folder':          '📁 Choose folder…',
+    'prof.btn_reload':          '↻ Reload',
+    'prof.fs_warn':             '⚠ This browser does not expose the File System Access API. Profiles are kept in browser local storage and disappear if you clear site data. Use Export to keep copies.',
+    'prof.list_title':          'Saved profiles',
+    'prof.list_hint':           'A profile stores your driving feel: the three FFB tabs (Wheel, Effects, Filters), the EQ bands, and three tuning parameters (encoder bandwidth, current limit and current control bandwidth). Hardware identity — motor poles, resistance, encoder mode and calibration — is deliberately left out so switching profiles can never break your calibration.',
+    'prof.btn_apply':           '▶ Apply to wheel',
+    'prof.btn_new':             '＋ Save current as…',
+    'prof.btn_update':          '↻ Overwrite',
+    'prof.btn_rename':          '✎ Rename',
+    'prof.btn_del':             '🗑 Delete',
+    'prof.btn_export':          '⬇ Export file',
+    'prof.btn_import':          '⬆ Import file',
+    'prof.apply_note':          'Apply writes the values to the board but does <b>not</b> store them in permanent memory. Test freely: if you do not like it, just reboot the board to return to what was saved. If you approve, use the Save button at the top of the page.',
+    'prof.empty':               'No profiles in this folder yet. Tune the FFB the way you like and use "Save current as…".',
+    'prof.no_folder':           'Choose a folder to start saving profiles.',
+    'prof.no_folder_short':     'no folder',
+    'prof.prompt_new':          'Profile name (e.g. Rally wet, GT3 dry, Kart):',
+    'prof.prompt_rename':       'New profile name:',
+    'prof.confirm_update':      'Overwrite "{name}" with the values currently on screen?',
+    'prof.confirm_del':         'Delete profile "{name}"? The file will be removed from the folder.',
+    'prof.confirm_import':      'Apply profile "{name}" ({n} fields) to the wheel?\n\nValues go to the board but are NOT written to permanent memory, and the profile is not added to your list — use "Save current as…" afterwards if you want to keep it.',
+    'prof.warn_partial':        'Only {n} fields have a value. That usually means the tool has not read the configuration from the board yet — connect and click Refresh (↻) at the top before saving, otherwise the profile will be incomplete.\n\nSave anyway?',
+    'prof.err_empty':           'No fields captured — open the FFB tabs at least once.',
+    'prof.err_not_profile':     'This file is not a valid profile.',
+    'prof.log_folder_set':      'folder set:',
+    'prof.log_loaded':          'profile(s) loaded',
+    'prof.log_saved':           'profile "{name}" saved with {n} fields',
+    'prof.log_updated':         'profile "{name}" overwritten',
+    'prof.log_renamed':         'renamed to "{name}"',
+    'prof.log_deleted':         'profile "{name}" deleted',
+    'prof.log_needs_permission':'previous folder found — click Reload to re-grant access',
+
+    'eq.toast_no_serial':       'no serial — open Connect first',
     'pt.rec_title':             '💡 Filter recommendations',
     'pt.rec_subtitle':          'Suggested cutoff based on measured inertia (J) and estimated friction torque during launch (more accurate if coastdown was also run). <b>Apply</b> writes to RAM — click the <b>Save</b> button at the top of the page to persist to EEPROM.',
     'pt.rec_col_filter':        'Filter',
@@ -3343,12 +3482,19 @@ const I18N = {
     'setup.step6_desc':        'Edit the fields below to match your encoder. Defaults are for incremental ABZ (most common — external encoder on the motor shaft). If you use the onboard MKS AS5047P, just change mode=257, cpr=16384 and abs_spi_cs_gpio_pin=7. Hints on the right explain each field.',
     'setup.step6_apply':       '✓ Apply values',
     'setup.step6_save':        'Save',
-    'setup.step6_save_hint':   '← AS5047 (absolute) needs Save + reboot to switch modes before steps 7/8',
+    'setup.step6_save_hint':   '← Save + reboot for the encoder config to take effect before steps 7/8',
     'setup.step6_open':        '→ Open Encoder tab',
 
     'setup.step7_title':       'Step 7 — Motor calibration',
     'setup.step7_desc':        'Measures phase resistance R and inductance L. The motor does NOT spin but DOES make a beep sound (injects voltage pulses to measure R and L). Takes ~5 s. Before running, errors are auto-cleared (sc) to avoid blocking from a previous state. When done, axis0.motor.is_calibrated turns True and the measured values appear in the green panel below.',
     'setup.step7_action':      '▶ Run MOTOR_CALIBRATION (state=4)',
+    'setup.step8_enc_title':   '🧭 Verify the encoder before calibrating',
+    'setup.step8_enc_hint':    'Rotate the wheel by hand. The needle below should rotate in real time and the count should change. If nothing happens, the encoder is not being read — check the cable and the mode in the Encoder tab before running ENCODER_OFFSET_CALIBRATION.',
+    'setup.step8_enc_pos':     'pos_estimate:',
+    'setup.step8_enc_count':   'shadow_count:',
+    'setup.step8_enc_ready':   'is_ready:',
+    'setup.step8_enc_idle':    'waiting for serial…',
+    'setup.step8_enc_live':    'live (1 Hz)',
     'setup.step7_result_title':'Measured post-cal values',
 
     'setup.step8_title':       'Step 8 — Encoder offset calibration',
@@ -3428,12 +3574,12 @@ const I18N = {
     'setup.hint.requested_current_range':'A — ≥ current_lim + margin',
     'setup.hint.current_control_bandwidth':'rad/s — current PI loop bandwidth. 200 = smooth/safe · 1000 = aggressive (industrial servo)',
     // Encoder
-    'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS',
-    'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits)',
+    'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS · 261 MT6835 (21b SPI, auto /4 baud, FreeRTOS thread, CRC-8 · zero via Debug → sys.mtzero+mteeprom)',
+    'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits) · MT6835 = 2097152 (21 bits)',
     'setup.hint.enc_direction':          '1 or -1 — use ENCODER_DIR_FIND (state=10) to detect',
-    'setup.hint.enc_bandwidth':          'PLL Hz — ABZ typical 100-500',
+    'setup.hint.enc_bandwidth':          'PLL Hz — ABZ typical 100-500 · MT6835/AS5047 can go 1000-2000 (now the real noise knob for velocity-based effects)',
     'setup.hint.enc_use_index':          'true only if you have a Z pulse (incremental ABZ)',
-    'setup.hint.enc_cs_pin':             'CS GPIO when mode is SPI_ABS_* — AS5047 onboard MKS = 7',
+    'setup.hint.enc_cs_pin':             'CS GPIO when mode is SPI_ABS_* — AS5047 onboard MKS = 7 · MT6835 on ODESC V4.2 SPI port = 6',
     'setup.hint.enc_pre_calibrated':     'false until calibrated (step 8) · true after (step 9)',
     // FFB
     'setup.hint.ffb_range':              'degrees lock-to-lock — 900 default sim racing',
@@ -3611,6 +3757,9 @@ const I18N = {
     // Debug tab
     'dbg.refresh_all':         '↻ Refresh all',
     'dbg.refresh_all_hint':    'Reads info + errors + live monitor at once. Shortcut: R key when Debug tab active.',
+    'dbg.advanced_show':       '⚙ Show advanced sections',
+    'dbg.advanced_hide':       '⚙ Hide advanced sections',
+    'dbg.advanced_hint':       'Hides by default sections rarely used in sim racing (Communication, Operating mode, Calibration/General Lockin, Sensorless, ACIM, Circular position, Homing). State persists in the browser.',
     'dbg.info_title':          'Device Info',
     'dbg.read_info':           'Read Info',
     'dbg.actions_title':       'Actions (state machine / NVM)',
@@ -3845,7 +3994,8 @@ const FIELD_DESC = {
     'axis.range':         'Rotação total do volante em graus (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Torque máximo entregue ao motor em Nm. Sobe pra usar mais do motor; cuidado com mãos.',
     'axis.fxratio':       'Multiplicador final 0..1. Reduz force overall preservando dinâmicas. Default 0.80.',
-    'axis.invert':        'Inverte direção lógica do volante (sem mexer em fios). Quando ON, HID position + FFB torque do jogo são negados juntos — útil quando o motor está cabeado no sentido oposto. Persiste em EE.',
+    'axis.invert':        'Inverte APENAS a posição HID reportada ao jogo (sem mexer em fios). Útil quando o encoder gira no sentido contrário ao esperado pelo jogo. Independente de axis.ffbinvert. Persiste em EE.',
+    'axis.ffbinvert':     'Inverte APENAS o torque FFB recebido do jogo (não mexe na posição). Útil quando o FFB empurra no sentido errado (ex: FFFSake Forwarder e outras stacks que já mandam FFB com sinal trocado). Independente de axis.invert. Persiste em EE.',
     'sys.vbusdiv':        'Divisor de tensão do VBUS sense (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). ODrive v3.6 oficial = 11. Valor errado afeta proteção de overvoltage e cálculo do brake — confira com multímetro depois de ajustar.',
     'axis.idlespring':    'Mola centralizadora SÓ quando jogo está OFF (FFB inativo). Volta a 0 quando jogo conecta. 0=desativado.',
     'axis.axisdamper':    'Damper SEMPRE ativo (com ou sem jogo conectado), somado ao FFB. Adiciona "peso" ao volante.',
@@ -3993,7 +4143,8 @@ const FIELD_DESC = {
     'axis.range':         'Total wheel rotation in degrees (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Max torque delivered to motor in Nm. Raise to use more of motor; mind your hands.',
     'axis.fxratio':       'Final multiplier 0..1. Scales force overall while preserving dynamics. Default 0.80.',
-    'axis.invert':        'Reverses wheel logical direction (no rewiring needed). When ON, HID position + game FFB torque are negated together — useful when motor is wired the opposite way. Persists to EEPROM.',
+    'axis.invert':        'Inverts ONLY the HID position reported to the game (no rewiring needed). Useful when the encoder rotates in the opposite direction the game expects. Independent from axis.ffbinvert. Persists to EEPROM.',
+    'axis.ffbinvert':     'Inverts ONLY the FFB torque received from the game (does not touch position). Useful when FFB pushes in the wrong direction (e.g. FFFSake Forwarder and other stacks that already send FFB with flipped sign). Independent from axis.invert. Persists to EEPROM.',
     'sys.vbusdiv':        'VBUS sense voltage divider (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). Official ODrive v3.6 = 11. Wrong value affects overvoltage protection and brake calculation — verify with a multimeter after changing.',
     'axis.idlespring':    'Centering spring ONLY when game is OFF (FFB inactive). Returns to 0 when game connects. 0=disabled.',
     'axis.axisdamper':    'Damper ALWAYS active (with or without game connected), added to game FFB. Adds "weight" to wheel.',
@@ -4244,6 +4395,26 @@ function setLang(lang) {
 /* Mapeia o texto literal do grupo (em pt-br como originalmente escrito no
    SCHEMA) pra chave i18n. Permite manter o SCHEMA legível em pt enquanto
    o sistema traduz na renderização. */
+// Grupos marcados como "avançados" — escondidos por default. Botão no
+// header da aba Debug toggle pra body.show-advanced via localStorage.
+// Pra esses casos: campos raramente usados em sim racing, configs de
+// modos não suportados (induction motor / homing / lockin etc.) e
+// transports não usados na nossa stack (UART/CAN — usamos USB CDC).
+const ADVANCED_GROUPS = new Set([
+  // ODrive
+  'Comunicação',                           // UART/CAN — usamos USB CDC
+  // Axis 0
+  'Modo de operação',                      // operating mode flags raramente tocados
+  'Calibration Lockin',                    // params internos do offset cal
+  'General Lockin',                        // open-loop spin params
+  'Sensorless Ramp',                       // sensorless commutation — não usado
+  // Motor
+  'ACIM (induction only)',                 // induction motors — usamos BLDC
+  // Controller
+  'Posição circular',                      // circular position — não usado em wheel
+  'Homing / mirror',                       // homing / mirror axis — não usado
+]);
+
 const GROUP_KEY_MAP = {
   // ODrive
   'Alimentação / Brake':                  'group.power_brake',
@@ -4308,7 +4479,7 @@ const ENUM_STREAM_PROTO = {
 const ENUM_ENCODER_MODE = {
   0: 'INCREMENTAL', 1: 'HALL', 2: 'SINCOS',
   256: 'SPI_ABS_CUI', 257: 'SPI_ABS_AMS', 258: 'SPI_ABS_AEAT',
-  259: 'SPI_ABS_RLS', 260: 'SPI_ABS_MA732'
+  259: 'SPI_ABS_RLS', 260: 'SPI_ABS_MA732', 261: 'SPI_ABS_MT6835'
 };
 const ENUM_GPIO_MODE = {
   0: 'DIGITAL', 1: 'DIGITAL_PULL_UP', 2: 'DIGITAL_PULL_DOWN',
@@ -4364,7 +4535,7 @@ const SIDEBAR_GROUPS = [
   { titleKey: 'sidebar.group.odrive', title: 'ODrive',
     items: ['odrv', 'axis0', 'motor', 'encoder', 'controller'] },
   { titleKey: 'sidebar.group.ffb',    title: 'Force Feedback',
-    items: ['ffb-wheel', 'ffb-effects', 'ffb-filters', 'ffb-live', 'ffb-test'] },
+    items: ['profiles', 'ffb-wheel', 'ffb-effects', 'ffb-filters', 'ffb-live', 'ffb-test'] },
   { titleKey: 'sidebar.group.io',     title: 'Inputs',
     items: ['inputs'] },
   { titleKey: 'sidebar.group.tools',  title: 'Tools',
@@ -4378,6 +4549,7 @@ const TAB_ICONS = {
   'encoder':      '⟳',
   'controller':   '⊕',
   'debug':        '⚒',
+  'profiles':     '🗂',
   'ffb-wheel':    '◯',
   'ffb-effects':  '✦',
   'ffb-filters':  '≋',
@@ -4645,13 +4817,17 @@ const SCHEMA = [
     id: 'debug', label: 'Debug / Status', prefix: '', custom: true,
   },
   {
+    id: 'profiles', label: 'Perfis', prefix: '', custom: true,
+  },
+  {
     id: 'ffb-wheel', label: 'FFB Wheel', prefix: 'axis.', protocol: 'offb',
     fields: [
       { group: 'Escala de força' },
       F('range',     'Rotation range'),                  // graus rotação total (default 900)
       F('maxtorque', 'Maximum torque'),                   // Nm cap (default 5.0, max recomendado 17 pelo motor)
       F('fxratio',   'Torque multiplier fxratio'),        // 0..1 — multiplicador final (default 0.80)
-      B('invert',    'Position and FFB invert'),          // inverte direção lógica (HID pos + FFB torque) sem mexer em fios
+      B('invert',    'Axis position invert'),             // inverte só a posição HID reportada ao jogo
+      B('ffbinvert', 'FFB torque invert'),                // inverte só o torque FFB recebido do jogo
 
       { group: 'Axis effects sempre-ativos (somam ao FFB do jogo)' },
       I('idlespring',   'Idle Spring'),         // mola centralizadora quando FFB OFF (0-255, default 0)
@@ -5024,7 +5200,8 @@ function buildCommandList() {
   offb('axis.range',         'Range do volante em counts');
   offb('axis.maxtorque',     'Maxtorque (limit final do FFB)');
   offb('axis.fxratio',       'Effect ratio (0-255)');
-  offb('axis.invert',        '0/1 — inverte sentido');
+  offb('axis.invert',        '0/1 — inverte só a posição HID');
+  offb('axis.ffbinvert',     '0/1 — inverte só o torque FFB');
   offb('axis.drvtype?',      'Tipo de driver atual');
   offb('axis.enctype?',      'Tipo de encoder atual');
   offb('axis.pos?',          'Posição atual em counts');
@@ -5791,6 +5968,8 @@ function wireInputsTab() {
       setStatusHeader('disconnected');
       return;
     }
+    // Gate: skip durante readAll pra não colidir reads no canal serial.
+    if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
     setStatusHeader('connected', '5');
     for (const i of INPUTS_GPIOS) {
       const card = document.getElementById('gpio-card-' + i);
@@ -6830,6 +7009,27 @@ function _setupStep7ResultHTML() {
   '</div>';
 }
 
+// Painel de verificação live do encoder — usado no Step 8 (ENCODER_OFFSET_CAL).
+// Agulha gira conforme o user gira o volante manualmente. Confirma que (1)
+// firmware está lendo posição, (2) modo/cpr/sentido estão corretos ANTES
+// de gastar 30s no offset cal. Polling roda só quando a aba Setup está
+// visível (selectTab dispara _setupEncCheckStartPoll/StopPoll).
+function _setupEncCheckPanelHTML() {
+  return '<div class="setup-enc-check" style="margin-bottom:10px;padding:10px;background:#0f0f0f;border:1px solid var(--border);border-radius:6px">' +
+      '<div style="font-size:12px;font-weight:600;color:var(--fg);margin-bottom:6px" data-i18n="setup.step8_enc_title">🧭 Verifique o encoder antes de calibrar</div>' +
+      '<div style="font-size:11px;color:var(--fg-muted);margin-bottom:8px;line-height:1.4" data-i18n="setup.step8_enc_hint">Gire o volante manualmente. A agulha abaixo deve rodar em tempo real e a contagem mudar. Se nada acontece, o encoder não está sendo lido — confira o cabo e o modo na aba Encoder antes de rodar o ENCODER_OFFSET_CALIBRATION.</div>' +
+      '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
+        '<canvas id="setup-enc-needle" width="88" height="88" style="background:#0a0a0a;border:1px solid var(--border);border-radius:50%;display:block"></canvas>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;font-family:ui-monospace,Consolas,monospace;font-size:12px">' +
+          '<div><span style="color:var(--fg-muted)" data-i18n="setup.step8_enc_pos">pos_estimate:</span> <span id="setup-enc-pos" style="color:#ffd54f;font-weight:600">—</span></div>' +
+          '<div><span style="color:var(--fg-muted)" data-i18n="setup.step8_enc_count">shadow_count:</span> <span id="setup-enc-count" style="color:var(--fg)">—</span></div>' +
+          '<div><span style="color:var(--fg-muted)" data-i18n="setup.step8_enc_ready">is_ready:</span> <span id="setup-enc-ready" style="color:var(--fg)">—</span></div>' +
+          '<div style="font-size:10px;color:var(--fg-muted)" id="setup-enc-status">—</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
 // Helper genérico: aplica uma lista de campos no DOM da aba correspondente
 // e marca cada um como dirty pra ficar vermelho.
 function _setupApplyFields(fields) {
@@ -6988,7 +7188,7 @@ function buildSetupHTML() {
       { id: 'btn-setup-run-motorcal', i18n: 'setup.step7_action', cls: 'warn' }
     ], 'inline')}
     ${_setupStepCard(8, 'setup.step8_title', 'setup.step8_desc',
-      _setupErrorPanelHTML(8, SETUP_ERR_FIELDS[8]), [
+      _setupEncCheckPanelHTML() + _setupErrorPanelHTML(8, SETUP_ERR_FIELDS[8]), [
       { id: 'btn-setup-run-enccal', i18n: 'setup.step8_action', cls: 'warn' }
     ], 'inline')}
     ${_setupStepCard(9, 'setup.step9_title', 'setup.step9_desc', null, [
@@ -7056,6 +7256,120 @@ function wireSetupTab() {
   // Flag: vbus precisa ser definida antes do Apply Power. Re-avaliada pelo
   // botão de tensão e checada pelo Apply Power.
   let _setupVbusDefined = false;
+
+  // -------------------------------------------------------------------------
+  // Step 7 — Verificação live do encoder.
+  // -------------------------------------------------------------------------
+  // Desenha agulha de posição num canvas circular + readouts de pos_estimate,
+  // shadow_count e is_ready. Polling a 4 Hz só quando a aba Setup está visível
+  // (selectTab dispara _setupEncCheckStartPoll/StopPoll). Custo serial baixo.
+  let _setupEncPollTimer = null;
+  function _setupEncDrawNeedle(posTurns) {
+    const cv = document.getElementById('setup-enc-needle');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const cx = W / 2, cy = H / 2;
+    const r  = Math.min(cx, cy) - 6;
+    ctx.clearRect(0, 0, W, H);
+    // Anel
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+    // 4 marcas (12 / 3 / 6 / 9 horas)
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 - Math.PI / 2;
+      const x1 = cx + Math.cos(a) * (r - 4);
+      const y1 = cy + Math.sin(a) * (r - 4);
+      const x2 = cx + Math.cos(a) * r;
+      const y2 = cy + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    // Agulha
+    if (posTurns !== null && isFinite(posTurns)) {
+      // pos_estimate em voltas → radianos. 0 turn = topo (12h).
+      const angle = (posTurns % 1) * 2 * Math.PI - Math.PI / 2;
+      const x2 = cx + Math.cos(angle) * (r - 4);
+      const y2 = cy + Math.sin(angle) * (r - 4);
+      ctx.strokeStyle = '#ffd54f';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      // Hub
+      ctx.fillStyle = '#ffd54f';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+      ctx.fill();
+    } else {
+      // "?" central quando sem dado
+      ctx.fillStyle = '#666';
+      ctx.font = '14px ui-monospace, Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('—', cx, cy);
+    }
+  }
+  async function _setupEncTick() {
+    const setupPanel = document.getElementById('tab-setup');
+    if (!setupPanel || !setupPanel.classList.contains('active')) return;
+    // Gate: durante readAll() (~200 leituras sequenciais no boot/refresh),
+    // qualquer tick periódico injetaria reads no mesmo canal serial e
+    // poderia receber respostas de outras requests. Skip.
+    if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
+    const statusEl = document.getElementById('setup-enc-status');
+    const posEl    = document.getElementById('setup-enc-pos');
+    const cntEl    = document.getElementById('setup-enc-count');
+    const rdyEl    = document.getElementById('setup-enc-ready');
+    if (!posEl || !cntEl || !rdyEl) return;
+    if (!writer) {
+      posEl.textContent = '—';
+      cntEl.textContent = '—';
+      rdyEl.textContent = '—';
+      if (statusEl) statusEl.textContent = t('setup.step8_enc_idle');
+      _setupEncDrawNeedle(null);
+      return;
+    }
+    const posRaw = await readProp('axis0.encoder.pos_estimate').catch(() => null);
+    const cntRaw = await readProp('axis0.encoder.shadow_count').catch(() => null);
+    const rdyRaw = await readProp('axis0.encoder.is_ready').catch(() => null);
+    const posTurns = posRaw === null ? null : parseFloat(posRaw);
+    if (posTurns !== null && isFinite(posTurns)) {
+      posEl.textContent = (posTurns * 360).toFixed(2) + '° (' + posTurns.toFixed(3) + ' t)';
+      _setupEncDrawNeedle(posTurns);
+    } else {
+      posEl.textContent = '—';
+      _setupEncDrawNeedle(null);
+    }
+    cntEl.textContent = (cntRaw === null) ? '—' : cntRaw;
+    if (rdyRaw === null) {
+      rdyEl.textContent = '—';
+      rdyEl.style.color = 'var(--fg)';
+    } else {
+      const isReady = (rdyRaw === 'True' || rdyRaw === '1');
+      rdyEl.textContent = isReady ? '✓' : '✕';
+      rdyEl.style.color = isReady ? '#66bb6a' : '#ef5350';
+    }
+    if (statusEl) statusEl.textContent = t('setup.step8_enc_live');
+  }
+  window._setupEncCheckStartPoll = () => {
+    if (_setupEncPollTimer) return;
+    _setupEncDrawNeedle(null);   // desenha base imediato
+    _setupEncTick();
+    _setupEncPollTimer = setInterval(_setupEncTick, 250);
+  };
+  window._setupEncCheckStopPoll = () => {
+    if (_setupEncPollTimer) { clearInterval(_setupEncPollTimer); _setupEncPollTimer = null; }
+  };
+
 
   // Estado visual dos botões "Aplicar valores" — segue o padrão dos campos:
   //   danger (vermelho) = valores pendentes, ainda não escritos no device
@@ -7757,6 +8071,17 @@ function wireSetupTab() {
   document.getElementById('btn-setup-go-debug')?.addEventListener('click', () => {
     selectTab('debug');
   });
+
+  // Boot order: buildTabs() roda antes de wireSetupTab(), então a primeira
+  // selectTab('setup') (se houver) cai antes do _setupEncCheckStartPoll
+  // global existir. Aqui no fim de wireSetupTab garantimos que, se a aba
+  // Setup já está ativa nesse momento, o poll inicia. Idempotente — o
+  // start interno é guardado por _setupEncPollTimer.
+  const setupPanel = document.getElementById('tab-setup');
+  if (setupPanel && setupPanel.classList.contains('active')
+      && typeof window._setupEncCheckStartPoll === 'function') {
+    window._setupEncCheckStartPoll();
+  }
 }
 
 /* =========================================================================
@@ -9171,6 +9496,341 @@ function logSpace(fMin, fMax, N) {
   const lmin = Math.log10(fMin), lmax = Math.log10(fMax);
   for (let i = 0; i < N; i++) out[i] = Math.pow(10, lmin + (lmax - lmin) * (i / (N - 1)));
   return out;
+}
+
+// ============================================================================
+// EQ por banda — UI + math
+//
+// Espelha o EqCascade do firmware: 3 biquads peak em série (GRIP/CHASSIS/ROAD).
+// Centro/Q de cada banda lidos do device (read-only) pra não duplicar valores.
+// Slider de ganho em dB faz writePropOffb live + redesenha o mini-chart.
+// ============================================================================
+const _eqState = {
+  bands: [
+    { id: 'weight',  cmd: 'eqweight',  type: 'lowshelf',  freq:  5.0, q: 0.7, gainDb: 0, color: '#60a5fa' },
+    { id: 'chassis', cmd: 'eqchassis', type: 'peak',      freq: 12.0, q: 1.0, gainDb: 0, color: '#34d399' },
+    { id: 'road',    cmd: 'eqroad',    type: 'highshelf', freq: 25.0, q: 0.7, gainDb: 0, color: '#fbbf24' },
+  ],
+  _writeDebounce: {},
+};
+
+// Magnitude de um biquad (peak / lowshelf / highshelf) em escala linear,
+// pra um array de freqs em Hz. Math idêntica ao Biquad::calcBiquad do
+// firmware (Filters.cpp). Sample rate fixo em 1000 Hz.
+function biquadPeakResponse(fc, Q, gainDb, freqs, fs, type) {
+  fs   = fs   || 1000;
+  type = type || 'peak';
+  const fcNorm = fc / fs;
+  const V   = Math.pow(10, Math.abs(gainDb) / 20);
+  const K   = Math.tan(Math.PI * fcNorm);
+  let a0, a1, a2, b1, b2;
+  let norm;
+  const SQ2 = Math.SQRT2;
+  if (type === 'peak') {
+    if (gainDb >= 0) {
+      norm = 1 / (1 + (1/Q) * K + K * K);
+      a0 = (1 + (V/Q) * K + K * K) * norm;
+      a1 = 2 * (K * K - 1) * norm;
+      a2 = (1 - (V/Q) * K + K * K) * norm;
+      b1 = a1;
+      b2 = (1 - (1/Q) * K + K * K) * norm;
+    } else {
+      norm = 1 / (1 + (V/Q) * K + K * K);
+      a0 = (1 + (1/Q) * K + K * K) * norm;
+      a1 = 2 * (K * K - 1) * norm;
+      a2 = (1 - (1/Q) * K + K * K) * norm;
+      b1 = a1;
+      b2 = (1 - (V/Q) * K + K * K) * norm;
+    }
+  } else if (type === 'lowshelf') {
+    if (gainDb >= 0) {
+      norm = 1 / (1 + SQ2 * K + K * K);
+      a0 = (1 + Math.sqrt(2*V) * K + V * K * K) * norm;
+      a1 = 2 * (V * K * K - 1) * norm;
+      a2 = (1 - Math.sqrt(2*V) * K + V * K * K) * norm;
+      b1 = 2 * (K * K - 1) * norm;
+      b2 = (1 - SQ2 * K + K * K) * norm;
+    } else {
+      norm = 1 / (1 + Math.sqrt(2*V) * K + V * K * K);
+      a0 = (1 + SQ2 * K + K * K) * norm;
+      a1 = 2 * (K * K - 1) * norm;
+      a2 = (1 - SQ2 * K + K * K) * norm;
+      b1 = 2 * (V * K * K - 1) * norm;
+      b2 = (1 - Math.sqrt(2*V) * K + V * K * K) * norm;
+    }
+  } else { // highshelf
+    if (gainDb >= 0) {
+      norm = 1 / (1 + SQ2 * K + K * K);
+      a0 = (V + Math.sqrt(2*V) * K + K * K) * norm;
+      a1 = 2 * (K * K - V) * norm;
+      a2 = (V - Math.sqrt(2*V) * K + K * K) * norm;
+      b1 = 2 * (K * K - 1) * norm;
+      b2 = (1 - SQ2 * K + K * K) * norm;
+    } else {
+      norm = 1 / (V + Math.sqrt(2*V) * K + K * K);
+      a0 = (1 + SQ2 * K + K * K) * norm;
+      a1 = 2 * (K * K - 1) * norm;
+      a2 = (1 - SQ2 * K + K * K) * norm;
+      b1 = 2 * (K * K - V) * norm;
+      b2 = (V - Math.sqrt(2*V) * K + K * K) * norm;
+    }
+  }
+  // Resposta digital |H(e^jω)|, ω = 2π·f/fs
+  const mags = new Array(freqs.length);
+  for (let i = 0; i < freqs.length; i++) {
+    const w = 2 * Math.PI * freqs[i] / fs;
+    const cosw  = Math.cos(w),  cos2w = Math.cos(2 * w);
+    const sinw  = Math.sin(w),  sin2w = Math.sin(2 * w);
+    // Numerador: a0 + a1·e⁻ʲʷ + a2·e⁻²ʲʷ
+    const numRe = a0 + a1 * cosw + a2 * cos2w;
+    const numIm = -(a1 * sinw + a2 * sin2w);
+    // Denominador: 1 + b1·e⁻ʲʷ + b2·e⁻²ʲʷ
+    const denRe = 1 + b1 * cosw + b2 * cos2w;
+    const denIm = -(b1 * sinw + b2 * sin2w);
+    const numMag = Math.sqrt(numRe * numRe + numIm * numIm);
+    const denMag = Math.sqrt(denRe * denRe + denIm * denIm);
+    mags[i] = numMag / Math.max(denMag, 1e-12);
+  }
+  return mags;
+}
+
+// Magnitude acumulada dos 3 biquads em série + pré-scale por 1/H(DC).
+// Espelha EXATAMENTE EqCascade::process no firmware: o input é multiplicado
+// por 1/H_cascata(0 Hz) ANTES dos biquads, travando o ganho em DC em unity.
+// Isso garante que a força de curva sustentada (essencialmente DC no FFB)
+// não muda com o ajuste do EQ — a curva desenhada sempre passa por 0 dB na
+// extremidade esquerda.
+function _eqCumulativeResponseDb(freqs) {
+  // H(DC) da cascata: avalia cada banda em 0 Hz e multiplica.
+  let dc = 1.0;
+  for (const band of _eqState.bands) {
+    dc *= biquadPeakResponse(band.freq, band.q, band.gainDb, [0], 1000, band.type)[0];
+  }
+  const dcNorm = (Math.abs(dc) > 1e-6) ? (1 / dc) : 1.0;
+
+  const cum = new Array(freqs.length).fill(dcNorm);
+  for (const band of _eqState.bands) {
+    const m = biquadPeakResponse(band.freq, band.q, band.gainDb, freqs, 1000, band.type);
+    for (let i = 0; i < freqs.length; i++) cum[i] *= m[i];
+  }
+  return cum.map(m => 20 * Math.log10(Math.max(m, 1e-12)));
+}
+
+function _eqLog(msg, cls) {
+  const el = document.getElementById('eq-status');
+  if (el) el.textContent = msg;
+  if (typeof logLine === 'function') logLine('eq: ' + msg, cls || 'tx');
+}
+
+async function _eqFetchFromDevice() {
+  if (!writer) { _eqLog(t('eq.toast_no_serial') || 'sem serial — abra Conectar primeiro', 'err'); return; }
+  for (const band of _eqState.bands) {
+    try {
+      const fStr = await readPropOffb('axis.' + band.cmd + 'freq');
+      const qStr = await readPropOffb('axis.' + band.cmd + 'q');
+      const gStr = await readPropOffb('axis.' + band.cmd);
+      const f = parseFloat(fStr), q = parseFloat(qStr), g = parseFloat(gStr);
+      if (isFinite(f)) band.freq = f;
+      if (isFinite(q)) band.q = q;
+      if (isFinite(g)) band.gainDb = g;
+    } catch (e) {
+      _eqLog('falha lendo ' + band.cmd + ' — firmware sem suporte EQ?', 'err');
+      return;
+    }
+  }
+  _eqSyncUI();
+  _eqDraw();
+  _eqLog('config lida do device.');
+}
+
+// Envia o ganho pro device. Debounced por banda pra não saturar serial
+// enquanto o slider está sendo movido rapidamente.
+function _eqWriteGain(bandId, gainDb) {
+  if (!writer) return;
+  const band = _eqState.bands.find(b => b.id === bandId);
+  if (!band) return;
+  band.gainDb = gainDb;
+  // Atualiza UI imediato (sem esperar serial)
+  _eqSyncUI();
+  _eqDraw();
+  if (_eqState._writeDebounce[bandId]) clearTimeout(_eqState._writeDebounce[bandId]);
+  _eqState._writeDebounce[bandId] = setTimeout(() => {
+    writePropOffb('axis.' + band.cmd, gainDb.toFixed(1)).catch(e => {
+      _eqLog('write ' + band.cmd + ' falhou: ' + (e.message || e), 'err');
+    });
+  }, 80);
+}
+
+function _eqResetFlat() {
+  for (const band of _eqState.bands) band.gainDb = 0;
+  _eqSyncUI();
+  _eqDraw();
+  if (writer) {
+    for (const band of _eqState.bands) {
+      writePropOffb('axis.' + band.cmd, '0').catch(() => {});
+    }
+  }
+  _eqLog('reset flat aplicado.');
+}
+
+// Sincroniza sliders e labels com _eqState (sem disparar input events).
+// Label de info usa o tipo do biquad pra ficar didático: "low-shelf @ 5 Hz",
+// "peak @ 12 Hz", "high-shelf @ 25 Hz". Q omitido pra não poluir.
+function _eqSyncUI() {
+  for (const band of _eqState.bands) {
+    const sl  = document.getElementById('eq-' + band.id + '-slider');
+    const val = document.getElementById('eq-' + band.id + '-val');
+    const inf = document.getElementById('eq-' + band.id + '-info');
+    if (sl  && sl.value != band.gainDb) sl.value = band.gainDb.toFixed(1);
+    if (val) val.textContent = (band.gainDb >= 0 ? '+' : '') + band.gainDb.toFixed(1);
+    if (inf) {
+      const typeLabel = (band.type === 'lowshelf')  ? 'low-shelf'
+                      : (band.type === 'highshelf') ? 'high-shelf'
+                      : 'peak';
+      inf.textContent = typeLabel + ' @ ' + band.freq.toFixed(0) + ' Hz';
+    }
+    if (val) {
+      // cor: cinza em 0, color do band se != 0
+      val.style.color = (band.gainDb === 0) ? 'var(--fg-muted)' : band.color;
+    }
+  }
+}
+
+function _eqDraw() {
+  const cv = document.getElementById('eq-chart');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  if (cssW <= 0 || cssH <= 0) return;
+  cv.width  = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const padL = 36, padR = 8, padT = 8, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
+
+  // Eixos: X log 0.5-200 Hz, Y linear -15 a +15 dB
+  const fMin = 0.5, fMax = 200;
+  const yMin = -15, yMax = +15;
+  const lf  = (f)  => Math.log10(f);
+  const xOf = (f)  => padL + (lf(f) - lf(fMin)) / (lf(fMax) - lf(fMin)) * W;
+  const yOf = (db) => padT + (1 - (db - yMin) / (yMax - yMin)) * H;
+
+  // Grid horizontal (dB) — linhas em -12, -6, 0, +6, +12
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.font = '10px ui-monospace, Consolas, monospace';
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (const db of [-12, -6, 0, +6, +12]) {
+    const y = yOf(db);
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + W, y);
+    if (db === 0) { ctx.strokeStyle = '#444'; ctx.lineWidth = 1.5; }
+    else          { ctx.strokeStyle = '#222'; ctx.lineWidth = 1;   }
+    ctx.stroke();
+    ctx.fillText((db > 0 ? '+' : '') + db, padL - 4, y);
+  }
+
+  // Grid vertical (Hz) — décadas 1/10/100
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (const f of [1, 10, 100]) {
+    const x = xOf(f);
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + H);
+    ctx.stroke();
+    ctx.fillText(f + ' Hz', x, padT + H + 4);
+  }
+  // Sub-grid em 2, 5, 20, 50 sem rótulo
+  ctx.strokeStyle = '#1a1a1a';
+  for (const f of [2, 5, 20, 50]) {
+    const x = xOf(f);
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + H);
+    ctx.stroke();
+  }
+
+  // Marcadores verticais nos centros das bandas
+  for (const band of _eqState.bands) {
+    const x = xOf(band.freq);
+    ctx.strokeStyle = band.color + '40';   // alpha 25%
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = band.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(band.id.toUpperCase(), x, padT + 2);
+  }
+
+  // Curvas individuais (linhas finas, alpha) + soma (linha grossa branca)
+  const freqs = logSpace(fMin, fMax, 200);
+  for (const band of _eqState.bands) {
+    if (band.gainDb === 0) continue;       // não desenha banda em 0
+    const mags = biquadPeakResponse(band.freq, band.q, band.gainDb, freqs, 1000, band.type);
+    ctx.beginPath();
+    ctx.strokeStyle = band.color + '80';   // alpha 50%
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < freqs.length; i++) {
+      const x = xOf(freqs[i]);
+      const y = yOf(20 * Math.log10(Math.max(mags[i], 1e-12)));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Curva acumulada — em branco/sempre presente
+  const cumDb = _eqCumulativeResponseDb(freqs);
+  ctx.beginPath();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < freqs.length; i++) {
+    const x = xOf(freqs[i]);
+    const y = yOf(cumDb[i]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function _eqWireUI() {
+  for (const band of _eqState.bands) {
+    const sl = document.getElementById('eq-' + band.id + '-slider');
+    if (!sl) continue;
+    sl.addEventListener('input', () => {
+      const v = parseFloat(sl.value);
+      if (isFinite(v)) _eqWriteGain(band.id, v);
+    });
+  }
+  const btnR = document.getElementById('eq-btn-reset');
+  if (btnR) btnR.addEventListener('click', _eqResetFlat);
+  const btnF = document.getElementById('eq-btn-fetch');
+  if (btnF) btnF.addEventListener('click', _eqFetchFromDevice);
+
+  // Redraw on window resize (canvas usa clientWidth)
+  window.addEventListener('resize', () => { if (document.getElementById('eq-chart')) _eqDraw(); });
+
+  _eqSyncUI();
+  _eqDraw();
+
+  // Tentativa não-bloqueante de ler do device se já estiver conectado.
+  if (writer) {
+    _eqFetchFromDevice().catch(() => {});
+  }
 }
 
 // Resposta mecânica: |θ(jω)/T(jω)| do modelo (J·s + b)·s com referência
@@ -13879,6 +14539,13 @@ function buildTabs() {
       content.appendChild(panel);
       return;
     }
+    // Perfis tab — salva/aplica conjuntos de tuning FFB numa pasta local
+    if (tab.custom && tab.id === 'profiles') {
+      panel.innerHTML = buildProfilesHTML();
+      content.appendChild(panel);
+      setTimeout(_profWireUI, 0);
+      return;
+    }
     // FFB Live tab — custom UI (live FFB state, counters, peaks)
     if (tab.custom && tab.id === 'ffb-live') {
       panel.innerHTML = buildFFBLiveHTML();
@@ -14022,6 +14689,80 @@ function buildTabs() {
     // marcador do current control bandwidth.
     // ===================================================================
     if (tab.id === 'ffb-filters') {
+      // ===================================================================
+      // 🎚 EQ por banda (GRIP / CHASSIS / ROAD)
+      // -----------------------------------------------------------------
+      // Painel acima do chart de filtros. 3 sliders de ganho ±12 dB
+      // (resolução 0.1 dB), centro/Q de cada banda hardcoded no firmware
+      // (EqCascade.cpp). Mini-chart mostra a soma dos 3 peaks em escala
+      // log de frequência — efeito acumulado do EQ sobre a CF.
+      // ===================================================================
+      const eqWrap = document.createElement('div');
+      eqWrap.className = 'eq-panel';
+      eqWrap.style.cssText = 'grid-column:1/-1;background:#0c0c0c;border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:14px';
+      eqWrap.innerHTML = `
+        <h3 style="margin:0 0 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span data-i18n="eq.title">🎚 EQ por banda</span>
+          <span style="font-size:12px;color:var(--fg-muted);font-weight:normal" data-i18n="eq.subtitle">— realça ou atenua faixas de frequência do FFB</span>
+        </h3>
+        <p style="margin:6px 0 12px;font-size:12px;color:var(--fg-muted);line-height:1.55"
+           data-i18n-html="eq.intro">
+          O EQ aplica 3 biquads em série na cadeia do Constant Force (low-shelf + peak + high-shelf) com centros pensados pra sim racing.
+          Default <b>flat</b> (todos em 0 dB) = bypass interno, comportamento idêntico ao firmware sem EQ.
+          Mudanças vão pro device em tempo real — não precisa Salvar pra testar, só pra persistir após reboot.
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr) auto;gap:14px;align-items:stretch">
+          <!-- WEIGHT (low-shelf) -->
+          <div class="eq-band" data-band="weight" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#1a1a1a;border:1px solid var(--border);border-radius:6px">
+            <div style="font-size:13px;font-weight:600;color:#60a5fa" data-i18n="eq.band_weight">WEIGHT</div>
+            <div style="font-size:11px;color:var(--fg-muted)" id="eq-weight-info">low-shelf @ 5 Hz</div>
+            <input type="range" id="eq-weight-slider" min="-12" max="12" step="0.1" value="0"
+                   class="eq-vslider"
+                   style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:36px;height:140px;margin:6px 0">
+            <div style="font-family:ui-monospace,Consolas,monospace;font-size:13px;font-weight:600">
+              <span id="eq-weight-val">+0.0</span> dB
+            </div>
+            <div style="font-size:10px;color:var(--fg-muted);text-align:center" data-i18n="eq.hint_weight">peso / slip lento</div>
+          </div>
+          <!-- CHASSIS (peak) -->
+          <div class="eq-band" data-band="chassis" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#1a1a1a;border:1px solid var(--border);border-radius:6px">
+            <div style="font-size:13px;font-weight:600;color:#34d399" data-i18n="eq.band_chassis">CHASSIS</div>
+            <div style="font-size:11px;color:var(--fg-muted)" id="eq-chassis-info">peak @ 12 Hz</div>
+            <input type="range" id="eq-chassis-slider" min="-12" max="12" step="0.1" value="0"
+                   class="eq-vslider"
+                   style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:36px;height:140px;margin:6px 0">
+            <div style="font-family:ui-monospace,Consolas,monospace;font-size:13px;font-weight:600">
+              <span id="eq-chassis-val">+0.0</span> dB
+            </div>
+            <div style="font-size:10px;color:var(--fg-muted);text-align:center" data-i18n="eq.hint_chassis">suspensão / body roll</div>
+          </div>
+          <!-- ROAD (high-shelf) -->
+          <div class="eq-band" data-band="road" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#1a1a1a;border:1px solid var(--border);border-radius:6px">
+            <div style="font-size:13px;font-weight:600;color:#fbbf24" data-i18n="eq.band_road">ROAD</div>
+            <div style="font-size:11px;color:var(--fg-muted)" id="eq-road-info">high-shelf @ 25 Hz</div>
+            <input type="range" id="eq-road-slider" min="-12" max="12" step="0.1" value="0"
+                   class="eq-vslider"
+                   style="-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:36px;height:140px;margin:6px 0">
+            <div style="font-family:ui-monospace,Consolas,monospace;font-size:13px;font-weight:600">
+              <span id="eq-road-val">+0.0</span> dB
+            </div>
+            <div style="font-size:10px;color:var(--fg-muted);text-align:center" data-i18n="eq.hint_road">textura / kerbs</div>
+          </div>
+          <!-- Side controls + chart -->
+          <div style="display:flex;flex-direction:column;gap:8px;min-width:300px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button id="eq-btn-reset" class="warn" style="flex:1;font-size:12px" data-i18n="eq.btn_reset">↺ Reset flat</button>
+              <button id="eq-btn-fetch" style="flex:1;font-size:12px" data-i18n="eq.btn_fetch">⟳ Ler do device</button>
+            </div>
+            <canvas id="eq-chart" style="flex:1;width:100%;min-height:160px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px"></canvas>
+            <div style="font-size:10px;color:var(--fg-muted);text-align:center" data-i18n="eq.chart_hint">Resposta acumulada dos 3 peaks (eixo X log: 0.5–200 Hz)</div>
+          </div>
+        </div>
+        <div id="eq-status" style="margin-top:10px;font-size:11px;color:var(--fg-muted);font-family:ui-monospace,Consolas,monospace;min-height:14px"></div>
+      `;
+      panel.appendChild(eqWrap);
+      setTimeout(_eqWireUI, 0);
+
       const chartWrap = document.createElement('div');
       chartWrap.className = 'fr-chart-wrap';
       chartWrap.style.cssText = 'grid-column:1/-1;background:#0c0c0c;border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:14px';
@@ -14109,10 +14850,18 @@ function buildTabs() {
       }, 0);
     }
 
+    // Estado: enquanto iteramos os fields, controla se estamos dentro de
+    // um bloco "advanced". Cada group reseta o estado conforme o nome
+    // estiver ou não no ADVANCED_GROUPS set. Fields renderizados depois
+    // dum group herdam o estado até o próximo group aparecer.
+    let _inAdvanced = false;
+
     tab.fields.forEach(fld => {
       if (fld.group) {
         const g = document.createElement('div');
         g.className = 'group';
+        _inAdvanced = ADVANCED_GROUPS.has(fld.group);
+        if (_inAdvanced) g.classList.add('advanced-section');
         // Mapeia label → key i18n. Se houver chave registrada usa, senão fallback raw text.
         const groupKey = GROUP_KEY_MAP[fld.group];
         if (groupKey) {
@@ -14384,6 +15133,7 @@ function buildTabs() {
       // diferentes ficam desalinhados (label1, value1, label2 / value2, label3...).
       const fieldWrap = document.createElement('div');
       fieldWrap.className = 'field';
+      if (_inAdvanced) fieldWrap.classList.add('advanced-section');
       fieldWrap.dataset.fieldPath = path;
       fieldWrap.appendChild(labelEl);
       fieldWrap.appendChild(valWrap);
@@ -16901,9 +17651,13 @@ function wireFFBLive() {
 
 function buildDebugHTML() {
   return `
-    <div class="debug-section" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:0">
+    <div class="debug-section" style="display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:0;flex-wrap:wrap">
       <button id="btn-refresh-all" class="primary" style="padding:10px 20px;font-size:17px" data-i18n="dbg.refresh_all">↻ Atualizar tudo</button>
       <span style="color:var(--muted);font-size:13px" data-i18n="dbg.refresh_all_hint">Lê info + erros + monitor live de uma vez. Atalho: tecla R quando aba Debug ativa.</span>
+      <button id="btn-toggle-advanced"
+              style="margin-left:auto;padding:8px 14px;font-size:12px;background:#1a1a1a;color:var(--fg);border:1px solid var(--border);border-radius:4px;cursor:pointer"
+              data-i18n="dbg.advanced_show"
+              data-i18n-title="dbg.advanced_hint">⚙ Mostrar seções avançadas</button>
     </div>
 
     <div class="debug-section">
@@ -17016,6 +17770,31 @@ function initDebugTab() {
   // Botão grande "Atualizar tudo" no topo
   const btnAll = document.getElementById('btn-refresh-all');
   if (btnAll) btnAll.onclick = refreshAll;
+
+  // Toggle de seções avançadas (ADVANCED_GROUPS hidden por default).
+  // Persiste em localStorage; aplica via classe body.show-advanced que o
+  // CSS usa pra mostrar/esconder os elementos marcados.advanced-section.
+  const ADV_LS_KEY = 'odrive_wheel_show_advanced';
+  const btnAdv = document.getElementById('btn-toggle-advanced');
+  function _applyAdvancedVisibility(show) {
+    document.body.classList.toggle('show-advanced', !!show);
+    if (btnAdv) {
+      const key = show ? 'dbg.advanced_hide' : 'dbg.advanced_show';
+      btnAdv.dataset.i18n = key;
+      btnAdv.textContent = t(key);
+      btnAdv.style.background = show ? 'var(--accent)' : '#1a1a1a';
+      btnAdv.style.color      = show ? '#fff'           : 'var(--fg)';
+    }
+  }
+  const initialShow = localStorage.getItem(ADV_LS_KEY) === '1';
+  _applyAdvancedVisibility(initialShow);
+  if (btnAdv) {
+    btnAdv.onclick = () => {
+      const next = !document.body.classList.contains('show-advanced');
+      localStorage.setItem(ADV_LS_KEY, next ? '1' : '0');
+      _applyAdvancedVisibility(next);
+    };
+  }
 
   // Atalho de teclado R quando a aba Debug está ativa
   document.addEventListener('keydown', (e) => {
@@ -17425,6 +18204,13 @@ function selectTab(id) {
     // Também para polling do painel de diagnóstico se estiver rodando
     if (typeof window._encDiagStopPoll   === 'function') window._encDiagStopPoll();
   }
+  // Setup wizard: liga poll de encoder check (agulha + readouts no Step 7)
+  // só enquanto a aba está visível. Para sair da aba é suficiente parar.
+  if (id === 'setup') {
+    if (typeof window._setupEncCheckStartPoll === 'function') window._setupEncCheckStartPoll();
+  } else {
+    if (typeof window._setupEncCheckStopPoll === 'function') window._setupEncCheckStopPoll();
+  }
   // Aba Inputs: auto-start polling ao entrar, auto-stop ao sair. Substitui
   // o "ligar manual" via botão (mas o botão ainda está disponível pra
   // ligar/desligar dentro da aba se necessário).
@@ -17610,16 +18396,69 @@ async function writeOne(input) {
   }
 }
 
+// ===========================================================================
+// Bulk-read gate — pausa polls periódicos enquanto readAll() está rodando.
+// ---------------------------------------------------------------------------
+// Problema observado: ao conectar a serial, readAll dispara ~200 leituras
+// sequenciais via sendCmd. Em paralelo, polls periódicos (encoder check do
+// Step 8, capture-center, enc-diag, inputs etc.) também enviam comandos no
+// mesmo canal. Como ODrive ASCII e OFFB cmdparser respondem em formatos
+// diferentes mas usam a mesma fila pendingReplies, qualquer dessincronia
+// (timeout, write fora de ordem, resposta de protocolo cruzado) faz o
+// próximo readProp receber resposta destinada a outra request. Sintoma:
+// pos_estimate mostra "True", shadow_count mostra "1.5", etc.
+//
+// Solução: contador global incrementado por readAll. Polls verificam
+// _isBulkBusy() no início do tick e pulam quando truthy. Como cada poll
+// já é idempotente e re-fira no próximo intervalo, pular alguns ticks
+// não causa nada além de pausa visual temporária.
+// ===========================================================================
+let _bulkReadBusy = 0;
+function _isBulkBusy() { return _bulkReadBusy > 0; }
+window._isBulkBusy = _isBulkBusy;   // expor pra polls que vivem em outro escopo
+
+function _showBulkProgress(n, total) {
+  const box  = document.getElementById('bulk-progress');
+  const cnt  = document.getElementById('bulk-progress-count');
+  const bar  = document.getElementById('bulk-progress-bar');
+  if (!box) return;
+  box.style.display = 'block';
+  if (cnt) cnt.textContent = n + '/' + total;
+  if (bar) {
+    const pct = total > 0 ? Math.min(100, (n / total) * 100) : 0;
+    bar.style.width = pct.toFixed(1) + '%';
+  }
+}
+function _hideBulkProgress() {
+  const box = document.getElementById('bulk-progress');
+  if (!box) return;
+  // Pequeno delay pra mostrar "100/100" antes de esconder — feedback visual
+  // de "terminou", não "sumiu na metade".
+  const bar = document.getElementById('bulk-progress-bar');
+  if (bar) bar.style.width = '100%';
+  setTimeout(() => { box.style.display = 'none'; }, 250);
+}
+
 async function readAll() {
   // Apenas inputs com dataset.path são SCHEMA fields mapeados pra device.
   // Quick Start, FFB Test inline, overlay controls etc. NÃO têm path e
   // não devem ser lidos do device (caso contrário viram "invalid property").
   const inputs = document.querySelectorAll(
     '#content input[data-path], #content select[data-path]');
+  const total = inputs.length;
+  _bulkReadBusy++;
+  _showBulkProgress(0, total);
   let n = 0;
-  for (const inp of inputs) {
-    await readOne(inp);
-    n++;
+  try {
+    for (const inp of inputs) {
+      await readOne(inp);
+      n++;
+      // Atualiza UI a cada 5 fields — overhead mínimo, sensação fluida
+      if ((n % 5) === 0 || n === total) _showBulkProgress(n, total);
+    }
+  } finally {
+    _bulkReadBusy--;
+    _hideBulkProgress();
   }
   logLine('--- readAll: ' + n + ' fields ---');
 
@@ -17655,6 +18494,513 @@ async function readAll() {
 // pra evitar tentativas inúteis e logs ruidosos durante save/import.
 //
 // Lista pequena e bem definida; expandir só se aparecerem outros casos.
+// ===========================================================================
+// PERFIS DE TUNING FFB
+// ---------------------------------------------------------------------------
+// Um perfil é um snapshot dos parâmetros de PILOTAGEM — não da identidade do
+// hardware. Trocar de perfil nunca deve poder quebrar a calibração do motor
+// ou do encoder, então pole_pairs, phase_resistance, encoder mode/cpr/offset,
+// brake_resistance etc. ficam deliberadamente de fora. Pra clonar uma placa
+// inteira existe o Export/Import global do header.
+//
+// Armazenamento: File System Access API. Os perfis são arquivos .json numa
+// pasta escolhida pelo usuário, e o handle da pasta é persistido no IndexedDB
+// (handles são structured-cloneable). Ao reabrir o tool a pasta volta sozinha
+// — só precisa de um clique pra reconceder permissão, que é exigência do
+// browser e não dá pra contornar. Vantagem sobre localStorage: os perfis são
+// arquivos reais, sobrevivem a limpeza do browser, e dá pra versionar ou
+// sincronizar a pasta via Drive/OneDrive e compartilhar com outras pessoas.
+// Fallback pra localStorage quando a API não existe (Firefox/Safari) — o tool
+// já exige WebSerial, que é Chrome/Edge, então na prática é raro.
+// ===========================================================================
+
+// Abas cujos campos entram no perfil por inteiro. Varrer a aba (em vez de
+// listar paths) faz campos novos entrarem sozinhos quando o SCHEMA crescer.
+const PROFILE_TABS = ['ffb-wheel', 'ffb-effects', 'ffb-filters'];
+
+// Fora das abas FFB, mas ainda tuning e não identidade do hardware:
+//   encoder.bandwidth        — virou knob real de ruído/latência depois que
+//                              speed/accel passaram a vir da PLL
+//   current_lim              — teto de força; faz par com axis.maxtorque
+//   current_control_bandwidth— aspereza/chiado do motor
+const PROFILE_EXTRA_PATHS = [
+  'axis0.encoder.config.bandwidth',
+  'axis0.motor.config.current_lim',
+  'axis0.motor.config.current_control_bandwidth',
+];
+
+// EQ: os sliders são UI custom (viram writePropOffb direto), não têm input
+// com data-path, então precisam de tratamento próprio na captura/aplicação.
+const PROFILE_EQ_PATHS = ['axis.eqweight', 'axis.eqchassis', 'axis.eqroad'];
+
+const PROFILE_FILE_MARK = 'odrive-wheel-profile';
+const PROF_IDB_NAME = 'odrive-wheel-profiles';
+const PROF_LS_FALLBACK = 'odrive-profiles-fallback';
+
+let _profDirHandle = null;   // FileSystemDirectoryHandle da pasta ativa
+let _profList = [];          // [{name, fileName, meta, values}]
+let _profSelected = null;    // fileName do perfil selecionado na lista
+
+const _profFsSupported = () => (typeof window.showDirectoryPicker === 'function');
+
+// ---- IndexedDB mínimo (só pra guardar o handle da pasta) ------------------
+function _profIdb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(PROF_IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function _profIdbSet(key, val) {
+  const db = await _profIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(val, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function _profIdbGet(key) {
+  const db = await _profIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('handles', 'readonly');
+    const rq = tx.objectStore('handles').get(key);
+    rq.onsuccess = () => { db.close(); resolve(rq.result || null); };
+    rq.onerror = () => { db.close(); reject(rq.error); };
+  });
+}
+
+// ---- Pasta ----------------------------------------------------------------
+async function _profPickFolder() {
+  if (!_profFsSupported()) {
+    toast('Navegador sem File System Access API — usando armazenamento local', 'warn');
+    return false;
+  }
+  try {
+    const h = await window.showDirectoryPicker({ id: 'odrive-profiles', mode: 'readwrite' });
+    _profDirHandle = h;
+    await _profIdbSet('dir', h);
+    await _profRefresh();
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') _profLog('falha ao abrir pasta: ' + e.message, 'err');
+    return false;
+  }
+}
+
+// Tenta restaurar a pasta da sessão anterior. `interactive` decide se pode
+// pedir permissão (precisa de gesto do usuário) ou só consultar silenciosamente.
+async function _profRestoreFolder(interactive) {
+  if (!_profFsSupported()) return false;
+  try {
+    const h = await _profIdbGet('dir');
+    if (!h) return false;
+    const opts = { mode: 'readwrite' };
+    let perm = await h.queryPermission(opts);
+    if (perm === 'prompt' && interactive) perm = await h.requestPermission(opts);
+    if (perm !== 'granted') { _profDirHandle = null; return false; }
+    _profDirHandle = h;
+    return true;
+  } catch (e) {
+    _profLog('pasta anterior indisponível: ' + e.message, 'err');
+    return false;
+  }
+}
+
+// ---- Leitura/escrita de perfis -------------------------------------------
+async function _profLoadAll() {
+  if (!_profDirHandle) {
+    // Fallback localStorage
+    try {
+      const raw = localStorage.getItem(PROF_LS_FALLBACK);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  const out = [];
+  for await (const [name, handle] of _profDirHandle.entries()) {
+    if (handle.kind !== 'file' || !name.toLowerCase().endsWith('.json')) continue;
+    try {
+      const txt = await (await handle.getFile()).text();
+      const obj = JSON.parse(txt);
+      if (obj && obj._type === PROFILE_FILE_MARK) out.push({ fileName: name, ...obj });
+    } catch { /* arquivo json que não é perfil — ignora silenciosamente */ }
+  }
+  out.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  return out;
+}
+
+async function _profSave(profile) {
+  const fileName = profile.fileName ||
+    (profile.name.replace(/[^\w\-. ]+/g, '_').trim() || 'perfil') + '.json';
+  const body = {
+    _type: PROFILE_FILE_MARK,
+    _version: 1,
+    name: profile.name,
+    created: profile.created || new Date().toISOString(),
+    modified: new Date().toISOString(),
+    values: profile.values,
+  };
+  if (_profDirHandle) {
+    const fh = await _profDirHandle.getFileHandle(fileName, { create: true });
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(body, null, 2));
+    await w.close();
+  } else {
+    const all = await _profLoadAll();
+    const i = all.findIndex(p => p.fileName === fileName);
+    const rec = { fileName, ...body };
+    if (i >= 0) all[i] = rec; else all.push(rec);
+    localStorage.setItem(PROF_LS_FALLBACK, JSON.stringify(all));
+  }
+  return fileName;
+}
+
+async function _profDelete(fileName) {
+  if (_profDirHandle) {
+    await _profDirHandle.removeEntry(fileName);
+  } else {
+    const all = (await _profLoadAll()).filter(p => p.fileName !== fileName);
+    localStorage.setItem(PROF_LS_FALLBACK, JSON.stringify(all));
+  }
+}
+
+// ---- Captura / aplicação --------------------------------------------------
+// Captura o que está NA TELA (não o último valor lido do device): se o usuário
+// ajustou um slider e ainda não aplicou, é esse valor que ele quer no perfil.
+function _profCaptureInputs() {
+  const values = {};
+  const seen = new Set();
+  const take = (inp) => {
+    const p = inp.dataset.path;
+    if (!p || seen.has(p)) return;
+    if (inp.dataset.type === 'bool') {
+      seen.add(p);
+      values[p] = inp.checked ? 'True' : 'False';
+      return;
+    }
+    // Campo em branco = nunca foi lido do device (ou o usuário apagou).
+    // Salvar isso geraria um perfil que escreve string vazia e falha na
+    // aplicação, então simplesmente não entra no perfil.
+    const raw = String(inp.value).trim();
+    if (raw === '') return;
+    seen.add(p);
+    values[p] = raw;
+  };
+  for (const tabIdName of PROFILE_TABS) {
+    document.querySelectorAll(
+      '#' + tabId(tabIdName) + ' input[data-path], #' + tabId(tabIdName) + ' select[data-path]'
+    ).forEach(take);
+  }
+  for (const p of PROFILE_EXTRA_PATHS) {
+    const inp = document.querySelector('#content [data-path="' + p + '"]');
+    if (inp) take(inp);
+  }
+  // EQ vem do estado da UI do gráfico, que é a fonte da verdade dos sliders.
+  if (typeof _eqState !== 'undefined' && _eqState && _eqState.bands) {
+    for (const band of _eqState.bands) {
+      values['axis.' + band.cmd] = Number(band.gainDb).toFixed(1);
+    }
+  }
+  return values;
+}
+
+// Escreve o perfil no device. NÃO persiste em NVM — igual ao Import global:
+// o usuário testa, e só clica Salvar se aprovar. Reboot descarta.
+async function _profApplyValues(values) {
+  if (!writer) { toast(t('toast.connect_first_board'), 'err'); return; }
+  const jobs = [];
+  for (const [path, val] of Object.entries(values)) {
+    if (PROFILE_EQ_PATHS.includes(path)) { jobs.push({ path, val, eq: true }); continue; }
+    const inp = document.querySelector('#content [data-path="' + path + '"]');
+    if (inp) jobs.push({ path, val, inp });
+  }
+  if (!jobs.length) { toast('Perfil sem campos aplicáveis', 'warn'); return; }
+
+  // Gate: aplicar dispara dezenas de writes seriais — pausa polls periódicos
+  // pra não interlear respostas de protocolos diferentes no mesmo canal.
+  _bulkReadBusy++;
+  let ok = 0, fail = 0;
+  try {
+    for (let i = 0; i < jobs.length; i++) {
+      const j = jobs[i];
+      try {
+        if (j.eq) {
+          await writePropOffb(j.path, j.val);
+          const band = (_eqState && _eqState.bands)
+            ? _eqState.bands.find(b => 'axis.' + b.cmd === j.path) : null;
+          if (band) band.gainDb = parseFloat(j.val) || 0;
+        } else {
+          setInputValue(j.inp, j.val, /*markSynced=*/false);
+          await writeOne(j.inp);
+        }
+        ok++;
+      } catch (e) {
+        fail++;
+        logLine('perfil write fail: ' + j.path + ' → ' + e.message, 'err');
+      }
+      _profLog('aplicando ' + (i + 1) + '/' + jobs.length + ' — ' + j.path);
+    }
+  } finally {
+    _bulkReadBusy = Math.max(0, _bulkReadBusy - 1);
+  }
+  // Redesenha o gráfico do EQ com os ganhos novos, se a aba já foi construída.
+  if (typeof _eqSyncUI === 'function') _eqSyncUI();
+  else if (typeof _eqDraw === 'function' && document.getElementById('eq-chart')) _eqDraw();
+
+  _profLog(ok + ' aplicados' + (fail ? ', ' + fail + ' falharam' : '') +
+           ' — clique Salvar no topo pra gravar na placa', fail ? 'err' : 'tx');
+  toast(fail ? ('⚠ ' + ok + ' ok, ' + fail + ' falhas') :
+               ('✓ ' + ok + ' campos aplicados — não salvo ainda'), fail ? 'warn' : 'ok');
+}
+
+function _profLog(msg, cls) {
+  const el = document.getElementById('prof-status');
+  if (el) el.textContent = msg;
+  if (typeof logLine === 'function') logLine('perfis: ' + msg, cls || 'tx');
+}
+
+// ---- UI -------------------------------------------------------------------
+function buildProfilesHTML() {
+  return `
+    <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:14px">
+
+      <div style="background:#0c0c0c;border:1px solid var(--border);border-radius:6px;padding:14px">
+        <h3 style="margin:0 0 4px" data-i18n="prof.folder_title">🗂 Pasta de perfis</h3>
+        <p class="hint" style="margin:0 0 10px;color:var(--fg-dim);font-size:13px" data-i18n="prof.folder_hint">
+          Escolha uma pasta no seu computador para guardar os perfis. A pasta é lembrada entre sessões — ao reabrir a ferramenta basta reconceder o acesso com um clique. Como são arquivos comuns, dá para fazer backup, sincronizar via Drive/OneDrive ou enviar para outra pessoa.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button id="prof-btn-folder" class="primary" data-i18n="prof.btn_folder">📁 Escolher pasta…</button>
+          <button id="prof-btn-reload" data-i18n="prof.btn_reload">↻ Recarregar</button>
+          <span id="prof-folder-name" style="font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--fg-muted)">—</span>
+        </div>
+        <div id="prof-fs-warn" style="display:none;margin-top:8px;font-size:12px;color:#ffca28;line-height:1.5" data-i18n="prof.fs_warn">
+          ⚠ Este navegador não expõe a File System Access API. Os perfis ficam salvos no armazenamento local do navegador e somem se você limpar os dados do site. Use Exportar para guardar cópias.
+        </div>
+      </div>
+
+      <div style="background:#0c0c0c;border:1px solid var(--border);border-radius:6px;padding:14px">
+        <h3 style="margin:0 0 4px" data-i18n="prof.list_title">Perfis salvos</h3>
+        <p class="hint" style="margin:0 0 10px;color:var(--fg-dim);font-size:13px" data-i18n="prof.list_hint">
+          Um perfil guarda o ajuste de pilotagem: as três abas de FFB (Wheel, Effects, Filters), as bandas do EQ e três parâmetros de tuning (largura de banda do encoder, limite de corrente e largura de banda do controle de corrente). Identidade do hardware — polos do motor, resistência, modo e calibração do encoder — fica de fora de propósito, para que trocar de perfil nunca quebre a calibração.
+        </p>
+        <div id="prof-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:12px"></div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button id="prof-btn-apply" class="primary" disabled data-i18n="prof.btn_apply">▶ Aplicar no volante</button>
+          <button id="prof-btn-new" class="ok" data-i18n="prof.btn_new">＋ Salvar atual como…</button>
+          <button id="prof-btn-update" disabled data-i18n="prof.btn_update">⟳ Sobrescrever</button>
+          <button id="prof-btn-rename" disabled data-i18n="prof.btn_rename">✎ Renomear</button>
+          <button id="prof-btn-del" class="danger" disabled data-i18n="prof.btn_del">🗑 Excluir</button>
+          <span style="flex:1"></span>
+          <button id="prof-btn-export" disabled data-i18n="prof.btn_export">⬇ Exportar arquivo</button>
+          <button id="prof-btn-import" data-i18n="prof.btn_import">⬆ Importar arquivo</button>
+          <input type="file" id="prof-file-import" accept=".json" style="display:none">
+        </div>
+
+        <div style="margin-top:10px;font-size:12px;color:var(--fg-dim);line-height:1.5" data-i18n-html="prof.apply_note">
+          Aplicar escreve os valores na placa mas <b>não grava na memória permanente</b>. Teste à vontade: se não gostar, basta reiniciar a placa para voltar ao que estava gravado. Se aprovar, use o botão Salvar no topo da página.
+        </div>
+        <div id="prof-status" style="margin-top:8px;font-size:11px;color:var(--fg-muted);font-family:ui-monospace,Consolas,monospace;min-height:14px"></div>
+      </div>
+
+    </div>
+  `;
+}
+
+function _profRenderList() {
+  const box = document.getElementById('prof-list');
+  if (!box) return;
+  if (!_profList.length) {
+    box.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-muted);font-size:13px;padding:10px 0">' +
+      (_profDirHandle || !_profFsSupported()
+        ? t('prof.empty')
+        : t('prof.no_folder')) + '</div>';
+  } else {
+    box.innerHTML = _profList.map(p => {
+      const sel = p.fileName === _profSelected;
+      const n = Object.keys(p.values || {}).length;
+      const when = p.modified ? new Date(p.modified).toLocaleString() : '';
+      return `
+        <button class="prof-card" data-file="${p.fileName}"
+          style="text-align:left;padding:10px 12px;border-radius:6px;cursor:pointer;
+                 background:${sel ? 'rgba(99,102,241,0.12)' : '#141414'};
+                 border:1px solid ${sel ? 'var(--accent)' : 'var(--border)'}">
+          <div style="font-weight:600;font-size:13px;color:var(--fg);margin-bottom:3px;
+                      overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name || p.fileName}</div>
+          <div style="font-size:11px;color:var(--fg-muted);font-family:ui-monospace,Consolas,monospace">${n} campos</div>
+          <div style="font-size:10px;color:var(--fg-muted);margin-top:2px">${when}</div>
+        </button>`;
+    }).join('');
+    box.querySelectorAll('.prof-card').forEach(card => {
+      card.addEventListener('click', () => {
+        _profSelected = card.dataset.file;
+        _profRenderList();
+        _profUpdateButtons();
+      });
+    });
+  }
+  _profUpdateButtons();
+}
+
+function _profUpdateButtons() {
+  const has = !!_profSelected && _profList.some(p => p.fileName === _profSelected);
+  ['prof-btn-apply', 'prof-btn-update', 'prof-btn-rename', 'prof-btn-del', 'prof-btn-export']
+    .forEach(id => { const b = document.getElementById(id); if (b) b.disabled = !has; });
+}
+
+async function _profRefresh() {
+  const nameEl = document.getElementById('prof-folder-name');
+  if (nameEl) nameEl.textContent = _profDirHandle ? _profDirHandle.name : t('prof.no_folder_short');
+  const warn = document.getElementById('prof-fs-warn');
+  if (warn) warn.style.display = _profFsSupported() ? 'none' : '';
+  _profList = await _profLoadAll();
+  if (_profSelected && !_profList.some(p => p.fileName === _profSelected)) _profSelected = null;
+  _profRenderList();
+}
+
+function _profWireUI() {
+  const $ = id => document.getElementById(id);
+  if (!$('prof-list')) return;
+
+  $('prof-btn-folder').addEventListener('click', async () => {
+    if (await _profPickFolder()) _profLog(t('prof.log_folder_set') + ' ' + _profDirHandle.name);
+  });
+
+  $('prof-btn-reload').addEventListener('click', async () => {
+    // Se a permissão caiu (reabriu o tool), este clique é o gesto que
+    // permite pedir de novo — por isso interactive=true aqui.
+    if (!_profDirHandle) await _profRestoreFolder(true);
+    await _profRefresh();
+    _profLog(_profList.length + ' ' + t('prof.log_loaded'));
+  });
+
+  $('prof-btn-apply').addEventListener('click', async () => {
+    const p = _profList.find(x => x.fileName === _profSelected);
+    if (!p) return;
+    await _profApplyValues(p.values || {});
+  });
+
+  $('prof-btn-new').addEventListener('click', async () => {
+    const values0 = _profCaptureInputs();
+    const n0 = Object.keys(values0).length;
+    // Campos em branco não entram na captura, então um total baixo significa
+    // que a UI ainda não recebeu os valores do device — salvar aqui geraria
+    // um perfil pela metade que sobrescreve só parte do tuning ao ser aplicado.
+    if (n0 < 10 && !confirm(t('prof.warn_partial').replace('{n}', n0))) return;
+    const name = prompt(t('prof.prompt_new'));
+    if (!name) return;
+    const values = _profCaptureInputs();
+    const n = Object.keys(values).length;
+    if (!n) { toast(t('prof.err_empty'), 'err'); return; }
+    try {
+      await _profSave({ name: name.trim(), values });
+      await _profRefresh();
+      const created = _profList.find(x => x.name === name.trim());
+      if (created) { _profSelected = created.fileName; _profRenderList(); }
+      _profLog(t('prof.log_saved').replace('{n}', n).replace('{name}', name));
+      toast('✓ ' + name, 'ok');
+    } catch (e) {
+      _profLog('falha ao salvar: ' + e.message, 'err');
+      toast('Falha ao salvar: ' + e.message, 'err');
+    }
+  });
+
+  $('prof-btn-update').addEventListener('click', async () => {
+    const p = _profList.find(x => x.fileName === _profSelected);
+    if (!p) return;
+    if (!confirm(t('prof.confirm_update').replace('{name}', p.name || p.fileName))) return;
+    const values = _profCaptureInputs();
+    try {
+      await _profSave({ ...p, values });
+      await _profRefresh();
+      _profLog(t('prof.log_updated').replace('{name}', p.name || p.fileName));
+      toast('✓ ' + (p.name || p.fileName), 'ok');
+    } catch (e) { _profLog('falha: ' + e.message, 'err'); }
+  });
+
+  $('prof-btn-rename').addEventListener('click', async () => {
+    const p = _profList.find(x => x.fileName === _profSelected);
+    if (!p) return;
+    const name = prompt(t('prof.prompt_rename'), p.name || '');
+    if (!name || name.trim() === p.name) return;
+    try {
+      // Nome do arquivo deriva do nome do perfil, então renomear = criar o
+      // novo e remover o antigo.
+      const old = p.fileName;
+      const nf = await _profSave({ ...p, fileName: null, name: name.trim() });
+      if (nf !== old) await _profDelete(old);
+      _profSelected = nf;
+      await _profRefresh();
+      _profLog(t('prof.log_renamed').replace('{name}', name));
+    } catch (e) { _profLog('falha ao renomear: ' + e.message, 'err'); }
+  });
+
+  $('prof-btn-del').addEventListener('click', async () => {
+    const p = _profList.find(x => x.fileName === _profSelected);
+    if (!p) return;
+    if (!confirm(t('prof.confirm_del').replace('{name}', p.name || p.fileName))) return;
+    try {
+      await _profDelete(p.fileName);
+      _profSelected = null;
+      await _profRefresh();
+      _profLog(t('prof.log_deleted').replace('{name}', p.name || p.fileName));
+    } catch (e) { _profLog('falha ao excluir: ' + e.message, 'err'); }
+  });
+
+  $('prof-btn-export').addEventListener('click', () => {
+    const p = _profList.find(x => x.fileName === _profSelected);
+    if (!p) return;
+    const body = { _type: PROFILE_FILE_MARK, _version: 1, name: p.name,
+                   created: p.created, modified: p.modified, values: p.values };
+    const blob = new Blob([JSON.stringify(body, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = p.fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $('prof-btn-import').addEventListener('click', () => {
+    const inp = $('prof-file-import');
+    inp.value = '';   // força o change a disparar mesmo com o mesmo arquivo
+    inp.click();
+  });
+
+  $('prof-file-import').addEventListener('change', async (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    try {
+      const obj = JSON.parse(await f.text());
+      if (!obj || obj._type !== PROFILE_FILE_MARK || !obj.values) {
+        toast(t('prof.err_not_profile'), 'err');
+        return;
+      }
+      // Importar não guarda na lista sozinho — só aplica. Se o usuário quiser
+      // manter, clica "Salvar atual como" depois de aplicar.
+      const n = Object.keys(obj.values).length;
+      if (!confirm(t('prof.confirm_import')
+            .replace('{name}', obj.name || f.name).replace('{n}', n))) return;
+      await _profApplyValues(obj.values);
+    } catch (e) {
+      toast('JSON inválido: ' + e.message, 'err');
+    }
+  });
+
+  // Restaura a pasta da sessão anterior sem pedir permissão (não temos gesto
+  // do usuário aqui). Se a permissão ainda estiver válida a lista aparece
+  // sozinha; se não, o usuário clica Recarregar e o browser pergunta.
+  (async () => {
+    await _profRestoreFolder(false);
+    await _profRefresh();
+    if (!_profDirHandle && _profFsSupported()) {
+      const h = await _profIdbGet('dir').catch(() => null);
+      if (h) _profLog(t('prof.log_needs_permission'));
+    }
+  })();
+}
+
 const READONLY_EXPORT_PATHS = new Set([
   'axis0.controller.config.anticogging.index',           // contador runtime, não config
   'axis0.controller.config.anticogging.calib_anticogging', // disparador, não estado persistente
@@ -18399,6 +19745,35 @@ wireSetupTab();
       </div>
     </div>
 
+    <!-- ===================== MT6835 (mode=261) ==================== -->
+    <!-- Só aparece quando sys.mtstatus? indica is_mt6835=1. Análogo ao
+         painel AS5047 magnet: boot check + STATUS warnings + estado da
+         auto-calibração + botões Set Zero / Program EEPROM. -->
+    <div id="enc-diag-mt6835-panel" style="display:none;margin-top:10px;padding:10px;background:#0f0f0f;border:1px solid var(--border);border-radius:4px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--fg);font-weight:600;margin-bottom:6px">
+        <span>MT6835 status</span>
+        <span id="enc-diag-mt-boot" style="font-weight:600">—</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-family:var(--mono,monospace);font-size:12px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">HYST zeroed</span><span id="enc-diag-mt-hyst" style="color:var(--fg);font-weight:600">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Weak field</span><span id="enc-diag-mt-weak" style="color:var(--fg);font-weight:600">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Overspeed</span><span id="enc-diag-mt-over" style="color:var(--fg);font-weight:600">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Undervolt</span><span id="enc-diag-mt-uv"   style="color:var(--fg);font-weight:600">—</span></div>
+        <div style="grid-column:1/-1;display:flex;justify-content:space-between"><span style="color:var(--muted)">Auto-cal state</span><span id="enc-diag-mt-cal" style="color:var(--fg);font-weight:600">—</span></div>
+      </div>
+
+      <!-- Zero + Program EEPROM. Ambos exigem motor desarmado (checagem
+           também é feita no firmware). Program EEPROM avisa do delay de 6 s. -->
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <button id="enc-diag-mt-zero"    class="ok" style="font-size:12px" title="Grava a posição atual como ZERO_POS do MT6835 (volátil — persiste com Program EEPROM). Requer motor desarmado.">🎯 Set Zero</button>
+        <button id="enc-diag-mt-eeprom"  class="danger" style="font-size:12px" title="Persiste todo o register map (ZERO_POS, HYST, BW) na EEPROM interna do MT6835. NÃO desligar por 6 s após o comando (datasheet 7.6.6). Requer motor desarmado.">💾 Program EEPROM (6 s)</button>
+        <span id="enc-diag-mt-out" style="font-size:11px;color:var(--muted);font-family:var(--mono,monospace)"></span>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted);line-height:1.4">
+        ⚠ Set Zero grava só na RAM do chip — persiste até um power-cycle. Pra guardar, rode Program EEPROM logo depois e <b>NÃO desligue por 6 s</b>. Motor precisa estar desarmado nos dois.
+      </div>
+    </div>
+
     <div id="enc-diag-verify-out" style="display:none;font-family:var(--mono,monospace);font-size:12px;padding:8px 10px;background:#0f0f0f;border:1px solid var(--border);border-radius:4px;line-height:1.6"></div>
   `;
   panel.appendChild(section);
@@ -18421,6 +19796,8 @@ wireSetupTab();
       $('enc-diag-status').textContent = t('enc.diag_status_idle') + ' (sem serial)';
       return;
     }
+    // Gate: skip durante readAll pra não colidir reads no canal serial.
+    if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
     // SERIAL (não Promise.all) — sendCmd parece misturar respostas entre
     // protocolos quando há muitas requests in-flight simultâneas. Visto no
     // painel: shadow_count recebendo o output bruto de sys.encraw!. Custo
@@ -18533,6 +19910,39 @@ wireSetupTab();
     // Mostra hint contextual se bits ABS_SPI_* presentes (0x40 | 0x80 | 0x100)
     const absSpiMask = 0x40 | 0x80 | 0x100;
     $('enc-diag-abs-warn').style.display = (errN & absSpiMask) ? '' : 'none';
+
+    // ---------- MT6835 (mode 261) ----------
+    // sys.mtstatus? retorna "N/A (encoder mode != 261)" quando não é MT6835,
+    // ou "boot=X hyst0=Y overspeed=A weakfield=B undervolt=C cal=<name>".
+    const mtReply = await execPropOffb('sys.mtstatus').catch(() => null);
+    const mtPanel = $('enc-diag-mt6835-panel');
+    if (mtReply && mtReply.indexOf('boot=') === 0) {
+      mtPanel.style.display = '';
+      const mt = parseKV(mtReply);
+      const okBad = (v, invertOk) => {
+        // invertOk=false: '1' = bom (verde). invertOk=true: '0' = bom.
+        const n = parseInt(v || '0', 10);
+        const good = invertOk ? (n === 0) : (n === 1);
+        return { txt: n ? '✓' : '✕', color: good ? '#66bb6a' : '#ef5350' };
+      };
+      const bootE  = okBad(mt.boot,      false);   // boot=1 é bom
+      const hystE  = okBad(mt.hyst0,     false);   // hyst0=1 é bom
+      const weakE  = okBad(mt.weakfield, true);    // weakfield=0 é bom
+      const overE  = okBad(mt.overspeed, true);    // overspeed=0 é bom
+      const uvE    = okBad(mt.undervolt, true);    // undervolt=0 é bom
+      $('enc-diag-mt-boot').textContent = bootE.txt + ' boot';
+      $('enc-diag-mt-boot').style.color = bootE.color;
+      $('enc-diag-mt-hyst').textContent = hystE.txt; $('enc-diag-mt-hyst').style.color = hystE.color;
+      $('enc-diag-mt-weak').textContent = weakE.txt + (mt.weakfield === '1' ? ' ⚠ magneto longe' : ''); $('enc-diag-mt-weak').style.color = weakE.color;
+      $('enc-diag-mt-over').textContent = overE.txt; $('enc-diag-mt-over').style.color = overE.color;
+      $('enc-diag-mt-uv'  ).textContent = uvE.txt;   $('enc-diag-mt-uv'  ).style.color = uvE.color;
+      // cal: 'none'/'running'/'failed'/'ok'/'read_fail' — texto direto
+      const calColor = { none: 'var(--muted)', running: '#ffca28', ok: '#66bb6a', failed: '#ef5350', read_fail: '#ef5350' }[mt.cal] || 'var(--fg)';
+      $('enc-diag-mt-cal').textContent = mt.cal || '—';
+      $('enc-diag-mt-cal').style.color = calColor;
+    } else {
+      mtPanel.style.display = 'none';
+    }
   }
 
   function setRunning(on) {
@@ -18599,6 +20009,64 @@ wireSetupTab();
       `);
     }
     out.innerHTML = rows.join('');
+  });
+
+  // ----- MT6835 Set Zero (sys.mtzero!) -----
+  // Grava posição atual como ZERO_POS do MT6835 (volátil na RAM do chip).
+  // Firmware recusa se motor armado. Mostra ack na barra do painel.
+  $('enc-diag-mt-zero').addEventListener('click', async () => {
+    if (!writer) { toast('Sem serial', 'err'); return; }
+    // Warning explícito: chamada nova pra maioria dos usuários.
+    if (!confirm(
+      'Grava a posição ATUAL do volante como zero do MT6835.\n\n' +
+      '• Volatil — some no próximo power-cycle a menos que rode Program EEPROM depois.\n' +
+      '• Motor precisa estar desarmado (axis0 state = IDLE).\n\n' +
+      'Continuar?')) return;
+    const out = $('enc-diag-mt-out');
+    out.textContent = '⏳ mtzero…';
+    const reply = await execPropOffb('sys.mtzero').catch(() => 'FAIL');
+    const ok = reply && reply.indexOf('OK') === 0;
+    out.textContent = reply || '(sem resposta)';
+    out.style.color = ok ? '#66bb6a' : '#ef5350';
+    logLine('mt6835: sys.mtzero! → ' + reply, ok ? 'rx' : 'err');
+    toast(ok ? '🎯 Zero volátil aplicado — rode Program EEPROM pra persistir' : '❌ Falhou (motor armado?)', ok ? 'ok' : 'err');
+  });
+
+  // ----- MT6835 Program EEPROM (sys.mteeprom!) -----
+  // Persiste o register map inteiro. Pausa leituras por 6.5s no firmware
+  // (datasheet 7.6.6). Usuário NÃO pode desligar durante essa janela.
+  $('enc-diag-mt-eeprom').addEventListener('click', async () => {
+    if (!writer) { toast('Sem serial', 'err'); return; }
+    if (!confirm(
+      '⚠ Persiste o register map do MT6835 na EEPROM interna do chip.\n\n' +
+      '• NÃO desligue a placa por 6 segundos após confirmar (datasheet).\n' +
+      '• Motor precisa estar desarmado.\n' +
+      '• Leituras de ângulo ficam pausadas ~6.5s (posição congela).\n\n' +
+      'Continuar?')) return;
+    const out = $('enc-diag-mt-out');
+    out.textContent = '⏳ programando EEPROM…';
+    out.style.color = '#ffca28';
+    const reply = await execPropOffb('sys.mteeprom').catch(() => 'FAIL');
+    const ok = reply && reply.indexOf('OK') === 0;
+    out.textContent = reply || '(sem resposta)';
+    out.style.color = ok ? '#66bb6a' : '#ef5350';
+    logLine('mt6835: sys.mteeprom! → ' + reply, ok ? 'rx' : 'err');
+    if (ok) {
+      toast('💾 Programando… NÃO DESLIGUE por 6s', 'ok');
+      // Countdown visual de 6.5s pra reforçar o aviso.
+      let secLeft = 6;
+      const orig = out.textContent;
+      const tick = setInterval(() => {
+        out.textContent = orig + '  |  ⏱ NÃO DESLIGUE: ' + secLeft + 's';
+        if (--secLeft < 0) {
+          clearInterval(tick);
+          out.textContent = orig + '  |  ✓ Seguro pra desligar';
+          toast('✓ EEPROM programada — seguro pra desligar', 'ok');
+        }
+      }, 1000);
+    } else {
+      toast('❌ Falhou (motor armado?)', 'err');
+    }
   });
 
 })();
@@ -18670,6 +20138,8 @@ wireSetupTab();
     if (!encPanel || !encPanel.classList.contains('active')) {
       return;
     }
+    // Gate: skip durante readAll pra não colidir reads no canal serial.
+    if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
     const posRaw = await readProp('axis0.encoder.pos_estimate').catch(() => null);
     if (posRaw !== null) {
       const v = parseFloat(posRaw);
