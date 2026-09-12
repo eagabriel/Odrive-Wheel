@@ -396,7 +396,23 @@ static void ffb_thread(void *arg) {
             rpt.VBus   = sat100(odrive_bridge_get_vbus());
             rpt.IBus   = sat100(odrive_bridge_get_ibus());
             rpt.IBrake = sat100(odrive_bridge_get_brake_resistor_current());
-            // report_id=1: tud_hid_report strippa o id; payload = buttons..Slider
+            // Temperaturas em int8 °C. INT8_MIN (-128) = sensor não
+            // conectado / leitura NaN. -127..+127 é o range válido.
+            auto satTemp = [](float v) -> int8_t {
+                if (!std::isfinite(v)) return -128;
+                if (v >  127.0f)  return  127;
+                if (v < -127.0f)  return -127;
+                return (int8_t)v;
+            };
+            rpt.FetTempC   = satTemp(odrive_bridge_get_fet_temp());
+            rpt.MotorTempC = satTemp(odrive_bridge_get_motor_temp());
+            // Estado + 4 errors do ODrive — cast direto, enums já são int32.
+            rpt.AxisState       = (int8_t) odrive_bridge_get_axis_state();
+            rpt.AxisError       = (int32_t)odrive_bridge_get_axis_error();
+            rpt.MotorError      = (int32_t)odrive_bridge_get_motor_error();
+            rpt.EncoderError    = (int32_t)odrive_bridge_get_encoder_error();
+            rpt.ControllerError = (int32_t)odrive_bridge_get_controller_error();
+            // report_id=1: tud_hid_report strippa o id; payload = buttons..ControllerError
             tud_hid_report(1, ((uint8_t*)&rpt) + 1, sizeof(rpt) - 1);
         }
 
@@ -1180,7 +1196,7 @@ extern "C" float ffb_get_axis_fxratio(void){ return s_axis_raw ? s_axis_raw->fxR
 extern "C" void  ffb_set_axis_range(float v)  { if (s_axis_raw) s_axis_raw->rangeDegrees_ = v; }
 extern "C" void  ffb_set_axis_maxtq(float v)  {
     if (!s_axis_raw) return;
-    if (v < 0.1f) v = 0.1f; if (v > 25.0f) v = 25.0f;  // hard cap de seguranca (25 Nm)
+    if (v < 0.1f) v = 0.1f; if (v > 40.0f) v = 40.0f;  // hard cap de seguranca (40 Nm)
     s_axis_raw->maxTorque_Nm_ = v;
 }
 extern "C" void  ffb_set_axis_fxratio(float v){

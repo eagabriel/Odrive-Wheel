@@ -130,6 +130,20 @@ struct  __attribute__((__packed__)) reportHID_t {
 		int16_t VBus   = 0;   // vbus_voltage × 100      (V × 100)
 		int16_t IBus   = 0;   // ibus × 100              (A × 100)
 		int16_t IBrake = 0;   // brake_resistor_current × 100 (A × 100)
+		// Temperaturas em °C (int8, range -128..+127). INT8_MIN (-128) =
+		// sensor não conectado / leitura inválida (NaN). Append-only no fim
+		// do struct — parsers antigos (plugin .NET pré-temp, overlay HTML)
+		// leem só os primeiros 30 bytes de payload e continuam funcionando.
+		int8_t  FetTempC   = -128;
+		int8_t  MotorTempC = -128;
+		// ODrive state + errors — append-only. Enums são int32 no interface
+		// autogen; int32_t bit-por-bit é lossless (uint32 usaria mesmo storage,
+		// mas HID declara signed abaixo pra economizar 5 bytes de LOGICAL_MAX).
+		int8_t   AxisState        = 0;   // AXIS_STATE_UNDEFINED=0, IDLE=1, CLOSED_LOOP=8, etc
+		int32_t  AxisError        = 0;   // bitmask — 0 = ERROR_NONE
+		int32_t  MotorError       = 0;
+		int32_t  EncoderError     = 0;
+		int32_t  ControllerError  = 0;
 };
 /**
  * Helper class for double buffered HID gamepad reports to allow use of different datatypes for main axes

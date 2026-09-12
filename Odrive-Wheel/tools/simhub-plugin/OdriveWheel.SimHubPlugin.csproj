@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>OdriveWheel.SimHubPlugin</RootNamespace>
+    <AssemblyName>OdriveWheel.SimHubPlugin</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>Egabriel</Authors>
+    <Company>Odrive-Wheel</Company>
+    <Copyright>MIT</Copyright>
+    <Description>SimHub plugin that reads Odrive-Wheel telemetry over USB HID at 1 kHz native rate.</Description>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <SimHubPath Condition="'$(SimHubPath)' == ''">C:\Program Files (x86)\SimHub</SimHubPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="SimHub.Plugins">
+      <HintPath>$(SimHubPath)\SimHub.Plugins.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameReaderCommon">
+      <HintPath>$(SimHubPath)\GameReaderCommon.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SimHub.Logging">
+      <HintPath>$(SimHubPath)\SimHub.Logging.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>$(SimHubPath)\log4net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.IO.Ports" />
+    <Reference Include="System.Management" />
+    <!-- Newtonsoft.Json vem do SimHub install (v13.0.4). Referencia direto
+         em vez de puxar via NuGet pra garantir a mesma versão sem conflito
+         de binding redirect. -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(SimHubPath)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HidSharp" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Badge do projeto — embutido no DLL como WPF Resource; acessível via
+         pack://application:,,,/OdriveWheel.SimHubPlugin;component/Assets/logo.png -->
+    <Resource Include="Assets\logo.png" />
+  </ItemGroup>
+
+  <Target Name="CopyToSimHub" AfterTargets="Build" Condition="Exists('$(SimHubPath)')">
+    <Message Text="Copying $(AssemblyName).dll to $(SimHubPath)" Importance="high" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(SimHubPath)" ContinueOnError="true" />
+    <Copy SourceFiles="$(OutputPath)HidSharp.dll" DestinationFolder="$(SimHubPath)" ContinueOnError="true" />
+  </Target>
+
+</Project>

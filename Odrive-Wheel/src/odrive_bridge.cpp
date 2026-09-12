@@ -109,6 +109,25 @@ extern "C" float odrive_bridge_get_motor_temp(void) {
     return axes[0].motor_.motor_thermistor_.temperature_;
 }
 
+// Estado + erros do ODrive (getters usados pelo HID + CLI de diagnóstico).
+// Todos os enums Error/AxisState são int32 (interface autogen), então
+// truncar pra uint32_t / uint8_t não perde nenhum bit real.
+extern "C" uint8_t odrive_bridge_get_axis_state(void) {
+    return (uint8_t)axes[0].current_state_;
+}
+extern "C" uint32_t odrive_bridge_get_axis_error(void) {
+    return (uint32_t)axes[0].error_;
+}
+extern "C" uint32_t odrive_bridge_get_motor_error(void) {
+    return (uint32_t)axes[0].motor_.error_;
+}
+extern "C" uint32_t odrive_bridge_get_encoder_error(void) {
+    return (uint32_t)axes[0].encoder_.error_;
+}
+extern "C" uint32_t odrive_bridge_get_controller_error(void) {
+    return (uint32_t)axes[0].controller_.error_;
+}
+
 // Snapshot dos contadores de SPI do encoder + último raw recebido.
 extern "C" void odrive_bridge_enc_get_raw(struct encraw_snap_t *snap) {
     auto& e = axes[0].encoder_;

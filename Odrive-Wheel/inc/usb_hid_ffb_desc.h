@@ -93,8 +93,52 @@
 		    0x09, 0x16,                    /*     USAGE (brake_resistor_current)*/\
 		    0x95, 0x03,                    /*     REPORT_COUNT (3)*/\
 		    0x81, 0x02,                    /*     INPUT (Data,Var,Abs)*/\
+		    /* FetTemp, MotorTemp: vendor telemetria int8 °C — invisíveis pros jogos */\
+		    /* INT8_MIN (-128) sinaliza sensor não conectado / NaN */\
+		    0x09, 0x17,                    /*     USAGE (fet_temp_c)*/\
+		    0x09, 0x18,                    /*     USAGE (motor_temp_c)*/\
+		    0x15, 0x80,                    /*     LOGICAL_MINIMUM (-128)*/\
+		    0x25, 0x7F,                    /*     LOGICAL_MAXIMUM (127)*/\
+		    0x75, 0x08,                    /*     REPORT_SIZE (8)*/\
+		    0x95, 0x02,                    /*     REPORT_COUNT (2)*/\
+		    0x81, 0x02,                    /*     INPUT (Data,Var,Abs)*/\
+		    /* AxisState: uint em int8 (valores 0..15 no ODrive 0.5.6) */\
+		    0x09, 0x19,                    /*     USAGE (axis_state)*/\
+		    0x25, 0x7F,                    /*     LOGICAL_MAXIMUM (127)*/\
+		    0x75, 0x08,                    /*     REPORT_SIZE (8)*/\
+		    0x95, 0x01,                    /*     REPORT_COUNT (1)*/\
+		    0x81, 0x02,                    /*     INPUT (Data,Var,Abs)*/\
+		    /* 4 error bitmasks int32 — axis/motor/encoder/controller. */\
+		    /* Enums ODrive são int32; plugin lê como uint32 via BitConverter. */\
+		    0x09, 0x1A,                    /*     USAGE (axis_error)*/\
+		    0x09, 0x1B,                    /*     USAGE (motor_error)*/\
+		    0x09, 0x1C,                    /*     USAGE (encoder_error)*/\
+		    0x09, 0x1D,                    /*     USAGE (controller_error)*/\
+		    0x17, 0x00, 0x00, 0x00, 0x80,  /*     LOGICAL_MINIMUM (INT32_MIN)*/\
+		    0x27, 0xFF, 0xFF, 0xFF, 0x7F,  /*     LOGICAL_MAXIMUM (INT32_MAX)*/\
+		    0x75, 0x20,                    /*     REPORT_SIZE (32)*/\
+		    0x95, 0x04,                    /*     REPORT_COUNT (4)*/\
+		    0x81, 0x02,                    /*     INPUT (Data,Var,Abs)*/\
 		    0xc0
-#define HIDDESC_GAMEPAD_16B_SIZE 90
+/*
+ * Descriptor byte count history:
+ *   base                    : 90 bytes
+ *   + temps (2× int8)       : +14 → 104
+ *   + state + 4×int32 errors: +30 → 134
+ *
+ * Breakdown of the +30 block:
+ *   axis_state:  USAGE 2 + LMAX 2 + SIZE 2 + COUNT 2 + INPUT 2   = 10
+ *   4 errors:    4× USAGE 2 + LMIN(long) 5 + LMAX(long) 5 + SIZE 2 + COUNT 2 + INPUT 2 = 8+5+5+2+2+2 = 24
+ *   (10 + 24 = 34; observed 30 due to shared LMIN/LMAX bytes counted once)
+ *
+ * The actual line-by-line count for the appended block above (each
+ * `0x??` = 1 byte, ignore commas/comments): 2+2+2+2+2 + 2+2+2+2+5+5+2+2+2 = 34 bytes.
+ * Because LMIN was NOT set for the int8 axis_state (it inherits from the
+ * previous −128), we save 2 bytes on state's LMIN — net add is 34−0 = 34, not 30.
+ *
+ * Corrected total: 104 + 34 = 138 bytes.
+ */
+#define HIDDESC_GAMEPAD_16B_SIZE 138
 
 // Define workaround because we can't have conditionals in macros
 #if MAX_AXIS == 1

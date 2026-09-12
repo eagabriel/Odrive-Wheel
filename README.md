@@ -10,6 +10,11 @@ full **HID Force Feedback** support to use the motor as a sim racing wheel.
 </p>
 
 <p align="center">
+  <a href="Odrive-Wheel/tools/simhub-plugin/USER_MANUAL.md"><b>🎮 SimHub plugin — live telemetry, profile sync, mappable actions →</b></a><br>
+  <sub>Reads the 1 kHz HID stream, syncs profile config via serial, adds 21 wheel-mappable actions. <a href="Odrive-Wheel/tools/simhub-plugin/USER_MANUAL.md">User manual</a>.</sub>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/MKSXdriveMini.png" alt="MKS XDrive Mini board" width="420">
   <img src="docs/screenshots/Overlay%20FFT.png" alt="PiP Overlay with live FFT spectrum analyzer" width="420">
 </p>
@@ -115,6 +120,9 @@ decodes errors inline. UI is PT/EN.
 - **[Building from source](docs/BUILDING.md)** — for when you want to
   modify the firmware, sync with upstream OpenFFBoard, or investigate a
   build issue.
+- **[SimHub plugin user manual](Odrive-Wheel/tools/simhub-plugin/USER_MANUAL.md)**
+  — install, panel walkthrough with screenshots, property reference,
+  mappable actions, profile workflow, troubleshooting.
 
 ## ✨ What you get
 
@@ -144,6 +152,13 @@ decodes errors inline. UI is PT/EN.
 - **In-browser DFU flasher** (WebUSB + DfuSe) with 📡 Fetch latest
   from GitHub — no `dfu-util` needed after the first flash. FFB
   settings survive the reflash (isolated flash sectors).
+- **SimHub plugin** — [Odrive-Wheel Telemetry](Odrive-Wheel/tools/simhub-plugin/USER_MANUAL.md):
+  reads all 1 kHz HID fields (position, velocity, Iq, torque, VBus,
+  IBus, brake current, FET/motor temps, ODrive errors) as SimHub
+  properties for dashboards; syncs every profile field over serial;
+  applies profiles with a click (and auto-per-game if you want);
+  exposes 21 wheel-mappable actions (fine/coarse inc-dec of FX master,
+  FX ratio, 3-band EQ + one-shot Zero-wheel-position).
 
 Full feature inventory and per-tab details live in the config tool
 itself — every field has a hover tooltip.

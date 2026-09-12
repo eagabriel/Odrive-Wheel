@@ -1748,7 +1748,7 @@
   <div class="header-actions">
     <!-- Sponsor / BuyMeACoffee links (à esquerda do Connect) -->
     <span class="tool-version" title="HTML tool version"
-          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.27</span>
+          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.28</span>
     <!-- PIX (Brazil): abre modal com QR code pre-gerado inline (offline).
          Cor #32BCAD do branding oficial do PIX. -->
     <button id="btn-pix-open" type="button"
@@ -2056,7 +2056,7 @@ const I18N = {
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
-    'tab.overlay': 'Overlay (iRacing)',
+    'tab.overlay': 'Overlay',
     'tab.perftest': 'Performance Test',
     // Performance Test tab (PT) — mede pico de RPM + aceleração máxima
     // disparando força constante via HID FFB e capturando posição a ~1 kHz
@@ -2352,6 +2352,13 @@ const I18N = {
     'ovl.series_ibus':          'ibus (A) — corrente do bus DC',
     'ovl.series_iq':            'Iq motor (A) — corrente quadratura',
     'ovl.series_ibr':           'I brake (A) — corrente do brake resistor',
+    'ovl.series_fet_temp':      'FET temp (°C) — temperatura do inversor (thermistor da placa)',
+    'ovl.series_motor_temp':    'Motor temp (°C) — temperatura do motor (thermistor externo se presente)',
+    'ovl.logger_title':         'Logger de telemetria',
+    'ovl.logger_hint':          'Grava TODOS os sinais HID a 1 kHz nativo em arquivo CSV comprimido (gzip). O arquivo é escrito em disco de forma contínua — se o browser cair, o log até aquele ponto sobrevive. Nome sugerido: <code>odrivewheel_log_&lt;timestamp&gt;.csv.gz</code>. ~40 MB por hora.',
+    'ovl.logger_btn_start':     '🔴 Iniciar gravação',
+    'ovl.logger_btn_stop':      '⏹ Parar gravação',
+    'ovl.logger_status_idle':   'sem gravação em andamento',
     'ovl.indicators_title':    'Indicadores numéricos',
     'ovl.show_brake_power':    'P brake (W) — potência média dissipada no resistor de freio',
     'ovl.brake_power_hint':    'P = R · ⟨I_brake²⟩ sobre janela rolante 60s, alimentado pelo I_brake real do HID a 1 kHz (pega pulsos curtos de regen). R = config.brake_resistance (lido ao abrir). Aparece na info-bar do painel Barramento DC.',
@@ -3054,7 +3061,7 @@ const I18N = {
     'tab.console-tab': 'Console',
     'tab.dfu': 'DFU Flash',
     'tab.inputs': 'Inputs (GPIO)',
-    'tab.overlay': 'Overlay (iRacing)',
+    'tab.overlay': 'Overlay',
     'tab.perftest': 'Performance Test',
     // Performance Test tab (EN)
     'pt.title':              'Performance Test',
@@ -3348,6 +3355,13 @@ const I18N = {
     'ovl.series_ibus':          'ibus (A) — DC bus current',
     'ovl.series_iq':            'Iq motor (A) — quadrature current',
     'ovl.series_ibr':           'I brake (A) — brake resistor current',
+    'ovl.series_fet_temp':      'FET temp (°C) — inverter temperature (board thermistor)',
+    'ovl.series_motor_temp':    'Motor temp (°C) — motor temperature (external thermistor if present)',
+    'ovl.logger_title':         'Telemetry logger',
+    'ovl.logger_hint':          'Records ALL HID signals at native 1 kHz to a gzipped CSV file. The file is streamed to disk continuously — if the browser crashes, everything written up to that point survives. Default name: <code>odrivewheel_log_&lt;timestamp&gt;.csv.gz</code>. ~40 MB per hour.',
+    'ovl.logger_btn_start':     '🔴 Start recording',
+    'ovl.logger_btn_stop':      '⏹ Stop recording',
+    'ovl.logger_status_idle':   'idle',
     'ovl.indicators_title':    'Numeric indicators',
     'ovl.show_brake_power':    'P brake (W) — average power dissipated in the brake resistor',
     'ovl.brake_power_hint':    'P = R · ⟨I_brake²⟩ over a 60s rolling window, fed by the real I_brake from HID at 1 kHz (catches short regen pulses). R = config.brake_resistance (read at open). Shows in the DC bus panel info bar.',
@@ -4322,7 +4336,7 @@ const FIELD_RANGE = {
 
   // FFB Wheel (axis.* via cmdparser)
   'axis.range':         '90–3600°',
-  'axis.maxtorque':     '0.1–25 Nm',
+  'axis.maxtorque':     '0.1–40 Nm',
   'axis.fxratio':       '0.0–1.0',
   'axis.idlespring':    '0–255',
   'axis.axisdamper':    '0–255',
@@ -8188,7 +8202,10 @@ const overlayState = {
   hidListener: null,        // callback registrado em 'inputreport'
   drawTimer:   null,        // setInterval ~30 Hz pra render throttled
   // Histórico decimado p/ charts (~100 Hz, janela 60s = 6000 entries cada)
-  bus:  { vbus: [], ibus: [], iq: [], ibr: [] },
+  //   ft/mt = FET/motor temp em °C (int8 no HID, -128 = sensor off → NaN).
+  //   Push condicionado no _ovlOnHidReport pra não sujar buffer com valores
+  //   sentinel; se o firmware é antigo (report < 32 bytes) buffers ficam vazios.
+  bus:  { vbus: [], ibus: [], iq: [], ibr: [], ft: [], mt: [] },
   whl:  { trq:  [], pos:  [] },
   // Canvas refs dentro do PiP (re-bound em cada open)
   cvBus: null,
@@ -8318,6 +8335,14 @@ function buildOverlayHTML() {
           <input type="checkbox" id="ovl-show-ibr" checked>
           <span data-i18n="ovl.series_ibr">I brake (A) — corrente do brake resistor</span>
         </label>
+        <label style="color:#ff8a65;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-fet-temp">
+          <span data-i18n="ovl.series_fet_temp">FET temp (°C) — temperatura do inversor (thermistor da placa)</span>
+        </label>
+        <label style="color:#ba68c8;cursor:pointer;display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="ovl-show-motor-temp">
+          <span data-i18n="ovl.series_motor_temp">Motor temp (°C) — temperatura do motor (thermistor externo se presente)</span>
+        </label>
       </div>
     </div>
 
@@ -8348,6 +8373,20 @@ function buildOverlayHTML() {
                   data-i18n="ovl.clipout_hint">Conta amostras com |Iq| ≥ 95% × current_lim sobre janela rolante 30s. Mede quanto o motor não conseguiu entregar o torque que o firmware mandou (perda de detalhe físico). Cor: 🟢 &lt;1%, 🟡 1–5%, 🟠 5–10%, 🔴 &gt;10%. current_lim vem do Motor Cal (rode Performance Test pra cachear).</span>
           </span>
         </label>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h3 data-i18n="ovl.logger_title">Logger de telemetria</h3>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 8px"
+         data-i18n="ovl.logger_hint">Grava TODOS os sinais HID a 1 kHz nativo em arquivo CSV comprimido (gzip). O arquivo é escrito em disco de forma contínua — se o browser cair, o log até aquele ponto sobrevive. Nome sugerido: <code>odrivewheel_log_&lt;timestamp&gt;.csv.gz</code>. ~40 MB por hora.</p>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button id="btn-log-start" class="ok" style="padding:10px 20px;font-size:16px"
+                data-i18n="ovl.logger_btn_start">🔴 Iniciar gravação</button>
+        <button id="btn-log-stop" class="danger" style="padding:10px 20px;font-size:16px;display:none"
+                data-i18n="ovl.logger_btn_stop">⏹ Parar gravação</button>
+        <span id="log-status" style="color:var(--muted);font-size:14px;font-family:ui-monospace,Consolas,monospace"
+              data-i18n="ovl.logger_status_idle">sem gravação em andamento</span>
       </div>
     </div>
 
@@ -8571,22 +8610,32 @@ function drawOvlBusChart() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
 
-  // padL/padR + padB ampliados pra acomodar texto 14px nos rótulos dos eixos
-  const padL = 60, padR = 60, padT = 10, padB = 22;
-  const W = cssW - padL - padR;
-  const H = cssH - padT - padB;
-  if (W <= 0 || H <= 0) return;
-
+  // padL: rótulos V (esquerda, azul).
+  // padR: rótulos A (interno, laranja) + rótulos °C (externo, vermelho/roxo)
+  //       quando ao menos um dos dois traces de temp está ligado. Se ambos
+  //       desligados, mantém padR=60 pra maximizar área do plot.
   const showV = document.getElementById('ovl-show-vbus')?.checked ?? true;
   const showI = document.getElementById('ovl-show-ibus')?.checked ?? true;
   const showQ = document.getElementById('ovl-show-iq')?.checked   ?? true;
   const showB = document.getElementById('ovl-show-ibr')?.checked  ?? true;
+  const showFT = document.getElementById('ovl-show-fet-temp')?.checked   ?? false;
+  const showMT = document.getElementById('ovl-show-motor-temp')?.checked ?? false;
+  const anyTemp = showFT || showMT;
+
+  const padL = 60, padR = anyTemp ? 100 : 60, padT = 10, padB = 22;
+  const W = cssW - padL - padR;
+  const H = cssH - padT - padB;
+  if (W <= 0 || H <= 0) return;
 
   const vArr = showV ? overlayState.bus.vbus : [];
   const aArr = [
     ...(showI ? overlayState.bus.ibus : []),
     ...(showQ ? overlayState.bus.iq   : []),
     ...(showB ? overlayState.bus.ibr  : [])
+  ];
+  const tArr = [
+    ...(showFT ? overlayState.bus.ft : []),
+    ...(showMT ? overlayState.bus.mt : [])
   ];
   // Mesma lógica do drawChart() do Debug — vbus unidirecional (0..max),
   // ibus/iq/ibr no eixo simétrico (zero centralizado).
@@ -8598,6 +8647,16 @@ function drawOvlBusChart() {
   aAbs = Math.max(aAbs * 1.1, 0.5);
   let aMin = -aAbs, aMax = aAbs;
   if (vMax === vMin) vMax = vMin + 1;
+
+  // Temp axis (°C) — floor em 0 pra manter escala interpretável,
+  // teto autoscale + 10°C de headroom, span mínimo de 40°C pra que
+  // uma temp estável (ex: FET 40°C parado) não vire uma linha zoomada
+  // no meio do chart.
+  let tMin = 0, tMax = 40;
+  if (tArr.length) {
+    const tHi = _ovlMax(tArr);
+    tMax = Math.max(tHi + 10, 40);
+  }
 
   // Grid + axis labels (cores via tema)
   const th = _ovlThemeColors();
@@ -8612,6 +8671,13 @@ function drawOvlBusChart() {
     ctx.fillText(vL.toFixed(1) + 'V', padL - 3, y);
     ctx.fillStyle = '#ffa726'; ctx.textAlign = 'left';
     ctx.fillText(aR.toFixed(2) + 'A', padL + W + 3, y);
+    // Eixo °C — só quando algum temp trace está visível.
+    if (anyTemp) {
+      const tR = tMax - (tMax - tMin) * i / 4;
+      // Cor mista dos dois temps (fica neutro laranja-avermelhado)
+      ctx.fillStyle = '#ff8a65'; ctx.textAlign = 'left';
+      ctx.fillText(tR.toFixed(0) + '°', padL + W + 42, y);
+    }
   }
   ctx.fillStyle = th.fgMuted; ctx.textAlign = 'left';
   ctx.fillText('-60s', padL, padT + H + 14);
@@ -8635,6 +8701,9 @@ function drawOvlBusChart() {
   if (showI) plotTrace(overlayState.bus.ibus, '#ffa726', aMin, aMax);
   if (showQ) plotTrace(overlayState.bus.iq,   '#66bb6a', aMin, aMax);
   if (showB) plotTrace(overlayState.bus.ibr,  '#ef5350', aMin, aMax);
+  // Temps em cores distintas do resto (FET laranja-avermelhado, motor roxo).
+  if (showFT) plotTrace(overlayState.bus.ft, '#ff8a65', tMin, tMax);
+  if (showMT) plotTrace(overlayState.bus.mt, '#ba68c8', tMin, tMax);
 
   // Legenda inline — pastilhas no canto sup-direito. Só os toggles ligados
   // entram. Última amostra de cada série aparece junto pra dar leitura ao vivo.
@@ -8643,6 +8712,9 @@ function drawOvlBusChart() {
   if (showI) legend.push({ c:'#ffa726', lbl:'ibus', val:overlayState.bus.ibus.at(-1), fmt:v=>_ovlFmtSigned2(v)+'A' });
   if (showQ) legend.push({ c:'#66bb6a', lbl:'Iq',   val:overlayState.bus.iq.at(-1),   fmt:v=>_ovlFmtSigned2(v)+'A' });
   if (showB) legend.push({ c:'#ef5350', lbl:'Ibr',  val:overlayState.bus.ibr.at(-1),  fmt:v=>_ovlFmtSigned2(v)+'A' });
+  // Sensor não conectado → buffer vazio → legend mostra "—".
+  if (showFT) legend.push({ c:'#ff8a65', lbl:'FET',   val:overlayState.bus.ft.at(-1), fmt:v=>(v==null?'—':v.toFixed(0))+'°' });
+  if (showMT) legend.push({ c:'#ba68c8', lbl:'Motor', val:overlayState.bus.mt.at(-1), fmt:v=>(v==null?'—':v.toFixed(0))+'°' });
   _ovlDrawLegend(ctx, legend, padL + W, padT);
 }
 
@@ -8905,6 +8977,14 @@ function _ovlOnHidReport(event) {
   //  24..25  VBus   = vbus × 100
   //  26..27  IBus   = ibus × 100
   //  28..29  IBrake = brake_resistor_current × 100
+  //  30      FetTempC   int8  °C  (-128 = sensor off / NaN)  ← firmware ≥ 1.2
+  //  31      MotorTempC int8  °C  (-128 = sensor off / NaN)  ← firmware ≥ 1.2
+  //  32      AxisState  int8  ODrive state (0=UNDEFINED, 1=IDLE, 8=CLOSED_LOOP)  ← firmware ≥ 1.3
+  //  33..36  AxisError       int32 LE (bitmask, 0 = ERROR_NONE)  ← firmware ≥ 1.3
+  //  37..40  MotorError      int32 LE                             ← firmware ≥ 1.3
+  //  41..44  EncoderError    int32 LE                             ← firmware ≥ 1.3
+  //  45..48  ControllerError int32 LE                             ← firmware ≥ 1.3
+  // Firmware antigo manda payload menor; *Present detecta pelo tamanho.
   const x      = event.data.getInt16(8,  true);
   const yRaw   = event.data.getInt16(10, true);
   const zRaw   = event.data.getInt16(12, true);
@@ -8912,6 +8992,15 @@ function _ovlOnHidReport(event) {
   const vbRaw  = event.data.getInt16(24, true);
   const ibRaw  = event.data.getInt16(26, true);
   const ibrRaw = event.data.getInt16(28, true);
+  const tempPresent = event.data.byteLength >= 32;
+  const ftRaw = tempPresent ? event.data.getInt8(30) : -128;
+  const mtRaw = tempPresent ? event.data.getInt8(31) : -128;
+  const errPresent = event.data.byteLength >= 49;
+  const axisState = errPresent ? event.data.getInt8(32)        : 0;
+  const axisErr   = errPresent ? event.data.getUint32(33, true) : 0;
+  const motorErr  = errPresent ? event.data.getUint32(37, true) : 0;
+  const encErr    = errPresent ? event.data.getUint32(41, true) : 0;
+  const ctrlErr   = errPresent ? event.data.getUint32(45, true) : 0;
 
   const posDeg = (x / 32767) * overlayState.halfRangeDeg;
   const vel    = yRaw   / 1000;   // turns/s
@@ -8934,6 +9023,9 @@ function _ovlOnHidReport(event) {
   ovlPush('bus', 'ibus', ibus);
   ovlPush('bus', 'iq',   iq);
   ovlPush('bus', 'ibr',  ibr);
+  // Temps só se sensor válido (-128 = sensor off). ovlPush já filtra NaN.
+  if (ftRaw !== -128) ovlPush('bus', 'ft', ftRaw);
+  if (mtRaw !== -128) ovlPush('bus', 'mt', mtRaw);
   ovlPush('whl', 'trq',  torque);
   ovlPush('whl', 'pos',  posDeg);
 }
@@ -9276,10 +9368,282 @@ function overlayClosePiP() {
   // 'pagehide' handler limpa o resto
 }
 
+/* =========================================================================
+   Telemetry logger — grava HID a 1 kHz nativo em CSV.gz streaming.
+
+   Arquitetura:
+     - Botão Start → showSaveFilePicker → user escolhe nome/local
+     - Cria CompressionStream('gzip'); pipeTo (WritableStream) do arquivo
+       lida com backpressure sozinho — se disco lenta, gzip pausa, writer
+       pausa nossos writes
+     - Adiciona listener 'inputreport' próprio no HID device (independente
+       do overlay PiP — logger funciona com ou sem overlay aberto)
+     - Cada tick HID (1 kHz) empurra 1 linha CSV pro rowsBuffer JS
+     - setInterval de 100ms faz .join('') + encode + writer.write → gzip
+       → arquivo. Batching evita 1000 writes/s (overhead de encoding).
+     - Stop: flush final, writer.close (finaliza gzip), aguarda pipe
+       completar, fecha arquivo.
+
+   Robustez: se browser crashar, os chunks já gravados sobrevivem —
+   File System Access API commita cada write. Arquivo fica truncado no
+   último flush (~100ms de perda máxima).
+   ========================================================================= */
+const _logState = {
+  active:       false,
+  fileHandle:   null,
+  fileStream:   null,
+  gzipWriter:   null,
+  pipePromise:  null,
+  hidDevice:    null,
+  hidListener:  null,
+  rowsBuffer:   [],
+  flushTimer:   null,
+  uiTimer:      null,
+  startTime:    0,
+  sampleCount:  0,
+  bytesWritten: 0,     // uncompressed CSV bytes fed to gzip
+  textEncoder:  null,
+};
+
+function _loggerFmtTs() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_` +
+         `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+async function _loggerStart() {
+  if (_logState.active) return;
+
+  // Sanity check — CompressionStream + File System Access só existem em
+  // Chrome/Edge modernos. Se o browser não tiver, mostra erro claro.
+  if (typeof window.showSaveFilePicker !== 'function' ||
+      typeof window.CompressionStream !== 'function') {
+    toast('Logger requer Chrome/Edge com CompressionStream + FS Access API', 'err');
+    return;
+  }
+
+  const suggestedName = `odrivewheel_log_${_loggerFmtTs()}.csv.gz`;
+  let fileHandle;
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [{ description: 'Gzipped CSV log',
+                accept: { 'application/gzip': ['.gz'] } }]
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      logLine('logger: cancelado pelo usuário', 'tx');
+      return;
+    }
+    logLine('logger: erro no picker — ' + e.message, 'err');
+    return;
+  }
+
+  // Precisa de HID device — reusa o do overlay se aberto, senão pede novo.
+  const device = await _ovlAcquireHidDevice();
+  if (!device) {
+    logLine('logger: HID device não disponível', 'err');
+    return;
+  }
+
+  let fileStream;
+  try { fileStream = await fileHandle.createWritable(); }
+  catch (e) {
+    logLine('logger: falha ao abrir arquivo pra escrita — ' + e.message, 'err');
+    return;
+  }
+
+  const gzip = new CompressionStream('gzip');
+  const writer = gzip.writable.getWriter();
+  // pipeTo cuida do backpressure e fecha o fileStream quando gzip terminar.
+  const pipePromise = gzip.readable.pipeTo(fileStream)
+    .catch(e => logLine('logger: pipe abortado — ' + e.message, 'err'));
+
+  const listener = _loggerHidListener;
+  device.addEventListener('inputreport', listener);
+
+  Object.assign(_logState, {
+    active:       true,
+    fileHandle,
+    fileStream,
+    gzipWriter:   writer,
+    pipePromise,
+    hidDevice:    device,
+    hidListener:  listener,
+    rowsBuffer:   [],
+    startTime:    performance.now(),
+    sampleCount:  0,
+    bytesWritten: 0,
+    textEncoder:  new TextEncoder(),
+  });
+
+  // Cabeçalho CSV — nomes casam com os parses do plugin .NET pra facilitar
+  // análise cross-tool.
+  const header = 'timestamp_ms,pos_deg,vel_tps,iq_a,torque_nm,vbus_v,ibus_a,ibrake_a,'
+               + 'rx,ry,rz,slider,fet_temp_c,motor_temp_c,buttons,'
+               + 'axis_state,axis_error,motor_error,encoder_error,controller_error\n';
+  const headerBytes = _logState.textEncoder.encode(header);
+  try { await writer.write(headerBytes); }
+  catch (e) { logLine('logger: falha ao escrever header — ' + e.message, 'err'); await _loggerStop(); return; }
+  _logState.bytesWritten += headerBytes.byteLength;
+
+  _logState.flushTimer = setInterval(_loggerFlush,        100);
+  _logState.uiTimer    = setInterval(_loggerUpdateStatus, 500);
+  _loggerUpdateStatus();
+
+  const btnStart = document.getElementById('btn-log-start');
+  const btnStop  = document.getElementById('btn-log-stop');
+  if (btnStart) btnStart.style.display = 'none';
+  if (btnStop)  btnStop.style.display  = '';
+
+  logLine('logger: gravando → ' + fileHandle.name, 'tx');
+}
+
+function _loggerHidListener(event) {
+  if (!_logState.active) return;
+  if (event.reportId !== 0x01) return;
+  const d = event.data;
+
+  // Buttons: uint64 em decimal (via BigInt). 99% do tempo é "0" — 1 char.
+  let buttons;
+  try { buttons = d.getBigUint64(0, true).toString(); }
+  catch (e) {
+    // Fallback pra browsers sem BigInt (praticamente ninguém em 2026)
+    buttons = d.getUint32(0, true) + '_' + d.getUint32(4, true);
+  }
+
+  const x      = d.getInt16(8,  true);
+  const yRaw   = d.getInt16(10, true);
+  const zRaw   = d.getInt16(12, true);
+  const rx     = d.getInt16(14, true);
+  const ry     = d.getInt16(16, true);
+  const rz     = d.getInt16(18, true);
+  const dRaw   = d.getInt16(20, true);
+  const slider = d.getInt16(22, true);
+  const vbRaw  = d.getInt16(24, true);
+  const ibRaw  = d.getInt16(26, true);
+  const ibrRaw = d.getInt16(28, true);
+  const ft     = d.byteLength >= 32 ? d.getInt8(30)        : -128;
+  const mt     = d.byteLength >= 32 ? d.getInt8(31)        : -128;
+  const state  = d.byteLength >= 49 ? d.getInt8(32)        : 0;
+  const axisE  = d.byteLength >= 49 ? d.getUint32(33, true) : 0;
+  const motE   = d.byteLength >= 49 ? d.getUint32(37, true) : 0;
+  const encE   = d.byteLength >= 49 ? d.getUint32(41, true) : 0;
+  const ctrlE  = d.byteLength >= 49 ? d.getUint32(45, true) : 0;
+
+  const halfRange = overlayState.halfRangeDeg || 450;
+  const posDeg = (x / 32767) * halfRange;
+  const vel    = yRaw   / 1000;
+  const iq     = zRaw   / 1000;
+  const torque = dRaw   / 1000;
+  const vbus   = vbRaw  / 100;
+  const ibus   = ibRaw  / 100;
+  const ibr    = ibrRaw / 100;
+
+  const t = performance.now() - _logState.startTime;
+
+  _logState.rowsBuffer.push(
+    t.toFixed(3)      + ',' +
+    posDeg.toFixed(3) + ',' +
+    vel.toFixed(4)    + ',' +
+    iq.toFixed(3)     + ',' +
+    torque.toFixed(3) + ',' +
+    vbus.toFixed(2)   + ',' +
+    ibus.toFixed(2)   + ',' +
+    ibr.toFixed(2)    + ',' +
+    rx + ',' + ry + ',' + rz + ',' + slider + ',' +
+    ft + ',' + mt + ',' +
+    buttons + ',' +
+    state + ',' +
+    axisE + ',' + motE + ',' + encE + ',' + ctrlE + '\n'
+  );
+  _logState.sampleCount++;
+}
+
+async function _loggerFlush() {
+  if (!_logState.active || _logState.rowsBuffer.length === 0) return;
+  const chunk = _logState.rowsBuffer.join('');
+  _logState.rowsBuffer.length = 0;
+  try {
+    const bytes = _logState.textEncoder.encode(chunk);
+    await _logState.gzipWriter.write(bytes);
+    _logState.bytesWritten += bytes.byteLength;
+  } catch (e) {
+    logLine('logger: erro no flush — ' + e.message + ' (parando)', 'err');
+    _loggerStop();
+  }
+}
+
+function _loggerUpdateStatus() {
+  const status = document.getElementById('log-status');
+  if (!status) return;
+  if (!_logState.active) {
+    // Handled by _loggerStop message.
+    return;
+  }
+  const elapsed = (performance.now() - _logState.startTime) / 1000;
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(Math.floor(elapsed % 60)).padStart(2, '0');
+  const mb = (_logState.bytesWritten / 1024 / 1024).toFixed(1);
+  const rateHz = elapsed > 0 ? (_logState.sampleCount / elapsed).toFixed(0) : '—';
+  status.textContent = `● gravando ${mm}:${ss} — ${_logState.sampleCount} amostras @ ${rateHz} Hz, ${mb} MB (raw)`;
+}
+
+async function _loggerStop() {
+  if (!_logState.active) return;
+  _logState.active = false;
+  if (_logState.flushTimer) { clearInterval(_logState.flushTimer); _logState.flushTimer = null; }
+  if (_logState.uiTimer)    { clearInterval(_logState.uiTimer);    _logState.uiTimer    = null; }
+
+  // Flush qualquer linha pendente ANTES de fechar o writer.
+  await _loggerFlush();
+
+  if (_logState.hidDevice && _logState.hidListener) {
+    try { _logState.hidDevice.removeEventListener('inputreport', _logState.hidListener); } catch (e) {}
+  }
+
+  // close() finaliza o gzip (adiciona footer). pipeTo então completa e
+  // fecha o fileStream automaticamente.
+  try { await _logState.gzipWriter.close(); }
+  catch (e) { logLine('logger: erro fechando gzip writer — ' + e.message, 'err'); }
+  try { await _logState.pipePromise; }
+  catch (e) { logLine('logger: pipe error — ' + e.message, 'err'); }
+
+  const elapsedSec = (performance.now() - _logState.startTime) / 1000;
+  const rateHz = elapsedSec > 0 ? (_logState.sampleCount / elapsedSec).toFixed(0) : '—';
+  const mb = (_logState.bytesWritten / 1024 / 1024).toFixed(2);
+  const name = _logState.fileHandle?.name || 'arquivo';
+
+  const status = document.getElementById('log-status');
+  if (status) status.textContent = `parado — ${_logState.sampleCount} amostras em ${elapsedSec.toFixed(1)}s @ ${rateHz} Hz, ${mb} MB raw → ${name}`;
+
+  const btnStart = document.getElementById('btn-log-start');
+  const btnStop  = document.getElementById('btn-log-stop');
+  if (btnStart) btnStart.style.display = '';
+  if (btnStop)  btnStop.style.display  = 'none';
+
+  logLine(`logger: encerrado — ${_logState.sampleCount} amostras (${elapsedSec.toFixed(1)}s) → ${name}`, 'tx');
+
+  _logState.fileHandle = null;
+  _logState.fileStream = null;
+  _logState.gzipWriter = null;
+  _logState.pipePromise = null;
+  _logState.hidDevice   = null;
+  _logState.hidListener = null;
+  _logState.textEncoder = null;
+}
+
 function wireOverlayTab() {
   const btnOpen  = document.getElementById('btn-ovl-open');
   const btnClose = document.getElementById('btn-ovl-close');
   if (!btnOpen) return;
+
+  // Logger buttons — independentes do overlay PiP; gravam mesmo com PiP fechado.
+  const btnLogStart = document.getElementById('btn-log-start');
+  const btnLogStop  = document.getElementById('btn-log-stop');
+  if (btnLogStart) btnLogStart.addEventListener('click', () => _loggerStart());
+  if (btnLogStop)  btnLogStop.addEventListener('click',  () => _loggerStop());
 
   btnOpen.addEventListener('click', overlayOpenPiP);
   if (btnClose) btnClose.addEventListener('click', overlayClosePiP);
@@ -9290,7 +9654,7 @@ function wireOverlayTab() {
     try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
     catch (e) { return {}; }
   })();
-  ['vbus', 'ibus', 'iq', 'ibr'].forEach(k => {
+  ['vbus', 'ibus', 'iq', 'ibr', 'fet-temp', 'motor-temp'].forEach(k => {
     const cb = document.getElementById('ovl-show-' + k);
     if (cb && typeof saved['show_' + k] === 'boolean') cb.checked = saved['show_' + k];
   });
@@ -9312,6 +9676,8 @@ function wireOverlayTab() {
       show_ibus:  document.getElementById('ovl-show-ibus')?.checked,
       show_iq:    document.getElementById('ovl-show-iq')?.checked,
       show_ibr:   document.getElementById('ovl-show-ibr')?.checked,
+      'show_fet-temp':   document.getElementById('ovl-show-fet-temp')?.checked,
+      'show_motor-temp': document.getElementById('ovl-show-motor-temp')?.checked,
       enable_bus: document.getElementById('ovl-enable-bus')?.checked,
       enable_whl: document.getElementById('ovl-enable-whl')?.checked,
       show_brake_power: document.getElementById('ovl-show-brake-power')?.checked,
@@ -9322,7 +9688,7 @@ function wireOverlayTab() {
     try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch (e) {}
   }
 
-  ['vbus', 'ibus', 'iq', 'ibr'].forEach(k => {
+  ['vbus', 'ibus', 'iq', 'ibr', 'fet-temp', 'motor-temp'].forEach(k => {
     const cb = document.getElementById('ovl-show-' + k);
     if (cb) cb.addEventListener('change', () => {
       persist();

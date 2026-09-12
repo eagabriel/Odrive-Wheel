@@ -1,0 +1,564 @@
+<UserControl x:Class="OdriveWheel.SimHubPlugin.SettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1A1A1A"
+             Foreground="#EEEEEE"
+             FontFamily="Segoe UI"
+             FontSize="13"
+             MinWidth="600">
+
+    <UserControl.Resources>
+
+        <!-- ===== Palette (kept small so re-theming is a few edits) ===== -->
+        <SolidColorBrush x:Key="BgPage"       Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="BgCard"       Color="#242628"/>
+        <SolidColorBrush x:Key="BgCardAlt"    Color="#2A2C30"/>
+        <SolidColorBrush x:Key="BorderCard"   Color="#3A3D42"/>
+        <SolidColorBrush x:Key="Fg"           Color="#EEEEEE"/>
+        <SolidColorBrush x:Key="FgMuted"      Color="#9AA0A6"/>
+        <SolidColorBrush x:Key="FgSubtle"     Color="#6B7078"/>
+        <SolidColorBrush x:Key="Accent"       Color="#2A9D8F"/>
+        <SolidColorBrush x:Key="AccentSoft"   Color="#3FB8A9"/>
+        <SolidColorBrush x:Key="Warn"         Color="#E9C46A"/>
+        <SolidColorBrush x:Key="Danger"       Color="#E76F51"/>
+
+        <!-- ===== Base text styles ===== -->
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+            <Setter Property="Margin"     Value="0,2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background"       Value="#1E2023"/>
+            <Setter Property="Foreground"       Value="{StaticResource Fg}"/>
+            <Setter Property="BorderBrush"      Value="{StaticResource BorderCard}"/>
+            <Setter Property="Padding"          Value="6,4"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+            <Setter Property="Margin"     Value="0,4"/>
+        </Style>
+
+        <!-- ===== Text hierarchy ===== -->
+        <!-- H1: bold, tight tracking — brand identity. Uses Segoe UI Semibold
+             (native Windows) with an inline character-spacing hack via
+             Typography attributes for a slightly more "cockpit" feel. -->
+        <Style x:Key="H1" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
+            <Setter Property="FontSize"   Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+        </Style>
+        <!-- H2: uppercase + wider tracking so section headers read as tabs
+             on a dashboard, not just body text. -->
+        <Style x:Key="H2" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
+            <Setter Property="FontSize"   Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentSoft}"/>
+            <Setter Property="Margin"     Value="0,0,0,12"/>
+            <!-- No native letter-spacing prop on TextBlock; simulate with
+                 uppercase which visually widens words in a Semibold face. -->
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+        <Style x:Key="Muted" TargetType="TextBlock">
+            <Setter Property="Foreground"    Value="{StaticResource FgMuted}"/>
+            <Setter Property="FontSize"      Value="11"/>
+            <Setter Property="TextWrapping"  Value="Wrap"/>
+            <Setter Property="LineHeight"    Value="16"/>
+        </Style>
+        <Style x:Key="Subtle" TargetType="TextBlock">
+            <Setter Property="Foreground"   Value="{StaticResource FgSubtle}"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="LiveValue" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize"   Value="13"/>
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+        </Style>
+
+        <!-- ===== Card container ===== -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background"      Value="{StaticResource BgCard}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderCard}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius"    Value="8"/>
+            <Setter Property="Padding"         Value="18"/>
+            <Setter Property="Margin"          Value="0,0,0,12"/>
+        </Style>
+
+        <!-- ===== Buttons ===== -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background"      Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="14,6"/>
+            <Setter Property="Margin"          Value="0,4,8,4"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background"      Value="{StaticResource BgCardAlt}"/>
+            <Setter Property="Foreground"      Value="{StaticResource Fg}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderCard}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="12,6"/>
+            <Setter Property="Margin"          Value="0,4,8,4"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button">
+            <Setter Property="Background"      Value="{StaticResource Danger}"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="14,6"/>
+            <Setter Property="Margin"          Value="0,4,8,4"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+        </Style>
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="Foreground"      Value="{StaticResource AccentSoft}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="4,2"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="FontSize"        Value="12"/>
+        </Style>
+
+        <!-- ===== Modern toggle switch (visual template for CheckBox) ===== -->
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+            <Setter Property="Cursor"     Value="Hand"/>
+            <Setter Property="Margin"     Value="0,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="Track" Width="38" Height="20" CornerRadius="10"
+                                    Background="#3A3D42" BorderThickness="0"
+                                    VerticalAlignment="Center">
+                                <Ellipse x:Name="Knob" Width="14" Height="14" Fill="#B0B0B0"
+                                         HorizontalAlignment="Left" VerticalAlignment="Center"
+                                         Margin="3,0,0,0"/>
+                            </Border>
+                            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Knob"  Property="Fill"       Value="White"/>
+                                <Setter TargetName="Knob"  Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Knob"  Property="Margin"     Value="0,0,3,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20,18,20,18">
+
+            <!-- ============================================================ -->
+            <!--  Header banner — logo on left, title/subtitle/links on right -->
+            <!-- ============================================================ -->
+            <Border CornerRadius="8"
+                    BorderBrush="{StaticResource BorderCard}"
+                    BorderThickness="1"
+                    Margin="0,0,0,14"
+                    ClipToBounds="True">
+                <Border.Background>
+                    <!-- Gradient smooths the transition from the PNG's black
+                         background into the plugin's dark theme on the right. -->
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0.00" Color="#000000"/>
+                        <GradientStop Offset="0.28" Color="#0A0A0A"/>
+                        <GradientStop Offset="0.55" Color="#151719"/>
+                        <GradientStop Offset="1.00" Color="#1F2124"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid Height="110">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0"
+                           Source="pack://application:,,,/OdriveWheel.SimHubPlugin;component/Assets/logo.png"
+                           Stretch="Uniform"
+                           Margin="6"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,18,0">
+                        <TextBlock Text="Odrive-Wheel Telemetry" Style="{StaticResource H1}"/>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0">
+                            <Run Text="USB HID 1 kHz "/>
+                            <Run Text="·" Foreground="#4C4F55"/>
+                            <Run Text=" Profile sync via serial "/>
+                            <Run Text="·" Foreground="#4C4F55"/>
+                            <Run Text=" Auto-per-game "/>
+                            <Run Text="·" Foreground="#4C4F55"/>
+                            <Run Text=" Mappable inc/dec"/>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock x:Name="HdrVersion" Style="{StaticResource Subtle}" Text="plugin v0.4"/>
+                            <TextBlock Style="{StaticResource Subtle}" Margin="8,0" Text="·" Foreground="#4C4F55"/>
+                            <TextBlock x:Name="HdrFirmware" Style="{StaticResource Subtle}" Text="firmware ?"/>
+                            <TextBlock Style="{StaticResource Subtle}" Margin="8,0" Text="·" Foreground="#4C4F55"/>
+                            <Button Content="GitHub"       Style="{StaticResource LinkButton}" Click="OnOpenGitHub"/>
+                            <TextBlock Style="{StaticResource Subtle}" Margin="4,0" Text="·" Foreground="#4C4F55"/>
+                            <Button Content="PIX"          Style="{StaticResource LinkButton}" Click="OnOpenPix"/>
+                            <TextBlock Style="{StaticResource Subtle}" Margin="4,0" Text="·" Foreground="#4C4F55"/>
+                            <Button Content="☕ Coffee"    Style="{StaticResource LinkButton}" Click="OnOpenBmc"/>
+                            <TextBlock Style="{StaticResource Subtle}" Margin="4,0" Text="·" Foreground="#4C4F55"/>
+                            <Button Content="❤ Sponsor"    Style="{StaticResource LinkButton}" Click="OnOpenSponsor"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Warning banner — visible only when AnyError=true            -->
+            <!-- ============================================================ -->
+            <Border x:Name="WarningBanner" Visibility="Collapsed"
+                    CornerRadius="8"
+                    BorderBrush="#FF5A3D"
+                    BorderThickness="1"
+                    Background="#3A1512"
+                    Padding="16,12"
+                    Margin="0,0,0,14">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚠" FontSize="18" Foreground="{StaticResource Danger}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="ODrive error detected" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="#F5B4A5" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="WarningText" Foreground="#F5B4A5" Margin="28,4,0,0"
+                               FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Connection card                                             -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="CONNECTION"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                        <Ellipse Width="12" Height="12" x:Name="HidStatusLed" Fill="#555"
+                                 Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect x:Name="HidLedGlow" ShadowDepth="0"
+                                                  BlurRadius="0" Color="#555" Opacity="0"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock Text="HID: " VerticalAlignment="Center"/>
+                        <TextBlock x:Name="HidStatusText" Text="waiting for device…" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                        <Ellipse Width="12" Height="12" x:Name="SerialStatusLed" Fill="#555"
+                                 Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect x:Name="SerialLedGlow" ShadowDepth="0"
+                                                  BlurRadius="0" Color="#555" Opacity="0"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock Text="Serial: " VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SerialStatusText" Text="waiting for device…" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0">
+                        HID is the 1 kHz telemetry stream (games use this same channel — no conflict).
+                        Serial is used on demand to read/write config, and can conflict with the HTML tool
+                        if both try to open the COM port at the same time.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Live readings (HID)                                         -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="LIVE READINGS · HID"/>
+
+                    <!-- Wheel position hero — rotating stylised wheel + big
+                         numeric readout on the right. Rotation is 1:1 with
+                         the physical wheel angle, so at full lock the icon
+                         has rotated 1.25 turns (for a 900° range). -->
+                    <Border Background="#1B1D20" BorderBrush="{StaticResource BorderCard}"
+                            BorderThickness="1" CornerRadius="6"
+                            Padding="14,10" Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Wheel drawing (100 × 100). Grid so the wheel
+                                 is centred inside a background disc. -->
+                            <Grid Grid.Column="0" Width="100" Height="100">
+                                <!-- Background disc for depth -->
+                                <Ellipse Width="96" Height="96"
+                                         Fill="#0F1114"
+                                         Stroke="{StaticResource BorderCard}" StrokeThickness="1"/>
+                                <!-- Rotating wheel drawing wrapped in a Canvas
+                                     with a RotateTransform. Canvas 100×100
+                                     so shapes coordinate around (50,50). -->
+                                <Canvas Width="100" Height="100" RenderTransformOrigin="0.5,0.5">
+                                    <Canvas.RenderTransform>
+                                        <RotateTransform x:Name="WheelRot" Angle="0"/>
+                                    </Canvas.RenderTransform>
+                                    <!-- Rim -->
+                                    <Ellipse Canvas.Left="14" Canvas.Top="14"
+                                             Width="72" Height="72"
+                                             Stroke="{StaticResource AccentSoft}" StrokeThickness="2.4"/>
+                                    <!-- Spokes -->
+                                    <Line X1="50" Y1="20" X2="50" Y2="47"
+                                          Stroke="{StaticResource AccentSoft}" StrokeThickness="2"/>
+                                    <Line X1="50" Y1="80" X2="50" Y2="53"
+                                          Stroke="{StaticResource AccentSoft}" StrokeThickness="2"/>
+                                    <Line X1="20" Y1="50" X2="47" Y2="50"
+                                          Stroke="{StaticResource AccentSoft}" StrokeThickness="2"/>
+                                    <Line X1="80" Y1="50" X2="53" Y2="50"
+                                          Stroke="{StaticResource AccentSoft}" StrokeThickness="2"/>
+                                    <!-- Hub -->
+                                    <Ellipse Canvas.Left="45" Canvas.Top="45"
+                                             Width="10" Height="10"
+                                             Fill="{StaticResource AccentSoft}"/>
+                                    <!-- Marker at 12 o'clock — the visual cue
+                                         that shows rotation, since the rest
+                                         is rotationally symmetric. -->
+                                    <Ellipse Canvas.Left="46" Canvas.Top="8"
+                                             Width="8" Height="8"
+                                             Fill="{StaticResource Danger}"/>
+                                </Canvas>
+                            </Grid>
+                            <!-- Big numeric readout -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="18,0,0,0">
+                                <TextBlock x:Name="LivePositionBig" Text="0.0°"
+                                           FontFamily="Segoe UI Semibold" FontSize="30" FontWeight="Bold"
+                                           Foreground="{StaticResource Fg}"/>
+                                <TextBlock x:Name="LiveVelocityBig" Text="0.00 turns/s"
+                                           FontFamily="Consolas" FontSize="13"
+                                           Foreground="{StaticResource FgMuted}" Margin="0,4,0,0"/>
+                                <TextBlock x:Name="LiveTorqueBig" Text="0.00 Nm"
+                                           FontFamily="Consolas" FontSize="13"
+                                           Foreground="{StaticResource FgMuted}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.Resources>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="MinHeight" Value="20"/>
+                            </Style>
+                        </Grid.Resources>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"  Grid.Column="0" Text="Report rate (Hz)"/>
+                        <TextBlock Grid.Row="0"  Grid.Column="1" x:Name="LiveRate"           Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="1"  Grid.Column="0" Text="Position (°)"/>
+                        <TextBlock Grid.Row="1"  Grid.Column="1" x:Name="LivePosition"       Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="2"  Grid.Column="0" Text="Velocity (turns/s)"/>
+                        <TextBlock Grid.Row="2"  Grid.Column="1" x:Name="LiveVelocity"       Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="3"  Grid.Column="0" Text="Iq (A)"/>
+                        <TextBlock Grid.Row="3"  Grid.Column="1" x:Name="LiveIq"             Style="{StaticResource LiveValue}"/>
+                        <!-- Iq vs current_lim bar: green up to 95%, red 95-100% clip zone -->
+                        <Grid Grid.Row="3" Grid.Column="2" Height="14" VerticalAlignment="Center" Margin="4,2,0,2">
+                            <Border Background="#1E2023" BorderBrush="{StaticResource BorderCard}" BorderThickness="1" CornerRadius="2"/>
+                            <Rectangle x:Name="LiveIqBarClipZone" Fill="#3D1C15" HorizontalAlignment="Right" Width="10" RadiusX="1" RadiusY="1" Margin="1"/>
+                            <Rectangle x:Name="LiveIqBarFill"     Fill="{StaticResource Accent}" HorizontalAlignment="Left" Width="0" RadiusX="1" RadiusY="1" Margin="1"/>
+                            <TextBlock x:Name="LiveIqBarText" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" Foreground="#EEEEEE"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="4"  Grid.Column="0" Text="Torque (Nm)"/>
+                        <TextBlock Grid.Row="4"  Grid.Column="1" x:Name="LiveTorque"         Style="{StaticResource LiveValue}"/>
+                        <Canvas Grid.Row="4" Grid.Column="2" x:Name="SparkTorque" Height="18" Margin="4,2,0,2" ClipToBounds="True"/>
+
+                        <TextBlock Grid.Row="5"  Grid.Column="0" Text="VBus (V)"/>
+                        <TextBlock Grid.Row="5"  Grid.Column="1" x:Name="LiveVBus"           Style="{StaticResource LiveValue}"/>
+                        <Canvas Grid.Row="5" Grid.Column="2" x:Name="SparkVBus" Height="18" Margin="4,2,0,2" ClipToBounds="True"/>
+
+                        <TextBlock Grid.Row="6"  Grid.Column="0" Text="IBus (A)"/>
+                        <TextBlock Grid.Row="6"  Grid.Column="1" x:Name="LiveIBus"           Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="7"  Grid.Column="0" Text="I brake resistor (A)"/>
+                        <TextBlock Grid.Row="7"  Grid.Column="1" x:Name="LiveIBrake"         Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="8"  Grid.Column="0" Text="Clip out (%)"/>
+                        <TextBlock Grid.Row="8"  Grid.Column="1" x:Name="LiveClip"           Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="9"  Grid.Column="0" Text="Motor mech (W)"/>
+                        <TextBlock Grid.Row="9"  Grid.Column="1" x:Name="LiveMech"           Style="{StaticResource LiveValue}"/>
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" Text="FET temp (°C)"/>
+                        <TextBlock Grid.Row="10" Grid.Column="1" x:Name="LiveFetTemp"        Style="{StaticResource LiveValue}"/>
+                        <Grid Grid.Row="10" Grid.Column="2" Height="14" VerticalAlignment="Center" Margin="4,2,0,2">
+                            <Border Background="#1E2023" BorderBrush="{StaticResource BorderCard}" BorderThickness="1" CornerRadius="2"/>
+                            <Rectangle x:Name="LiveFetTempBar" HorizontalAlignment="Left" Width="0" RadiusX="1" RadiusY="1" Margin="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="11" Grid.Column="0" Text="Motor temp (°C)"/>
+                        <TextBlock Grid.Row="11" Grid.Column="1" x:Name="LiveMotorTemp"      Style="{StaticResource LiveValue}"/>
+                        <Grid Grid.Row="11" Grid.Column="2" Height="14" VerticalAlignment="Center" Margin="4,2,0,2">
+                            <Border Background="#1E2023" BorderBrush="{StaticResource BorderCard}" BorderThickness="1" CornerRadius="2"/>
+                            <Rectangle x:Name="LiveMotorTempBar" HorizontalAlignment="Left" Width="0" RadiusX="1" RadiusY="1" Margin="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="12" Grid.Column="0" Text="Axis state"/>
+                        <TextBlock Grid.Row="12" Grid.Column="1" Grid.ColumnSpan="2" x:Name="LiveAxisState"      Style="{StaticResource LiveValue}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="13" Grid.Column="0" Text="Axis error"/>
+                        <TextBlock Grid.Row="13" Grid.Column="1" Grid.ColumnSpan="2" x:Name="LiveAxisError"      Style="{StaticResource LiveValue}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="14" Grid.Column="0" Text="Motor error"/>
+                        <TextBlock Grid.Row="14" Grid.Column="1" Grid.ColumnSpan="2" x:Name="LiveMotorError"     Style="{StaticResource LiveValue}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="15" Grid.Column="0" Text="Encoder error"/>
+                        <TextBlock Grid.Row="15" Grid.Column="1" Grid.ColumnSpan="2" x:Name="LiveEncoderError"   Style="{StaticResource LiveValue}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="16" Grid.Column="0" Text="Controller error"/>
+                        <TextBlock Grid.Row="16" Grid.Column="1" Grid.ColumnSpan="2" x:Name="LiveControllerError" Style="{StaticResource LiveValue}" TextWrapping="Wrap"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Scope · Iq / Torque                                         -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="SCOPE · IQ / TORQUE"/>
+                    <Border Background="#0F1114" BorderBrush="{StaticResource BorderCard}"
+                            BorderThickness="1" CornerRadius="4" Padding="0" Margin="0,0,0,6">
+                        <Canvas x:Name="ScopeCanvas" Height="140" ClipToBounds="True"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="4,4,0,0">
+                        <Rectangle Width="10" Height="3" Fill="#4FC3F7" VerticalAlignment="Center"/>
+                        <TextBlock Text="Iq (A)" Style="{StaticResource Muted}" Margin="6,0,16,0"/>
+                        <Rectangle Width="10" Height="3" Fill="#F4A261" VerticalAlignment="Center"/>
+                        <TextBlock Text="Torque (Nm)" Style="{StaticResource Muted}" Margin="6,0,16,0"/>
+                        <TextBlock Text="—" Style="{StaticResource Subtle}" Margin="8,0"/>
+                        <TextBlock Text="last ~2.4 s @ 100 Hz" Style="{StaticResource Subtle}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Device config (from serial)                                 -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="DEVICE CONFIG · SERIAL"/>
+                    <TextBlock Style="{StaticResource Muted}">
+                        Every field below is exposed to SimHub dashboards under the plugin name
+                        "Odrive-Wheel Telemetry" — the label to the right is the property name to type in
+                        Dash Studio expressions (e.g. [OdriveWheel.SimHubPlugin.AxisMaxTorqueNm]).
+                        The plugin reads all values once when the board is first detected, then keeps its cache
+                        up to date on its own: inc/dec actions and Apply profile update the cache with what
+                        they wrote. If you edited values in the HTML tool while SimHub was running, hit
+                        the button below to re-sync.
+                    </TextBlock>
+                    <Button Content="↻ Refresh from device now" Click="OnRefreshNow"
+                            Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,4"/>
+                    <StackPanel x:Name="DeviceConfigStack" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Profiles                                                    -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="PROFILES"/>
+                    <TextBlock Style="{StaticResource Muted}">
+                        Point the plugin at the same folder your HTML tool saves profiles to. All
+                        "odrive-wheel-profile" .json files there show up below.
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <TextBox x:Name="TxtProfilesFolder" Width="380" VerticalAlignment="Center"/>
+                        <Button Content="Browse…" Click="OnBrowseFolder"
+                                Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="CmbProfiles" Grid.Column="0" Height="28"
+                                  Background="#1E2023" Foreground="#EEE"
+                                  BorderBrush="{StaticResource BorderCard}"/>
+                        <Button Content="↻" Click="OnReloadFolder" Grid.Column="1"
+                                Margin="6,0,0,0" Padding="12,4"
+                                Style="{StaticResource SecondaryButton}"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="▶ Apply selected profile" Click="OnApplyProfile" Style="{StaticResource PrimaryButton}"/>
+                        <Button Content="💾 Save to flash (sys.save! + ss)" Click="OnSaveToFlash" Style="{StaticResource DangerButton}"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0">
+                        Apply writes every field in the profile via serial but does NOT persist. Test-ride first;
+                        if you approve, use Save to flash — that runs sys.save! (FFB params to emulated EEPROM) and
+                        ss (ODrive config to NVM, reboots the board).
+                    </TextBlock>
+
+                    <!-- Save current state as a profile file (mirrors the
+                         HTML tool's "Save current as…" flow). Same JSON
+                         format so files round-trip between the two tools. -->
+                    <Rectangle Height="1" Fill="{StaticResource BorderCard}" Margin="0,14,0,10"/>
+                    <TextBlock FontWeight="SemiBold" Foreground="{StaticResource Fg}"
+                               Text="Save the current cached state as a profile file"/>
+                    <TextBlock Style="{StaticResource Muted}">
+                        Captures every currently-cached tuning value and writes a .json in the profiles folder,
+                        using the exact format the HTML tool expects.
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBox x:Name="TxtNewProfileName" Width="260" VerticalAlignment="Center"
+                                 ToolTip="Profile display name (also becomes the file name)"/>
+                        <Button Content="💾 Save as new" Click="OnSaveAsNew"
+                                Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/>
+                        <Button Content="⟳ Overwrite selected" Click="OnOverwriteSelected"
+                                Style="{StaticResource SecondaryButton}" Margin="0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ApplyStatus" Style="{StaticResource LiveValue}" Foreground="#B8B8B8" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Auto-per-game                                               -->
+            <!-- ============================================================ -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource H2}" Text="AUTOMATIC PER-GAME"/>
+                    <CheckBox x:Name="ChkAutoLoad"   Style="{StaticResource ToggleSwitch}"
+                              Content="Auto-apply &lt;GameName&gt;.json when the game changes" Click="OnToggleAutoLoad"/>
+                    <CheckBox x:Name="ChkSaveOnAuto" Style="{StaticResource ToggleSwitch}"
+                              Content="Also save to flash after auto-apply (⚠ reboots ODrive)" Click="OnToggleSaveOnAuto"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0">
+                        Requires SimHub to detect the game (most sims are supported natively). If a matching
+                        file is missing, nothing happens. The lookup uses the exact GameName SimHub reports —
+                        check the "Data corner" if you need to see what to name your file.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- ============================================================ -->
+            <!--  Footer                                                      -->
+            <!-- ============================================================ -->
+            <TextBlock Style="{StaticResource Subtle}" TextAlignment="Center" Margin="0,4,0,0">
+                <Run Text="Odrive-Wheel Telemetry SimHub plugin "/>
+                <Run x:Name="FtVersion" Text="v0.4"/>
+                <Run Text=" · MIT · "/>
+                <Run x:Name="FtBuild" Text=""/>
+            </TextBlock>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

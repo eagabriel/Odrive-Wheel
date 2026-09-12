@@ -5,6 +5,8 @@
 #ifndef ODRIVE_BRIDGE_H_
 #define ODRIVE_BRIDGE_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,6 +44,14 @@ float odrive_bridge_get_brake_resistor_current(void);
 // thermal derating sem precisar do canal ODrive ASCII completo.
 float odrive_bridge_get_fet_temp(void);
 float odrive_bridge_get_motor_temp(void);
+
+// Estado do axis + erros das 4 subclasses (axis/motor/encoder/controller).
+// Cada Error é enum int32 no ODrive interface, truncar pra uint32 é lossless.
+uint8_t  odrive_bridge_get_axis_state(void);
+uint32_t odrive_bridge_get_axis_error(void);
+uint32_t odrive_bridge_get_motor_error(void);
+uint32_t odrive_bridge_get_encoder_error(void);
+uint32_t odrive_bridge_get_controller_error(void);
 
 // Snapshot dos contadores de SPI ABS do encoder pra debugar AS5047.
 // Preenche o struct com: ok_count, fail_parity, fail_ef, fail_xfer, last_rx.
