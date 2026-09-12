@@ -4083,7 +4083,7 @@ const FIELD_DESC = {
     'axis.expo':          'Curva exponencial de resposta. 0=linear. Positivo=centro morto, negativo=centro sensível.',
     'axis.exposcale':     'Divisor pro expo. Default 100.',
     // FFB Effects
-    'fx.master':   'Master gain. Multiplica TODOS os efeitos (0..255). 255=máximo.',
+    'fx.master':   '⚠ NÃO PERSISTENTE — Master gain (0..255). Multiplica TODOS os efeitos. Este valor é a interface HID Device Gain que os jogos controlam via slider "FFB Strength" da própria UI do sim. Sempre reseta pra 255 no boot; o jogo sobrescreve assim que conecta. Ajuste a força na config do jogo, ou use axis.maxtorque + motor.current_lim que SÃO persistentes.',
     'fx.spring':   'Gain do efeito Spring (mola). 0..255. Default 64.',
     'fx.damper':   'Gain do efeito Damper. 0..255. Default 64.',
     'fx.friction': 'Gain do efeito Friction. 0..255. Default 254.',
@@ -4231,7 +4231,7 @@ const FIELD_DESC = {
     'axis.maxtorquerate': 'Slew limiter in counts/ms. 0=off. Raise to smooth transients; CAREFUL kills dynamics.',
     'axis.expo':          'Exponential response curve. 0=linear. Positive=dead center, negative=sensitive center.',
     'axis.exposcale':     'Expo divisor. Default 100.',
-    'fx.master':   'Master gain. Multiplies ALL effects (0..255). 255=max.',
+    'fx.master':   '⚠ NOT PERSISTENT — Master gain (0..255). Multiplies ALL effects. This is the HID Device Gain the game controls via its own "FFB Strength" slider. Always resets to 255 on boot; the game overwrites it as soon as it connects. Set FFB strength in the game\'s UI, or use axis.maxtorque + motor.current_lim which ARE persistent.',
     'fx.spring':   'Spring effect gain. 0..255. Default 64.',
     'fx.damper':   'Damper effect gain. 0..255. Default 64.',
     'fx.friction': 'Friction effect gain. 0..255. Default 254.',
