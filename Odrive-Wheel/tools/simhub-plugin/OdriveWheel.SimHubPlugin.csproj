@@ -61,7 +61,7 @@
   <Target Name="CopyToSimHub" AfterTargets="Build" Condition="Exists('$(SimHubPath)')">
     <Message Text="Copying $(AssemblyName).dll to $(SimHubPath)" Importance="high" />
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(SimHubPath)" ContinueOnError="true" />
-    <Copy SourceFiles="$(OutputPath)HidSharp.dll" DestinationFolder="$(SimHubPath)" ContinueOnError="true" />
+    <!-- HidSharp.dll is intentionally NOT copied: SimHub already ships v2.1.0 -->
   </Target>
 
 </Project>

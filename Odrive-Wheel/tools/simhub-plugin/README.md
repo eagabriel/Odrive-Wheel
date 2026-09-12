@@ -53,9 +53,10 @@ dotnet restore
 dotnet build -c Release
 ```
 
-The `AfterBuild` target copies `OdriveWheel.SimHubPlugin.dll` and
-`HidSharp.dll` straight into your SimHub install directory. Restart SimHub
-and enable the plugin under **Settings → Plugins**.
+The `AfterBuild` target copies `OdriveWheel.SimHubPlugin.dll` straight
+into your SimHub install directory (SimHub already ships `HidSharp.dll`,
+so we don't overwrite it). Restart SimHub and enable the plugin under
+**Settings → Plugins**.
 
 If SimHub is installed elsewhere:
 
@@ -65,12 +66,10 @@ dotnet build -c Release -p:SimHubPath="D:\SimHub"
 
 ## Manual install (if the copy step fails)
 
-Copy from `bin/Release/net48/`:
+Copy `OdriveWheel.SimHubPlugin.dll` from `bin/Release/net48/` into your
+SimHub install directory (next to `SimHubWPF.exe`). Restart SimHub.
 
-- `OdriveWheel.SimHubPlugin.dll`
-- `HidSharp.dll`
-
-into your SimHub install directory (next to `SimHubWPF.exe`). Restart SimHub.
+`HidSharp.dll` is already bundled with SimHub — don't overwrite it.
 
 ## Configuration
 

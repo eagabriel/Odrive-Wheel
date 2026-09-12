@@ -71,10 +71,11 @@ and mappable actions for dashboards and button-box control.
 
 ### Option A — Prebuilt DLL
 
-1. Grab `OdriveWheel.SimHubPlugin.dll` and `HidSharp.dll` from the
+1. Grab `OdriveWheel.SimHubPlugin.dll` from the
    [Odrive-Wheel Releases page](https://github.com/eagabriel/Odrive-Wheel/releases).
+   (SimHub already ships `HidSharp.dll` — the plugin reuses it.)
 2. Close SimHub (right-click the tray icon → *Exit* to be sure).
-3. Copy both DLLs into `C:\Program Files (x86)\SimHub`.
+3. Copy the DLL into `C:\Program Files (x86)\SimHub`.
 4. Start SimHub. On first launch it detects the new DLL and asks
    *"A new plugin was found — enable it?"* — click **Yes**.
 5. SimHub restarts. **Odrive-Wheel** appears in the left sidebar.
@@ -521,8 +522,9 @@ if you're not sure a file was found.
 ## Update the plugin
 
 1. Close SimHub completely (including the tray icon).
-2. Overwrite `OdriveWheel.SimHubPlugin.dll` (and `HidSharp.dll` if it
-   changed) in `C:\Program Files (x86)\SimHub`.
+2. Overwrite `OdriveWheel.SimHubPlugin.dll` in
+   `C:\Program Files (x86)\SimHub`. Don't touch `HidSharp.dll` — it's
+   part of SimHub itself.
 3. Start SimHub. Your settings (profiles folder, auto-load toggles)
    persist automatically — they live in
    `Documents\SimHub\PluginsData\OdriveWheel.SimHubPlugin`.
@@ -633,13 +635,13 @@ button-mapped inc/dec, per-game profile switching.
 ## Uninstall
 
 1. Close SimHub completely.
-2. Delete from `C:\Program Files (x86)\SimHub`:
-   - `OdriveWheel.SimHubPlugin.dll`
-3. Optionally delete `HidSharp.dll` (only if no other plugin uses it).
-4. Optionally delete
+2. Delete `OdriveWheel.SimHubPlugin.dll` from
+   `C:\Program Files (x86)\SimHub`. Don't touch `HidSharp.dll` — it
+   belongs to SimHub.
+3. Optionally delete
    `Documents\SimHub\PluginsData\OdriveWheel.SimHubPlugin\` to remove
    saved settings.
-5. Restart SimHub.
+4. Restart SimHub.
 
 ---
 
