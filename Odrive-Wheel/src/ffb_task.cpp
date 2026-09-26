@@ -544,25 +544,35 @@ extern "C" void ffb_init_storage_early(void) {
         }
     }
 
-    // EQ por banda — load dos ganhos persistidos. Valores armazenados em
-    // décimos de dB (int16 reinterpretado pela leitura uint16). 0xFFFF =
-    // nunca escrito → fica em flat (default do EqCascade). Range válido:
-    // -120..+120 (= ±12.0 dB).
-    if (s_effects_calc) {
-        const uint16_t eqAddrs[3] = { ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD };
-        for (uint8_t band = 0; band < 3; ++band) {
-            uint16_t raw = 0xFFFF;
-            if (!Flash_Read(eqAddrs[band], &raw, false) || raw == 0xFFFF) continue;
-            int16_t signed_x10 = (int16_t)raw;
-            if (signed_x10 < -120 || signed_x10 > 120) continue;
-            const float gainDb = (float)signed_x10 / 10.0f;
-            for (uint8_t axis = 0; axis < MAX_AXIS; ++axis) {
-                s_effects_calc->getEqCascade(axis).setGain((EqCascade::Band)band, gainDb);
-            }
-        }
-    }
+    // NOTA: o load do EQ (WEIGHT/CHASSIS/ROAD) foi MOVIDO daqui pra
+    // ffb_task_init(), depois do s_effects_calc ser criado. Quando
+    // ffb_init_storage_early() é chamado do main.cpp antes do ADC iniciar
+    // (caminho normal), s_effects_calc ainda é nullptr e o load falhava
+    // silenciosamente — bug: EQ gains salvos nunca eram restaurados no boot.
 
     s_storage_initialized = true;
+}
+
+// Restaura ganhos EQ (WEIGHT/CHASSIS/ROAD) da EEPROM pro EqCascade em
+// runtime. Precisa ser chamado DEPOIS que s_effects_calc está construído
+// (ffb_task_init) — não pode ficar em ffb_init_storage_early() porque
+// naquele ponto o shared_ptr ainda é nullptr.
+// Valores armazenados em décimos de dB (int16 reinterpretado pra uint16
+// no flash API). 0xFFFF (slot nunca escrito) → mantém default (0 dB flat).
+// Range válido: -120..+120 (±12.0 dB) — fora disso, ignora.
+static void ffb_load_eq_gains_from_flash(void) {
+    if (!s_effects_calc) return;
+    const uint16_t eqAddrs[3] = { ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD };
+    for (uint8_t band = 0; band < 3; ++band) {
+        uint16_t raw = 0xFFFF;
+        if (!Flash_Read(eqAddrs[band], &raw, false) || raw == 0xFFFF) continue;
+        int16_t signed_x10 = (int16_t)raw;
+        if (signed_x10 < -120 || signed_x10 > 120) continue;
+        const float gainDb = (float)signed_x10 / 10.0f;
+        for (uint8_t axis = 0; axis < MAX_AXIS; ++axis) {
+            s_effects_calc->getEqCascade(axis).setGain((EqCascade::Band)band, gainDb);
+        }
+    }
 }
 
 extern "C" void ffb_task_init(void) {
@@ -585,6 +595,11 @@ extern "C" void ffb_task_init(void) {
     // só grava friction/damper/inertia se filterProfileId == CUSTOM_PROFILE_ID.
     // Sem isso esses filtros nunca persistiriam.
     s_effects_calc->setFilterProfileToCustom();
+
+    // Restaura ganhos EQ (WEIGHT/CHASSIS/ROAD) do flash. Tem que ser AQUI e
+    // não em ffb_init_storage_early() — naquele ponto s_effects_calc ainda
+    // é nullptr (bug histórico: EQ salvo nunca era carregado no boot).
+    ffb_load_eq_gains_from_flash();
 
     auto axis_owned = std::make_unique<ODriveLocalAxis>();
     s_axis_raw = axis_owned.get();
