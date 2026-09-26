@@ -322,7 +322,9 @@
      adiciona body.show-advanced pra exibir. Tanto o cabeçalho .group
      quanto os .field que o seguem (até o próximo .group) recebem a
      classe .advanced-section pelo renderer. */
-  body:not(.show-advanced) .advanced-section { display: none; }
+  /* !important: painéis injetados (ex.: Anticogging no Controller) têm
+     display inline, que venceria a regra sem ele. */
+  body:not(.show-advanced) .advanced-section { display: none !important; }
 
   /* Each .field becomes a card */
   .field {
@@ -1748,7 +1750,7 @@
   <div class="header-actions">
     <!-- Sponsor / BuyMeACoffee links (à esquerda do Connect) -->
     <span class="tool-version" title="HTML tool version"
-          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.31</span>
+          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.32</span>
     <!-- PIX (Brazil): abre modal com QR code pre-gerado inline (offline).
          Cor #32BCAD do branding oficial do PIX. -->
     <button id="btn-pix-open" type="button"
@@ -1992,6 +1994,8 @@ const I18N = {
     'toast.wheel_zero_fail': 'Falha ao zerar posição',
     'toast.preset_as5047_applied': '✓ Preset AS5047 aplicado — clique Salvar pra persistir',
     'toast.preset_as5047_unchanged': 'ℹ AS5047 já está configurado — todos os valores coincidem com o preset',
+    'toast.preset_mt6835_applied': '✓ Preset MT6835 aplicado — clique Salvar pra persistir',
+    'toast.preset_mt6835_unchanged': 'ℹ MT6835 já está configurado — todos os valores coincidem com o preset',
     // Import JSON
     'import.confirm_apply':  '{n} campo(s) carregado(s) do JSON.\n\n[OK]       Aplicar agora — grava cada campo no device em sequência (não persiste em NVM até clicar Salvar)\n[Cancelar] Só carrega no formulário (vermelho), você revisa e Salva manualmente depois',
     'import.loaded_only':    '✓ {n} campo(s) carregado(s) no formulário — revise e clique Salvar pra aplicar',
@@ -2406,11 +2410,9 @@ const I18N = {
     'fbt.enable':      'Aplicar',
     'fbt.panic':       '🛑 Parar tudo',
     'fbt.chart_title': 'Posição (azul) e torque (verde) ao vivo',
-    'fbt.chart_off':   'Conecte HID + Web Serial pra ver o gráfico ao vivo.',
-    'fbt.chart_enable':'Auto-refresh',
-    'fbt.chart_once':  'Ler agora',
+    'fbt.chart_off':   'Conecte o HID pra ver o gráfico ao vivo.',
     'fbt.chart_clear': 'Limpar',
-    'fbt.chart_hint':  'Lê axis.curpos? + diag T (torque em Nm) via Web Serial. Intervalo curto (~100ms) sobrecarrega CDC; 200ms é o sweet spot.',
+    'fbt.chart_hint':  'Automático via HID (1 kHz, sem usar a serial) assim que o HID estiver conectado. Posição = a mesma que o jogo vê (inclui axis.expo/invert, limitada a ±range/2).',
     'fbt.note':        'Avisos: forças aqui são reais — segure o volante. "Parar tudo" desliga todos os efeitos. Sair da aba também para automaticamente.',
     // Inputs section (PT)
     'inputs.title':       'Entradas digitais e analógicas',
@@ -2662,7 +2664,7 @@ const I18N = {
     'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS · 261 MT6835 (21b SPI, /4 auto, thread FreeRTOS, CRC-8 · zero via Debug → sys.mtzero+mteeprom)',
     'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits) · MT6835 = 2097152 (21 bits)',
     'setup.hint.enc_direction':          '1 ou -1 — use ENCODER_DIR_FIND (state=10) pra detectar',
-    'setup.hint.enc_bandwidth':          'Hz do PLL — ABZ típico 100-500 · MT6835/AS5047 pode ir a 1000-2000 (agora vira o knob real de ruído dos efeitos de velocidade)',
+    'setup.hint.enc_bandwidth':          'rad/s do PLL (÷ 2π = Hz) — ABZ típico 100-500 · MT6835/AS5047 pode ir a 1000-2000 (agora vira o knob real de ruído dos efeitos de velocidade)',
     'setup.hint.enc_use_index':          'true só se tem pulso Z (incremental ABZ)',
     'setup.hint.enc_cs_pin':             'GPIO do CS quando mode é SPI_ABS_* — AS5047 onboard MKS = 7 · MT6835 no port SPI da ODESC V4.2 = 6',
     'setup.hint.enc_pre_calibrated':     'false até calibrar (passo 8) · true depois (passo 9)',
@@ -2803,6 +2805,13 @@ const I18N = {
     'encoder.preset_as5047_label':  'Preset AS5047:',
     'encoder.preset_as5047_hint':   'Configura encoder absoluto AS5047P (montado na MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False. Os campos ficam destacados em vermelho — clique Salvar pra persistir+reboot, depois rode ENCODER_OFFSET_CALIBRATION na aba Debug; se OK, marque pre_calibrated=True e Salvar de novo.',
     'encoder.preset_as5047_confirm':'Aplicar preset AS5047? Vai sobrescrever mode, cpr, abs_spi_cs_gpio_pin, use_index e pre_calibrated. Os campos ficam em vermelho até você clicar Salvar. Calibração antiga (phase_offset) será invalidada.',
+    'encoder.preset_mt6835_btn':    '⚙ Ativar MT6835 (preset)',
+    'encoder.preset_mt6835_label':  'Preset MT6835:',
+    'encoder.preset_mt6835_hint':   'Configura encoder absoluto MT6835 (21 bits, SPI): mode=SPI_ABS_MT6835 (261), cpr=2097152, abs_spi_cs_gpio_pin=6 (porta SPI da ODESC V4.2 — ajuste se sua ligação usar outro GPIO), use_index=False, pre_calibrated=False. Os campos ficam em vermelho — clique Salvar pra persistir+reboot, depois rode ENCODER_OFFSET_CALIBRATION; se OK, marque pre_calibrated=True e Salvar de novo. Set Zero e Program EEPROM do chip ficam no Diagnóstico abaixo, depois que o MT6835 estiver ativo.',
+    'encoder.preset_mt6835_confirm':'Aplicar preset MT6835? Vai sobrescrever mode, cpr, abs_spi_cs_gpio_pin, use_index e pre_calibrated. Os campos ficam em vermelho até você clicar Salvar. Calibração antiga (phase_offset) será invalidada.',
+    'enc.mt_no_serial':             'Conecte à placa pra verificar se o MT6835 está ativo.',
+    'enc.mt_not_active':            '⚠ MT6835 selecionado, mas ainda não está ativo na placa. Clique Salvar (grava e reinicia). Set Zero e Program EEPROM ficam disponíveis depois disso.',
+    'enc.mt_active_start_live':     'MT6835 ativo — clique ▶ Iniciar live pra ver o status do chip.',
     // Encoder diagnostics panel
     'enc.diag_title':              '🔬 Diagnóstico do Encoder',
     'enc.diag_section_spi':        'Contadores SPI ABS (sys.encraw!)',
@@ -3002,6 +3011,8 @@ const I18N = {
     'toast.wheel_zero_fail': 'Failed to zero wheel position',
     'toast.preset_as5047_applied': '✓ AS5047 preset applied — click Save to persist',
     'toast.preset_as5047_unchanged': 'ℹ AS5047 already configured — all values match the preset',
+    'toast.preset_mt6835_applied': '✓ MT6835 preset applied — click Save to persist',
+    'toast.preset_mt6835_unchanged': 'ℹ MT6835 already configured — all values match the preset',
     // Import JSON
     'import.confirm_apply':  '{n} field(s) loaded from JSON.\n\n[OK]     Apply now — write each field to the device in sequence (does NOT persist to NVM until you click Save)\n[Cancel] Just load into the form (red), review and Save manually later',
     'import.loaded_only':    '✓ {n} field(s) loaded into the form — review and click Save to apply',
@@ -3413,11 +3424,9 @@ const I18N = {
     'fbt.enable':      'Apply',
     'fbt.panic':       '🛑 Stop everything',
     'fbt.chart_title': 'Live position (blue) and torque (green)',
-    'fbt.chart_off':   'Connect HID + Web Serial to see the live chart.',
-    'fbt.chart_enable':'Auto-refresh',
-    'fbt.chart_once':  'Read now',
+    'fbt.chart_off':   'Connect the HID to see the live chart.',
     'fbt.chart_clear': 'Clear',
-    'fbt.chart_hint':  'Reads axis.curpos? + diag T (torque in Nm) via Web Serial. Short interval (~100ms) loads the CDC; 200ms is the sweet spot.',
+    'fbt.chart_hint':  'Automatic via HID (1 kHz, no serial traffic) as soon as the HID is connected. Position = what the game sees (includes axis.expo/invert, clamped to ±range/2).',
     'fbt.note':        'Warnings: forces here are real — hold the wheel. "Stop everything" disables all effects. Leaving the tab also stops them automatically.',
     // Inputs section (EN)
     'inputs.title':       'Digital and analog inputs',
@@ -3661,7 +3670,7 @@ const I18N = {
     'setup.hint.enc_mode':               '0 INCREMENTAL · 1 HALL · 257 SPI_ABS_AMS (AS5047) · 258 AEAT · 259 RLS · 261 MT6835 (21b SPI, auto /4 baud, FreeRTOS thread, CRC-8 · zero via Debug → sys.mtzero+mteeprom)',
     'setup.hint.enc_cpr':                'ABZ ×4 (datasheet) · AS5047 = 16384 (14 bits) · MT6835 = 2097152 (21 bits)',
     'setup.hint.enc_direction':          '1 or -1 — use ENCODER_DIR_FIND (state=10) to detect',
-    'setup.hint.enc_bandwidth':          'PLL Hz — ABZ typical 100-500 · MT6835/AS5047 can go 1000-2000 (now the real noise knob for velocity-based effects)',
+    'setup.hint.enc_bandwidth':          'PLL rad/s (÷ 2π = Hz) — ABZ typical 100-500 · MT6835/AS5047 can go 1000-2000 (now the real noise knob for velocity-based effects)',
     'setup.hint.enc_use_index':          'true only if you have a Z pulse (incremental ABZ)',
     'setup.hint.enc_cs_pin':             'CS GPIO when mode is SPI_ABS_* — AS5047 onboard MKS = 7 · MT6835 on ODESC V4.2 SPI port = 6',
     'setup.hint.enc_pre_calibrated':     'false until calibrated (step 8) · true after (step 9)',
@@ -3802,6 +3811,13 @@ const I18N = {
     'encoder.preset_as5047_label':  'AS5047 preset:',
     'encoder.preset_as5047_hint':   'Configures the absolute AS5047P encoder (mounted on MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False. Fields turn red — click Save to persist+reboot, then run ENCODER_OFFSET_CALIBRATION from the Debug tab; if it succeeds, set pre_calibrated=True and Save again.',
     'encoder.preset_as5047_confirm':'Apply AS5047 preset? Will overwrite mode, cpr, abs_spi_cs_gpio_pin, use_index and pre_calibrated. Fields stay red until you click Save. Old calibration (phase_offset) will be invalidated.',
+    'encoder.preset_mt6835_btn':    '⚙ Activate MT6835 (preset)',
+    'encoder.preset_mt6835_label':  'MT6835 preset:',
+    'encoder.preset_mt6835_hint':   'Configures the absolute MT6835 encoder (21-bit, SPI): mode=SPI_ABS_MT6835 (261), cpr=2097152, abs_spi_cs_gpio_pin=6 (ODESC V4.2 SPI port — change it if your wiring uses another GPIO), use_index=False, pre_calibrated=False. Fields turn red — click Save to persist+reboot, then run ENCODER_OFFSET_CALIBRATION; if it succeeds, set pre_calibrated=True and Save again. The chip Set Zero and Program EEPROM live in the Diagnostics below, once the MT6835 is active.',
+    'encoder.preset_mt6835_confirm':'Apply MT6835 preset? Will overwrite mode, cpr, abs_spi_cs_gpio_pin, use_index and pre_calibrated. Fields stay red until you click Save. Old calibration (phase_offset) will be invalidated.',
+    'enc.mt_no_serial':             'Connect to the board to check whether the MT6835 is active.',
+    'enc.mt_not_active':            '⚠ MT6835 selected, but not active on the board yet. Click Save (writes and reboots). Set Zero and Program EEPROM become available after that.',
+    'enc.mt_active_start_live':     'MT6835 active — click ▶ Start live to see the chip status.',
     // Encoder diagnostics panel
     'enc.diag_title':              '🔬 Encoder Diagnostics',
     'enc.diag_section_spi':        'ABS SPI counters (sys.encraw!)',
@@ -4040,7 +4056,7 @@ const FIELD_DESC = {
     'axis0.encoder.config.mode':                  'Tipo de encoder: incremental, hall, SPI absoluto, sin/cos, etc.',
     'axis0.encoder.config.cpr':                   'Counts per revolution (4× pulses pra encoder em quadratura).',
     'axis0.encoder.config.direction':             'Direção do encoder (1 ou -1). READONLY — calibrado automaticamente por motor_calibration (firmware aplica torque conhecido e mede pra qual lado o encoder responde). Editar manualmente inverte o sinal do Park transform → FOC fica com sinal trocado → motor oscila/gira errado/desarmado. Pra inverter o SENTIDO do volante do ponto de vista do usuário/jogo, use axis.invert na aba FFB Wheel.',
-    'axis0.encoder.config.bandwidth':             'Banda do PLL de estimativa (Hz). Encoder ABZ típico: 100-500.',
+    'axis0.encoder.config.bandwidth':             'Banda do PLL de estimativa em rad/s (o equivalente em Hz aparece ao lado). Encoder ABZ típico: 100-500; MT6835/AS5047 aguentam 1000-2000. Controla ruído × atraso da velocidade usada por damper/friction/inertia.',
     'axis0.encoder.config.pre_calibrated':        'True = pula offset cal no boot. Use após calibrar e salvar.',
     'axis0.encoder.config.phase_offset':          'Offset entre encoder zero e phase A do motor (counts). READONLY — calibrado por encoder_offset_calibration. Editar manualmente desalinha Park transform → motor pode oscilar ou girar errado. Se quiser inverter o sentido pro usuário, use axis.invert na aba FFB Wheel.',
     'axis0.encoder.config.phase_offset_float':    'Offset em radianos (resolução fina). READONLY — calibrado junto com phase_offset.',
@@ -4055,7 +4071,7 @@ const FIELD_DESC = {
     // Controller
     'axis0.controller.config.control_mode':       'TORQUE / VELOCITY / POSITION. Pra FFB use TORQUE.',
     'axis0.controller.config.input_mode':         'PASSTHROUGH (direto), VEL_RAMP, POS_FILTER, TRAP_TRAJ. Pra FFB use PASSTHROUGH.',
-    'axis0.controller.config.input_filter_bandwidth':'Banda do filtro do input em Hz. Só ativa em POS_FILTER mode.',
+    'axis0.controller.config.input_filter_bandwidth':'Banda do filtro do input em rad/s (equivalente em Hz ao lado). Só ativa em POS_FILTER mode.',
     'axis0.controller.config.torque_ramp_rate':   'Slew rate de torque em Nm/s. Só ativo em TORQUE_RAMP input mode.',
     'axis0.controller.config.vel_ramp_rate':      'Slew rate de velocidade.',
     'axis0.controller.config.pos_gain':           'Ganho proporcional de posição. Posição = pos_setpoint + pos_gain * erro.',
@@ -4070,8 +4086,8 @@ const FIELD_DESC = {
     'axis0.controller.config.vel_limit':          'Velocidade máxima em turns/s. Pra wheel use 10+ pra não bater em manobras.',
     'axis0.controller.config.vel_limit_tolerance':'Multiplicador antes de erro overspeed disparar (1.2 = 20% margem).',
     'axis0.controller.config.enable_overspeed_error':'Dispara erro se vel passar limite × tolerance.',
-    'axis0.controller.config.electrical_power_bandwidth':'Filtro do estimador de potência elétrica (Hz). Menor = ignora picos.',
-    'axis0.controller.config.mechanical_power_bandwidth':'Filtro do estimador de potência mecânica (Hz).',
+    'axis0.controller.config.electrical_power_bandwidth':'Filtro do estimador de potência elétrica em rad/s (equivalente em Hz ao lado). Menor = ignora picos.',
+    'axis0.controller.config.mechanical_power_bandwidth':'Filtro do estimador de potência mecânica em rad/s (equivalente em Hz ao lado).',
     'axis0.controller.config.spinout_electrical_power_threshold':'Threshold de potência elétrica pra spinout (W). Sobe pra 50 se FFB intenso disparar.',
     'axis0.controller.config.spinout_mechanical_power_threshold':'Threshold de potência mecânica negativa (W). -50 é seguro.',
     // FFB Wheel
@@ -4191,7 +4207,7 @@ const FIELD_DESC = {
     'axis0.encoder.config.mode':                  'Encoder type: incremental, hall, SPI absolute, sin/cos, etc.',
     'axis0.encoder.config.cpr':                   'Counts per revolution (4× pulses for quadrature encoder).',
     'axis0.encoder.config.direction':             'Encoder direction (1 or -1). READONLY — calibrated automatically by motor_calibration (firmware applies known torque and measures which way the encoder responds). Manually editing flips the sign in the Park transform → FOC sees inverted sign → motor oscillates / spins wrong / disarms. To flip the wheel direction from the user/game perspective, use axis.invert in the FFB Wheel tab.',
-    'axis0.encoder.config.bandwidth':             'PLL estimator bandwidth (Hz). Typical ABZ encoder: 100-500.',
+    'axis0.encoder.config.bandwidth':             'PLL estimator bandwidth in rad/s (Hz equivalent shown alongside). Typical ABZ encoder: 100-500; MT6835/AS5047 handle 1000-2000. Sets the noise vs. lag trade-off of the velocity used by damper/friction/inertia.',
     'axis0.encoder.config.pre_calibrated':        'True = skips offset cal at boot. Use after calibrating and saving.',
     'axis0.encoder.config.phase_offset':          'Offset between encoder zero and motor phase A (counts). READONLY — calibrated by encoder_offset_calibration. Manually editing breaks the Park transform → motor may oscillate or spin the wrong way. To invert the user-facing direction use axis.invert in the FFB Wheel tab.',
     'axis0.encoder.config.phase_offset_float':    'Offset in radians (fine resolution). READONLY — calibrated together with phase_offset.',
@@ -4205,7 +4221,7 @@ const FIELD_DESC = {
     'axis0.encoder.config.calib_scan_omega':      'Scan velocity (rad/s).',
     'axis0.controller.config.control_mode':       'TORQUE / VELOCITY / POSITION. For FFB use TORQUE.',
     'axis0.controller.config.input_mode':         'PASSTHROUGH (direct), VEL_RAMP, POS_FILTER, TRAP_TRAJ. For FFB use PASSTHROUGH.',
-    'axis0.controller.config.input_filter_bandwidth':'Input filter bandwidth in Hz. Only active in POS_FILTER mode.',
+    'axis0.controller.config.input_filter_bandwidth':'Input filter bandwidth in rad/s (Hz equivalent shown alongside). Only active in POS_FILTER mode.',
     'axis0.controller.config.torque_ramp_rate':   'Torque slew rate in Nm/s. Only active in TORQUE_RAMP input mode.',
     'axis0.controller.config.vel_ramp_rate':      'Velocity slew rate.',
     'axis0.controller.config.pos_gain':           'Position proportional gain.',
@@ -4220,8 +4236,8 @@ const FIELD_DESC = {
     'axis0.controller.config.vel_limit':          'Max velocity in turns/s. For wheel use 10+ to handle aggressive maneuvers.',
     'axis0.controller.config.vel_limit_tolerance':'Multiplier before overspeed error fires (1.2 = 20% margin).',
     'axis0.controller.config.enable_overspeed_error':'Fires error if vel exceeds limit × tolerance.',
-    'axis0.controller.config.electrical_power_bandwidth':'Electrical power estimator filter (Hz). Lower = ignores spikes.',
-    'axis0.controller.config.mechanical_power_bandwidth':'Mechanical power estimator filter (Hz).',
+    'axis0.controller.config.electrical_power_bandwidth':'Electrical power estimator filter in rad/s (Hz equivalent shown alongside). Lower = ignores spikes.',
+    'axis0.controller.config.mechanical_power_bandwidth':'Mechanical power estimator filter in rad/s (Hz equivalent shown alongside).',
     'axis0.controller.config.spinout_electrical_power_threshold':'Spinout electrical power threshold (W). Raise to 50 if intense FFB triggers it.',
     'axis0.controller.config.spinout_mechanical_power_threshold':'Spinout negative mechanical power threshold (W). -50 is safe.',
     'axis.range':         'Total wheel rotation in degrees (lock-to-lock). Default 900.',
@@ -4313,14 +4329,14 @@ const FIELD_RANGE = {
   // Encoder
   'axis0.encoder.config.cpr':                       '1–1000000',
   'axis0.encoder.config.direction':                 '-1 ou 1',
-  'axis0.encoder.config.bandwidth':                 '50–2000 Hz',
+  'axis0.encoder.config.bandwidth':                 '50–2000 rad/s',
   'axis0.encoder.config.phase_offset':              '-32768..32767',
   'axis0.encoder.config.calib_range':               '0.001–0.1 turn',
   'axis0.encoder.config.calib_scan_distance':       '6–25 rad',
   'axis0.encoder.config.calib_scan_omega':          '5–50 rad/s',
 
   // Controller
-  'axis0.controller.config.input_filter_bandwidth': '0.1–500 Hz',
+  'axis0.controller.config.input_filter_bandwidth': '0.1–500 rad/s',
   'axis0.controller.config.torque_ramp_rate':       '0.001–100 Nm/s',
   'axis0.controller.config.vel_ramp_rate':          '0.01–100 turn/s²',
   'axis0.controller.config.pos_gain':               '0.1–500',
@@ -4334,8 +4350,8 @@ const FIELD_RANGE = {
   'axis0.controller.config.circular_setpoint_range':'0.01–100 turn',
   'axis0.controller.config.steps_per_circular_range':'1–100000',
   'axis0.controller.config.homing_speed':           '0.01–10 turn/s',
-  'axis0.controller.config.electrical_power_bandwidth':'0.5–500 Hz',
-  'axis0.controller.config.mechanical_power_bandwidth':'0.5–500 Hz',
+  'axis0.controller.config.electrical_power_bandwidth':'0.5–500 rad/s',
+  'axis0.controller.config.mechanical_power_bandwidth':'0.5–500 rad/s',
   'axis0.controller.config.spinout_electrical_power_threshold':'1–500 W',
   'axis0.controller.config.spinout_mechanical_power_threshold':'-500..-1 W',
   'axis0.controller.config.anticogging.cogging_ratio':         '0.1–2.0',
@@ -4376,6 +4392,26 @@ const FIELD_RANGE = {
 
 function fieldRange(path) {
   return FIELD_RANGE[path] || '';
+}
+
+// Campos que o firmware ODrive interpreta em rad/s (ex.: PLL do encoder usa
+// kp = 2·bandwidth). A entrada continua em rad/s; o equivalente em Hz (÷ 2π)
+// aparece ao lado só como referência.
+const RAD_S_FIELDS = new Set([
+  'axis0.encoder.config.bandwidth',
+  'axis0.motor.config.current_control_bandwidth',
+  'axis0.controller.config.input_filter_bandwidth',
+  'axis0.controller.config.electrical_power_bandwidth',
+  'axis0.controller.config.mechanical_power_bandwidth',
+]);
+function _updateHzHint(input) {
+  if (!input || !RAD_S_FIELDS.has(input.dataset.path)) return;
+  const el = document.getElementById('hz-' + input.dataset.path);
+  if (!el) return;
+  const radS = parseFloat(input.value);
+  if (!isFinite(radS)) { el.textContent = ''; return; }
+  const hz = radS / (2 * Math.PI);
+  el.textContent = '≈ ' + (hz < 10 ? hz.toFixed(2) : hz < 100 ? hz.toFixed(1) : hz.toFixed(0)) + ' Hz';
 }
 
 let currentLang = (function() {
@@ -4479,8 +4515,8 @@ function setLang(lang) {
 /* Mapeia o texto literal do grupo (em pt-br como originalmente escrito no
    SCHEMA) pra chave i18n. Permite manter o SCHEMA legível em pt enquanto
    o sistema traduz na renderização. */
-// Grupos marcados como "avançados" — escondidos por default. Botão no
-// header da aba Debug toggle pra body.show-advanced via localStorage.
+// Grupos marcados como "avançados" — escondidos ao abrir a ferramenta. Botão
+// no header da aba Debug alterna body.show-advanced (só na sessão atual).
 // Pra esses casos: campos raramente usados em sim racing, configs de
 // modos não suportados (induction motor / homing / lockin etc.) e
 // transports não usados na nossa stack (UART/CAN — usamos USB CDC).
@@ -4489,14 +4525,36 @@ const ADVANCED_GROUPS = new Set([
   'Comunicação',                           // UART/CAN — usamos USB CDC
   // Axis 0
   'Modo de operação',                      // operating mode flags raramente tocados
-  'Calibration Lockin',                    // params internos do offset cal
+  // 'Calibration Lockin' fica VISÍVEL: lockin.current é o primeiro ajuste
+  // quando a calibração do encoder falha com volante montado.
   'General Lockin',                        // open-loop spin params
   'Sensorless Ramp',                       // sensorless commutation — não usado
   // Motor
   'ACIM (induction only)',                 // induction motors — usamos BLDC
+  // Encoder
+  'Hall',                                  // só pra sensor Hall — não usado
   // Controller
   'Posição circular',                      // circular position — não usado em wheel
   'Homing / mirror',                       // homing / mirror axis — não usado
+  'Anticogging',                           // campos + painéis de cal/captura/aplicar e Auto-tune PI
+]);
+
+// Campos avulsos escondidos (mesmo toggle "mostrar avançado" dos grupos),
+// pra quando o campo sem uso no FFB está no meio de um grupo útil.
+// Continuam no JSON de perfil/export e na lista de comandos do Console.
+const ADVANCED_FIELDS = new Set([
+  'axis0.config.startup_homing',                          // volante não faz homing
+  'axis0.encoder.config.sincos_gpio_pin_sin',             // encoder sin/cos — não usado
+  'axis0.encoder.config.sincos_gpio_pin_cos',
+  'axis0.controller.config.input_filter_bandwidth',       // só input_mode = POS_FILTER
+  'axis0.controller.config.torque_ramp_rate',             // só input_mode = TORQUE_RAMP
+  'axis0.controller.config.vel_ramp_rate',                // só input_mode = VEL_RAMP
+  'axis0.controller.config.inertia',                      // feed-forward de trajetória
+  'axis0.controller.config.enable_gain_scheduling',       // só modo posição
+  'axis0.controller.config.gain_scheduling_width',
+  'axis0.controller.config.anticogging.cogging_ratio',    // sem efeito no fw 0.5.6
+  'axis0.motor.config.dc_calib_tau',                      // interno
+  'axis0.motor.config.I_leak_max',                        // proteção interna
 ]);
 
 const GROUP_KEY_MAP = {
@@ -6293,9 +6351,15 @@ const FBT_TYPE  = { cf: 1, sp: 8, da: 9, fr: 11 };
 let fbtDevice = null;          // HIDDevice
 let fbtConnected = false;
 let fbtRunning = { cf: false, sp: false, da: false, fr: false }; // effect started?
-let fbtChartTimer = null;
 let fbtChartHist = { pos: [], trq: [] };
-const FBT_CHART_LEN = 200;     // pontos no buffer
+// Gráfico alimentado pelo HID input report (1 kHz), decimado pra 50 Hz.
+// 500 pontos × 20 ms = janela de 10 s.
+const FBT_DECIM       = 20;
+const FBT_SAMPLE_MS   = 20;
+const FBT_CHART_LEN   = 500;
+// Limite de ângulo do Constant Force: true enquanto o volante está além do
+// limite — updateForce('cf') manda magnitude 0 nesse estado.
+let fbtCfLimited = false;
 
 function buildFFBTestHTML() {
   return `
@@ -6395,13 +6459,9 @@ function buildFFBTestHTML() {
       <h3 data-i18n="fbt.chart_title">Posição (azul) e torque (verde) ao vivo</h3>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
         <span class="poll-dot" id="fbt-poll-dot"></span>
-        <label><input type="checkbox" id="fbt-poll-enable">
-          <span data-i18n="fbt.chart_enable">Auto-refresh</span></label>
-        <input type="number" id="fbt-poll-interval" value="200" min="50" max="2000" step="50" style="width:80px"> ms
-        <button id="fbt-poll-once" data-i18n="fbt.chart_once">Ler agora</button>
         <button id="fbt-chart-clear" data-i18n="fbt.chart_clear">Limpar</button>
         <span style="color:var(--fg-dim);font-size:13px;margin-left:auto" data-i18n="fbt.chart_hint">
-          Lê axis.curpos? + axis.curtorque? via Web Serial.
+          Automático via HID (1 kHz) assim que o HID estiver conectado.
         </span>
       </div>
       <canvas id="fbt-chart" width="800" height="220"
@@ -6502,10 +6562,10 @@ function wireFFBTestTab() {
     if (!fbtConnected) return;
     if (key === 'cf') {
       const force = parseInt(document.getElementById('fbt-cf-force').value, 10);
-      const limit = parseInt(document.getElementById('fbt-cf-limit').value, 10);
       let mag = Math.round((force / 100) * 0x7FFF);
-      // Limite angular: aplicado client-side, vamos fazer poll separado
-      // (vide updateCFAngleLimit). Aqui só envia magnitude raw.
+      // Limite angular: o listener HID (_fbtOnHidReport) mantém fbtCfLimited;
+      // fora do limite a força vai a zero, inclusive se o slider for mexido.
+      if (fbtCfLimited) mag = 0;
       // Convert to int16 signed range
       if (mag > 32767) mag = 32767; if (mag < -32767) mag = -32767;
       await sendOutput(0x05, buildConstantForce(FBT_BLOCK.cf, mag));
@@ -6576,6 +6636,7 @@ function wireFFBTestTab() {
     await sendOutput(0x0D, [255]);      // DEVICE_GAIN: max
     setConnState(true);
     _fbtAttachDisconnectListener();
+    _fbtAttachChartListener();
     // Atacha listener leve de liveness — qualquer painel pode consultar
     // _hidIsLive() pra saber se o firmware está realmente enviando reports.
     _hidEnsureLivenessListener(fbtDevice);
@@ -6649,6 +6710,13 @@ function wireFFBTestTab() {
       logLine('fbt: watchdog — firmware silencioso há >1.5s, marcando desconectado', 'warn');
       setConnState(false);
     }
+  }, 1000);
+  // Indicador do gráfico: apaga se não chega report HID há >1.5 s.
+  setInterval(() => {
+    const dot = document.getElementById('fbt-poll-dot');
+    if (!dot) return;
+    const live = fbtConnected && _hidLastReportT > 0 && performance.now() - _hidLastReportT < 1500;
+    if (!live) dot.classList.remove('on');
   }, 1000);
 
   document.getElementById('fbt-panic').addEventListener('click', stopAll);
@@ -6753,10 +6821,8 @@ function wireFFBTestTab() {
       ctx.fillText(pR.toFixed(0) + '°', padL + W + 4, y);
     }
     // Time axis labels
-    const interval = parseInt(document.getElementById('fbt-poll-interval')?.value, 10) || 200;
-    const windowMs = FBT_CHART_LEN * interval;
-    const windowLabel = windowMs >= 1000 ? '-' + (windowMs / 1000).toFixed(0) + 's'
-                                          : '-' + windowMs + 'ms';
+    const windowMs = FBT_CHART_LEN * FBT_SAMPLE_MS;
+    const windowLabel = '-' + (windowMs / 1000).toFixed(0) + 's';
     ctx.fillStyle = '#888'; ctx.textAlign = 'left';
     ctx.fillText(windowLabel, padL, padT + H + 12);
     ctx.textAlign = 'right';
@@ -6787,90 +6853,76 @@ function wireFFBTestTab() {
     setLegend('fbt-chart-leg-trq', lastT, ' Nm', 3);
     setLegend('fbt-chart-leg-pos', lastP, '°', 1);
     const stats = document.getElementById('fbt-chart-stats');
-    if (stats) stats.textContent = `${tArr.length} samples / ${FBT_CHART_LEN} max @ ${interval}ms`;
+    if (stats) stats.textContent = `${tArr.length} / ${FBT_CHART_LEN} · HID @ ${1000 / FBT_SAMPLE_MS} Hz`;
   };
 
-  // ---------- Poll unificado: lê pos + torque, atualiza chart + aplica angle limit ----------
-  // Importante: GETs do OpenFFBoard cmdparser PRECISAM do sufixo "?".
-  // Sem ele, parser retorna "unknown command" e nada acontece (foi o bug
-  // do angle limit não funcionar — sendCmd('axis.curpos') retornava undefined).
-  let fbtPolling = false;
-  const pollOnce = async () => {
-    if (!writer || fbtPolling) return;
-    fbtPolling = true;
-    const dot = document.getElementById('fbt-poll-dot');
-    if (dot) dot.classList.add('on');
-    try {
-      // Posição: cmdparser OpenFFBoard, retorna graus float em formato [.|valor]
-      const pr = await sendCmd('axis.curpos?', true).catch(() => null);
-      const mp = pr && pr.match(/\|(-?\d+\.?\d*)/);
-      // Torque: usa comando 'T' (diag ASCII custom) que retorna 'lt=INT nm=FLOAT'.
-      // Lê o campo nm (em Nm) — mesmo que FFB Live usa, garante eixo correto.
-      // Antes a gente lia axis.curtorque? que devolvia int raw 0-32767 e o gráfico
-      // mostrava "10000Nm" (era o int magnitude HID, não Nm).
-      const tr = await sendCmd('T', true).catch(() => null);
-      const mt = tr && tr.match(/nm=(-?\d+\.?\d*)/);
+  // ---------- Gráfico + limite de ângulo via HID input report ----------
+  // Posição = campo X (int16 escalado em ±range/2 — a mesma que o jogo vê,
+  // com axis.expo/invert aplicados) e torque = Dial (Nm × 1000). Chega a
+  // 1 kHz sem usar a serial; o gráfico é decimado pra 50 Hz e o limite de
+  // ângulo é checado em todo report.
+  let fbtDecimCount = 0;
+  let fbtHalfRangeDeg = 450;
+  let fbtDrawPending = false;
+  const CF_LIMIT_HYST_DEG = 1;   // histerese pra não alternar na borda do limite
 
-      let posDeg = null;
-      if (mp) {
-        posDeg = parseFloat(mp[1]);
-        fbtChartHist.pos.push(posDeg);
-        while (fbtChartHist.pos.length > FBT_CHART_LEN) fbtChartHist.pos.shift();
-      }
-      if (mt) {
-        fbtChartHist.trq.push(parseFloat(mt[1]));
-        while (fbtChartHist.trq.length > FBT_CHART_LEN) fbtChartHist.trq.shift();
-      }
-      drawChart();
+  const fbtReadHalfRange = () => {
+    // axis.range vem do input da aba FFB Wheel (sincronizado pelo readAll);
+    // sem serial, fica o default de 900°.
+    const r = parseFloat(document.getElementById('in-axis.range')?.value);
+    fbtHalfRangeDeg = (isFinite(r) && r >= 90 && r <= 3600) ? r / 2 : 450;
+  };
 
-      // Angle limit do Constant Force — usa a mesma leitura de posição
-      if (fbtRunning.cf && posDeg !== null) {
-        const limit = parseInt(cfLimit.value, 10);
-        if (limit > 0 && Math.abs(posDeg) > limit) {
-          // Fora do range: zera magnitude
-          await sendOutput(0x05, buildConstantForce(FBT_BLOCK.cf, 0));
-        } else {
-          // Dentro do range (ou sem limite): aplica magnitude do slider
-          await updateForce('cf');
-        }
-      }
-    } finally {
-      fbtPolling = false;
-      if (dot) dot.classList.remove('on');
+  const fbtAngleLimitCheck = (posDeg) => {
+    if (!fbtRunning.cf) { fbtCfLimited = false; return; }
+    const limit = parseInt(cfLimit.value, 10);
+    let limited;
+    if (!(limit > 0))       limited = false;
+    else if (fbtCfLimited)  limited = Math.abs(posDeg) > limit - CF_LIMIT_HYST_DEG;
+    else                    limited = Math.abs(posDeg) > limit;
+    if (limited === fbtCfLimited) return;
+    fbtCfLimited = limited;
+    // Reenvia só na transição (dentro ↔ fora) — não inunda o USB a 1 kHz.
+    updateForce('cf');
+  };
+
+  function fbtOnHidReport(event) {
+    if (event.reportId !== 0x01) return;
+    const x    = event.data.getInt16(8,  true);
+    const dRaw = event.data.getInt16(20, true);
+    const posDeg = (x / 32767) * fbtHalfRangeDeg;
+    fbtAngleLimitCheck(posDeg);
+
+    if (++fbtDecimCount < FBT_DECIM) return;
+    fbtDecimCount = 0;
+    fbtReadHalfRange();
+    fbtChartHist.pos.push(posDeg);
+    fbtChartHist.trq.push(dRaw / 1000);
+    while (fbtChartHist.pos.length > FBT_CHART_LEN) fbtChartHist.pos.shift();
+    while (fbtChartHist.trq.length > FBT_CHART_LEN) fbtChartHist.trq.shift();
+    document.getElementById('fbt-poll-dot')?.classList.add('on');
+
+    // Desenha só com a aba visível, no máximo 1× por frame.
+    const panel = document.getElementById('tab-ffb-test');
+    if (!fbtDrawPending && panel && panel.classList.contains('active')) {
+      fbtDrawPending = true;
+      requestAnimationFrame(() => { fbtDrawPending = false; drawChart(); });
     }
-  };
+  }
 
-  const startPoll = () => {
-    if (fbtChartTimer) clearInterval(fbtChartTimer);
-    const intEl = document.getElementById('fbt-poll-interval');
-    const interval = parseInt(intEl?.value, 10) || 200;
-    fbtChartTimer = setInterval(() => { pollOnce().catch(() => {}); }, interval);
-  };
-  const stopPoll = () => {
-    if (fbtChartTimer) { clearInterval(fbtChartTimer); fbtChartTimer = null; }
-    const dot = document.getElementById('fbt-poll-dot');
-    if (dot) dot.classList.remove('on');
-  };
+  // Anexado em _fbtSetupDeviceAfterOpen. Fica ativo mesmo fora da aba: o
+  // limite de ângulo precisa continuar valendo com o CF rodando.
+  let fbtChartListenerDev = null;
+  function _fbtAttachChartListener() {
+    if (!fbtDevice || fbtChartListenerDev === fbtDevice) return;
+    if (fbtChartListenerDev) {
+      try { fbtChartListenerDev.removeEventListener('inputreport', fbtOnHidReport); } catch (e) {}
+    }
+    fbtDevice.addEventListener('inputreport', fbtOnHidReport);
+    fbtChartListenerDev = fbtDevice;
+  }
 
-  // Wire dos controles do chart
-  const pollEnable = document.getElementById('fbt-poll-enable');
-  const pollInterval = document.getElementById('fbt-poll-interval');
-  const pollOnceBtn = document.getElementById('fbt-poll-once');
   const chartClearBtn = document.getElementById('fbt-chart-clear');
-  if (pollEnable) {
-    pollEnable.addEventListener('change', () => {
-      if (pollEnable.checked) startPoll();
-      else stopPoll();
-    });
-  }
-  if (pollInterval) {
-    pollInterval.addEventListener('change', () => {
-      if (pollEnable && pollEnable.checked) startPoll();   // restarta com novo intervalo
-    });
-  }
-  if (pollOnceBtn) {
-    pollOnceBtn.addEventListener('click', () => pollOnce().catch(() => {}));
-  }
   if (chartClearBtn) {
     chartClearBtn.addEventListener('click', () => {
       fbtChartHist.pos = [];
@@ -6891,13 +6943,11 @@ function wireFFBTestTab() {
           if (warn) warn.classList.toggle('on', v !== 8);
         } catch(e) {}
       } else {
-        // Saiu da aba — para apenas o auto-poll do chart (consumo de serial).
-        // Mantém os efeitos HID rodando: o usuário pode ativar Spring no FFB Test
-        // e ir pra aba Debug ver telemetria sem que os efeitos sejam desligados.
-        // Pra parar os efeitos manualmente, botão "Parar tudo" dentro do FFB Test
-        // ou desconectar o HID.
-        stopPoll();
-        if (pollEnable) pollEnable.checked = false;
+        // Saiu da aba — os efeitos HID continuam rodando (o usuário pode
+        // ativar Spring aqui e ir pra Debug ver telemetria). O gráfico para
+        // de desenhar sozinho (só desenha com a aba visível) e o limite de
+        // ângulo continua ativo. Pra parar os efeitos: "Parar tudo" ou
+        // desconectar o HID.
       }
     });
   });
@@ -11918,7 +11968,7 @@ function _wirePtAnalysisUI() {
     try {
       await writeProp('axis0.motor.config.current_control_bandwidth', String(Math.round(v)));
       const inp = document.getElementById('in-axis0.motor.config.current_control_bandwidth');
-      if (inp) inp.value = Math.round(v);
+      if (inp) { inp.value = Math.round(v); _updateHzHint(inp); }
       document.getElementById('pa-bw-current').textContent = Math.round(v) + ' rad/s';
       // Atualiza motorCal pra refletir a mudança no chart também
       if (motorCal && motorCal.device) {
@@ -15521,6 +15571,7 @@ function buildTabs() {
               </p>
             </div>
           `;
+          if (_inAdvanced) actionBar.classList.add('advanced-section');
           panel.appendChild(actionBar);
 
           // ============================================================
@@ -15561,6 +15612,7 @@ function buildTabs() {
             </div>
             <div id="pi-results" style="display:none;font-family:monospace;font-size:11px;color:var(--fg);background:#0a0a0a;padding:8px 10px;border-radius:4px;line-height:1.6"></div>
           `;
+          if (_inAdvanced) piPanel.classList.add('advanced-section');
           panel.appendChild(piPanel);
 
           // ============================================================
@@ -15623,6 +15675,7 @@ function buildTabs() {
               <div id="ach-history-list" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>
             </details>
           `;
+          if (_inAdvanced) acPanel.classList.add('advanced-section');
           panel.appendChild(acPanel);
 
           // ============================================================
@@ -15670,6 +15723,7 @@ function buildTabs() {
               <div id="ap-progress-fill" style="height:100%;width:0%;background:#d97706;transition:width .15s"></div>
             </div>
           `;
+          if (_inAdvanced) apPanel.classList.add('advanced-section');
           panel.appendChild(apPanel);
         }
 
@@ -15750,13 +15804,21 @@ function buildTabs() {
         btnWrite.onclick = () => writeOne(input);
         valWrap.appendChild(btnWrite);
       }
+      if (RAD_S_FIELDS.has(path)) {
+        const hzEl = document.createElement('span');
+        hzEl.id = 'hz-' + path;
+        hzEl.style.cssText = 'margin-left:6px;font-size:11px;color:var(--fg-muted);' +
+                             'font-family:ui-monospace,Consolas,monospace;white-space:nowrap';
+        valWrap.appendChild(hzEl);
+        input.addEventListener('input', () => _updateHzHint(input));
+      }
       // Cada par label+value vai num <div class="field"> — isso faz cada
       // par virar um único item do grid #content (repeat auto-fit minmax 440px).
       // Sem wrapper, em monitor wide com 3 colunas, label e value de fields
       // diferentes ficam desalinhados (label1, value1, label2 / value2, label3...).
       const fieldWrap = document.createElement('div');
       fieldWrap.className = 'field';
-      if (_inAdvanced) fieldWrap.classList.add('advanced-section');
+      if (_inAdvanced || ADVANCED_FIELDS.has(path)) fieldWrap.classList.add('advanced-section');
       fieldWrap.dataset.fieldPath = path;
       fieldWrap.appendChild(labelEl);
       fieldWrap.appendChild(valWrap);
@@ -15792,7 +15854,12 @@ function buildTabs() {
       btnZero.disabled = true;
       btnZero.textContent = '…';
       try {
-        const r = await execPropOffb('axis.zeroenc');  // envia "axis.zeroenc!"
+        const r = await withSerialExclusive(async () => {
+          const reply = await execPropOffb('axis.zeroenc');  // envia "axis.zeroenc!"
+          // Readout do zeroOffset_ (mostra quanto foi capturado) ainda no canal exclusivo
+          if (reply !== null) await _refreshZeroOffsetReadout();
+          return reply;
+        });
         if (r !== null) {
           toast(t('toast.wheel_zeroed'), 'ok');
           // Refresca live monitor + chart se aba debug aberta — mostra pos=0
@@ -15800,8 +15867,6 @@ function buildTabs() {
               document.getElementById('poll-enable')?.checked) {
             refreshLive();
           }
-          // Atualiza readout do zeroOffset_ (mostra quanto foi capturado)
-          _refreshZeroOffsetReadout();
         } else {
           toast(t('toast.wheel_zero_fail'), 'err');
         }
@@ -15822,14 +15887,17 @@ function buildTabs() {
       btnZeroReset.disabled = true;
       btnZeroReset.textContent = '…';
       try {
-        const r = await writePropOffb('axis.zeroofs', 0);
+        const r = await withSerialExclusive(async () => {
+          const reply = await writePropOffb('axis.zeroofs', 0);
+          if (reply !== null) await _refreshZeroOffsetReadout();
+          return reply;
+        });
         if (r !== null) {
           toast(t('toast.zero_reset_ok'), 'ok');
           if (typeof refreshLive === 'function' &&
               document.getElementById('poll-enable')?.checked) {
             refreshLive();
           }
-          _refreshZeroOffsetReadout();
         } else {
           toast(t('toast.zero_reset_fail'), 'err');
         }
@@ -18401,11 +18469,13 @@ function initDebugTab() {
   const btnAll = document.getElementById('btn-refresh-all');
   if (btnAll) btnAll.onclick = refreshAll;
 
-  // Toggle de seções avançadas (ADVANCED_GROUPS hidden por default).
-  // Persiste em localStorage; aplica via classe body.show-advanced que o
-  // CSS usa pra mostrar/esconder os elementos marcados.advanced-section.
-  const ADV_LS_KEY = 'odrive_wheel_show_advanced';
+  // Toggle de seções avançadas (ADVANCED_GROUPS / ADVANCED_FIELDS). Aplica via
+  // classe body.show-advanced que o CSS usa pra mostrar/esconder os elementos
+  // marcados .advanced-section. NÃO persiste: a ferramenta sempre abre no modo
+  // simplificado; o toggle vale só pra sessão atual.
   const btnAdv = document.getElementById('btn-toggle-advanced');
+  // Limpa a preferência que versões anteriores gravavam.
+  try { localStorage.removeItem('odrive_wheel_show_advanced'); } catch (e) {}
   function _applyAdvancedVisibility(show) {
     document.body.classList.toggle('show-advanced', !!show);
     if (btnAdv) {
@@ -18416,13 +18486,10 @@ function initDebugTab() {
       btnAdv.style.color      = show ? '#fff'           : 'var(--fg)';
     }
   }
-  const initialShow = localStorage.getItem(ADV_LS_KEY) === '1';
-  _applyAdvancedVisibility(initialShow);
+  _applyAdvancedVisibility(false);
   if (btnAdv) {
     btnAdv.onclick = () => {
-      const next = !document.body.classList.contains('show-advanced');
-      localStorage.setItem(ADV_LS_KEY, next ? '1' : '0');
-      _applyAdvancedVisibility(next);
+      _applyAdvancedVisibility(!document.body.classList.contains('show-advanced'));
     };
   }
 
@@ -18979,6 +19046,7 @@ function setInputValue(input, raw, markSynced) {
   }
   input.dataset.currentServerValue = raw;
   _applyFieldState(input, markSynced ? 'synced' : 'neutral');
+  _updateHzHint(input);
   // Hook: se foi o control_mode que acabou de ser lido/setado, atualiza o
   // estado visual dos fields que ficam inertes em TORQUE mode.
   if (input.dataset.path === 'axis0.controller.config.control_mode') {
@@ -19052,6 +19120,38 @@ let _bulkReadBusy = 0;
 function _isBulkBusy() { return _bulkReadBusy > 0; }
 window._isBulkBusy = _isBulkBusy;   // expor pra polls que vivem em outro escopo
 
+// Espera o canal serial ficar quieto: nenhuma resposta pendente por quietMs
+// seguidos. Os polls disparam o comando seguinte logo que a resposta anterior
+// chega, então um intervalo quieto significa que a cadeia deles terminou.
+async function _waitSerialQuiet(maxMs = 2500, quietMs = 60) {
+  const deadline = performance.now() + maxMs;
+  let quietSince = null;
+  while (performance.now() < deadline) {
+    if (pendingReplies.length === 0) {
+      if (quietSince === null) quietSince = performance.now();
+      else if (performance.now() - quietSince >= quietMs) return true;
+    } else {
+      quietSince = null;
+    }
+    await new Promise(r => setTimeout(r, 10));
+  }
+  return false;
+}
+
+// Executa fn com o canal serial exclusivo: levanta o gate de bulk (polls
+// periódicos pulam o tick), espera ticks já em andamento terminarem e só então
+// roda. Mesmo padrão aplicado no Quick Start (Set voltage / Apply) — evita que
+// uma resposta atrasada de write caia na leitura de um poll (FIFO sem ID).
+async function withSerialExclusive(fn) {
+  _bulkReadBusy++;
+  try {
+    await _waitSerialQuiet();
+    return await fn();
+  } finally {
+    _bulkReadBusy = Math.max(0, _bulkReadBusy - 1);
+  }
+}
+
 function _showBulkProgress(n, total) {
   const box  = document.getElementById('bulk-progress');
   const cnt  = document.getElementById('bulk-progress-count');
@@ -19120,6 +19220,19 @@ async function readAll() {
   // Sincroniza slider auxiliar do index_offset com valor recém-lido do device
   if (typeof window.refreshIndexOffsetSlider === 'function') {
     window.refreshIndexOffsetSlider();
+  }
+  // Blocos do encoder conforme o modo lido do device + checa se o MT6835 está
+  // ativo (sys.mtstatus). Awaited pra não intercalar com o fetch do EQ abaixo.
+  if (typeof window.refreshEncoderModeUi === 'function') {
+    await window.refreshEncoderModeUi(true);
+  }
+  // Sincroniza sliders do 3-band EQ (WEIGHT/CHASSIS/ROAD) — os fields NÃO
+  // estão no SCHEMA (não têm data-path) porque a UI é custom (card com
+  // sliders + gráfico próprio). Sem esse fetch pós-readAll, os sliders
+  // ficavam em 0 dB após reconnect/reboot mesmo com valores persistidos
+  // corretamente no firmware.
+  if (typeof _eqFetchFromDevice === 'function' && writer) {
+    _eqFetchFromDevice().catch(e => logLine('eq fetch pós-readAll: ' + e.message, 'err'));
   }
 }
 
@@ -20274,6 +20387,16 @@ wireSetupTab();
          data-i18n-html="encoder.preset_as5047_hint">
       Configura encoder absoluto AS5047P (montado na MKS XDrive Mini): mode=SPI_ABS_AMS, cpr=16384, abs_spi_cs_gpio_pin=7, use_index=False, pre_calibrated=False.
     </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">
+      <b style="color:var(--fg);font-size:14px" data-i18n="encoder.preset_mt6835_label">Preset MT6835:</b>
+      <button id="btn-preset-mt6835" class="warn"
+              style="padding:8px 16px;font-size:15px"
+              data-i18n="encoder.preset_mt6835_btn">⚙ Ativar MT6835 (preset)</button>
+    </div>
+    <div style="color:var(--muted);font-size:13px;line-height:1.5"
+         data-i18n-html="encoder.preset_mt6835_hint">
+      Configura encoder absoluto MT6835: mode=261, cpr=2097152, abs_spi_cs_gpio_pin=6.
+    </div>
   `;
   panel.appendChild(section);
 
@@ -20288,16 +20411,17 @@ wireSetupTab();
   // Wire-up listener AQUI dentro da IIFE — anexar no buildTabs era no-op
   // porque essa IIFE é quem cria o botão. Preenche campos no DOM e marca
   // dirty; user revisa campos vermelhos e clica Salvar pra persistir+reboot.
-  const btnPresetAs = section.querySelector('#btn-preset-as5047');
-  if (!btnPresetAs) return;
-  btnPresetAs.addEventListener('click', () => {
-    if (!confirm(t('encoder.preset_as5047_confirm'))) return;
+  // Preset genérico: fields = [[path, value, isBool], ...]; keys = prefixo
+  // das chaves i18n (confirm em encoder.preset_<k>_confirm, toasts em
+  // toast.preset_<k>_applied/_unchanged).
+  function applyPreset(label, keyPrefix, fields) {
+    if (!confirm(t('encoder.preset_' + keyPrefix + '_confirm'))) return;
     let changedCount = 0, totalCount = 0, missingCount = 0;
     const setField = (path, value, isBool) => {
       const inp = document.getElementById('in-' + path);
       if (!inp) {
         missingCount++;
-        logLine('preset AS5047: field não encontrado no DOM: ' + path, 'err');
+        logLine('preset ' + label + ': field não encontrado no DOM: ' + path, 'err');
         return;
       }
       totalCount++;
@@ -20317,21 +20441,34 @@ wireSetupTab();
       markDirty(inp);
       if (before !== after) changedCount++;
     };
-    setField('axis0.encoder.config.mode',                257,    false);
-    setField('axis0.encoder.config.cpr',                 16384,  false);
-    setField('axis0.encoder.config.abs_spi_cs_gpio_pin', 7,      false);
-    setField('axis0.encoder.config.use_index',           false,  true);
-    setField('axis0.encoder.config.pre_calibrated',      false,  true);
+    for (const [path, value, isBool] of fields) setField(path, value, isBool);
 
     selectTab('encoder');
-    logLine('preset AS5047: changed=' + changedCount + ' total=' + totalCount +
+    logLine('preset ' + label + ': changed=' + changedCount + ' total=' + totalCount +
             (missingCount ? ' missing=' + missingCount : ''), 'rx');
     if (changedCount === 0 && totalCount > 0) {
-      toast(t('toast.preset_as5047_unchanged'), 'info');
+      toast(t('toast.preset_' + keyPrefix + '_unchanged'), 'info');
     } else {
-      toast(t('toast.preset_as5047_applied'), 'ok');
+      toast(t('toast.preset_' + keyPrefix + '_applied'), 'ok');
     }
-  });
+  }
+
+  section.querySelector('#btn-preset-as5047')?.addEventListener('click', () =>
+    applyPreset('AS5047', 'as5047', [
+      ['axis0.encoder.config.mode',                257,    false],
+      ['axis0.encoder.config.cpr',                 16384,  false],
+      ['axis0.encoder.config.abs_spi_cs_gpio_pin', 7,      false],
+      ['axis0.encoder.config.use_index',           false,  true ],
+      ['axis0.encoder.config.pre_calibrated',      false,  true ],
+    ]));
+  section.querySelector('#btn-preset-mt6835')?.addEventListener('click', () =>
+    applyPreset('MT6835', 'mt6835', [
+      ['axis0.encoder.config.mode',                261,     false],
+      ['axis0.encoder.config.cpr',                 2097152, false],
+      ['axis0.encoder.config.abs_spi_cs_gpio_pin', 6,       false],
+      ['axis0.encoder.config.use_index',           false,   true ],
+      ['axis0.encoder.config.pre_calibrated',      false,   true ],
+    ]));
 })();
 
 // Painel de diagnóstico do encoder — injetado depois do preset AS5047, no
@@ -20423,7 +20560,7 @@ wireSetupTab();
       </div>
     </div>
 
-    <div style="margin-top:10px;padding:10px;background:#0f0f0f;border:1px solid var(--border);border-radius:4px">
+    <div id="enc-diag-as5047-mag" style="margin-top:10px;padding:10px;background:#0f0f0f;border:1px solid var(--border);border-radius:4px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--fg);font-weight:600;margin-bottom:6px">
         <span data-i18n="enc.diag_section_magnet">AS5047 Magnet (DIAAGC)</span>
         <span id="enc-diag-mag-status" style="font-weight:600">—</span>
@@ -20445,14 +20582,15 @@ wireSetupTab();
     </div>
 
     <!-- ===================== MT6835 (mode=261) ==================== -->
-    <!-- Só aparece quando sys.mtstatus? indica is_mt6835=1. Análogo ao
-         painel AS5047 magnet: boot check + STATUS warnings + estado da
-         auto-calibração + botões Set Zero / Program EEPROM. -->
+    <!-- Visível quando o modo SELECIONADO no dropdown é 261. Status e botões
+         só funcionam com o MT6835 ATIVO na placa (sys.mtstatus? responde
+         boot=...); até lá, enc-diag-mt-note explica o que falta. -->
     <div id="enc-diag-mt6835-panel" style="display:none;margin-top:10px;padding:10px;background:#0f0f0f;border:1px solid var(--border);border-radius:4px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--fg);font-weight:600;margin-bottom:6px">
         <span>MT6835 status</span>
         <span id="enc-diag-mt-boot" style="font-weight:600">—</span>
       </div>
+      <div id="enc-diag-mt-note" style="display:none;margin-bottom:8px;padding:6px 10px;font-size:12px;line-height:1.5;border-radius:4px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-family:var(--mono,monospace);font-size:12px">
         <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">HYST zeroed</span><span id="enc-diag-mt-hyst" style="color:var(--fg);font-weight:600">—</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Weak field</span><span id="enc-diag-mt-weak" style="color:var(--fg);font-weight:600">—</span></div>
@@ -20485,12 +20623,75 @@ wireSetupTab();
   // ----- Polling state -----
   let pollTimer = null;
   let running = false;
+  // MT6835 rodando de fato na placa (sys.mtstatus? responde boot=...).
+  // null = ainda não verificado. Independe do modo selecionado no dropdown:
+  // trocar o dropdown só vale depois de Salvar + reboot.
+  let mtActive = null;
 
   const $ = (id) => document.getElementById(id);
+  const selectedEncMode = () => document.getElementById('in-axis0.encoder.config.mode')?.value;
+
+  // Mensagem + estado dos botões do painel MT6835 conforme serial / ativo / live.
+  function updateMtActiveUi() {
+    const note = $('enc-diag-mt-note');
+    const usable = !!writer && mtActive === true;
+    $('enc-diag-mt-zero').disabled   = !usable;
+    $('enc-diag-mt-eeprom').disabled = !usable;
+    let key = null, warn = false;
+    if (!writer)                  { key = 'enc.mt_no_serial'; }
+    else if (mtActive === false)  { key = 'enc.mt_not_active'; warn = true; }
+    else if (mtActive === true && !running) { key = 'enc.mt_active_start_live'; }
+    if (!key) { note.style.display = 'none'; return; }
+    note.textContent = t(key);
+    note.style.display = '';
+    note.style.background = warn ? '#3a2820' : 'transparent';
+    note.style.border     = warn ? '1px solid #ef5350' : '1px solid var(--border)';
+    note.style.color      = warn ? '#ffab91' : 'var(--muted)';
+  }
+
+  // Consulta única ao firmware, fora do polling live (que já consulta a 1 Hz).
+  async function checkMtActive() {
+    if (!writer || running) return;
+    if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
+    const r = await withSerialExclusive(() => execPropOffb('sys.mtstatus').catch(() => null));
+    if (r !== null) mtActive = r.indexOf('boot=') === 0;
+  }
+
+  // Mostra os blocos do encoder SELECIONADO: 257 → AS5047, 261 → MT6835.
+  // checkDevice=true faz a consulta sys.mtstatus quando 261 está selecionado.
+  async function refreshEncoderModeUi(checkDevice) {
+    const mode  = selectedEncMode();
+    const isAms = mode === '257';
+    const isMt  = mode === '261';
+    // Diagnóstico inteiro só pra encoder SPI absoluto (modos 256–261, bit
+    // MODE_FLAG_ABS = 0x100). Incremental/Hall/SinCos → esconde e para o live.
+    const isSpi = (parseInt(mode, 10) & 0x100) !== 0;
+    section.style.display = isSpi ? 'flex' : 'none';
+    if (!isSpi) {
+      if (running) setRunning(false);
+      return;
+    }
+    $('enc-diag-as5047-mag').style.display = isAms ? '' : 'none';
+    $('enc-diag-verify').style.display     = isAms ? '' : 'none';
+    if (!isAms) $('enc-diag-verify-out').style.display = 'none';
+    $('enc-diag-mt6835-panel').style.display = isMt ? '' : 'none';
+    if (isMt && checkDevice) await checkMtActive();
+    if (isMt) updateMtActiveUi();
+  }
   const fmt = (v, d=3) => (v === null || v === undefined || v === '') ? '—'
                         : (isFinite(parseFloat(v)) ? parseFloat(v).toFixed(d) : String(v));
 
+  // Um poll por vez: o setInterval (1 Hz) e chamadas diretas (start, ações)
+  // não podem sobrepor — ~11 comandos sequenciais, e um timeout (2 s) faria
+  // o próximo tick começar com o anterior ainda em andamento.
+  let pollInFlight = false;
   async function pollOnce() {
+    if (pollInFlight) return;
+    pollInFlight = true;
+    try { await pollOnceInner(); } finally { pollInFlight = false; }
+  }
+
+  async function pollOnceInner() {
     if (!writer) {
       $('enc-diag-status').textContent = t('enc.diag_status_idle') + ' (sem serial)';
       return;
@@ -20543,7 +20744,10 @@ wireSetupTab();
       return out;
     };
     const erReply = await execPropOffb('sys.encraw').catch(() => null);
-    const mgReply = await execPropOffb('sys.magnet').catch(() => null);
+    // sys.magnet é do AS5047 — só consulta se ele é o encoder selecionado.
+    const mgReply = selectedEncMode() === '257'
+      ? await execPropOffb('sys.magnet').catch(() => null)
+      : null;
     const er = parseKV(erReply);
     const mg = parseKV(mgReply);
 
@@ -20613,10 +20817,13 @@ wireSetupTab();
     // ---------- MT6835 (mode 261) ----------
     // sys.mtstatus? retorna "N/A (encoder mode != 261)" quando não é MT6835,
     // ou "boot=X hyst0=Y overspeed=A weakfield=B undervolt=C cal=<name>".
+    // Visibilidade do painel segue o modo selecionado (refreshEncoderModeUi);
+    // aqui só atualiza o estado "ativo" e os indicadores.
+    if (selectedEncMode() !== '261') return;
     const mtReply = await execPropOffb('sys.mtstatus').catch(() => null);
-    const mtPanel = $('enc-diag-mt6835-panel');
-    if (mtReply && mtReply.indexOf('boot=') === 0) {
-      mtPanel.style.display = '';
+    if (mtReply !== null) mtActive = mtReply.indexOf('boot=') === 0;
+    updateMtActiveUi();
+    if (mtActive) {
       const mt = parseKV(mtReply);
       const okBad = (v, invertOk) => {
         // invertOk=false: '1' = bom (verde). invertOk=true: '0' = bom.
@@ -20640,7 +20847,11 @@ wireSetupTab();
       $('enc-diag-mt-cal').textContent = mt.cal || '—';
       $('enc-diag-mt-cal').style.color = calColor;
     } else {
-      mtPanel.style.display = 'none';
+      ['enc-diag-mt-boot', 'enc-diag-mt-hyst', 'enc-diag-mt-weak', 'enc-diag-mt-over',
+       'enc-diag-mt-uv', 'enc-diag-mt-cal'].forEach(id => {
+        $(id).textContent = '—';
+        $(id).style.color = 'var(--fg)';
+      });
     }
   }
 
@@ -20656,9 +20867,18 @@ wireSetupTab();
       clearInterval(pollTimer);
       pollTimer = null;
     }
+    if (selectedEncMode() === '261') updateMtActiveUi();
   }
 
   $('enc-diag-toggle').addEventListener('click', () => setRunning(!running));
+
+  // Troca de modo no dropdown (manual ou via preset) → reorganiza os blocos
+  // e, se virou 261, pergunta ao firmware se o MT6835 já está ativo.
+  const modeSel = document.getElementById('in-axis0.encoder.config.mode');
+  if (modeSel) modeSel.addEventListener('change', () => { refreshEncoderModeUi(true); });
+  // readAll() chama no fim (após conectar / reconectar pós-Save).
+  window.refreshEncoderModeUi = refreshEncoderModeUi;
+  refreshEncoderModeUi(false);
 
   // Exposto pro selectTab() parar polling quando user sai da aba Encoder.
   // Segue mesmo padrão de _capCenterStopPoll / _inputsStopPoll.
@@ -20667,9 +20887,13 @@ wireSetupTab();
   // ----- Clear errors -----
   $('enc-diag-clear-err').addEventListener('click', async () => {
     if (!writer) { toast('Sem serial', 'err'); return; }
-    await sendCmd('w axis0.error 0');
-    await sendCmd('w axis0.encoder.error 0');
-    await sendCmd('w axis0.motor.error 0');
+    // writeProp (não sendCmd sem reply): absorve uma eventual resposta de
+    // erro do ODrive na janela de 80 ms, em vez de ela vazar pro próximo read.
+    await withSerialExclusive(async () => {
+      await writeProp('axis0.error', 0);
+      await writeProp('axis0.encoder.error', 0);
+      await writeProp('axis0.motor.error', 0);
+    });
     logLine('enc-diag: erros zerados (axis + encoder + motor)', 'rx');
     toast('🧹 Erros zerados', 'ok');
     if (running) pollOnce();
@@ -20679,7 +20903,7 @@ wireSetupTab();
   $('enc-diag-offset-cal').addEventListener('click', async () => {
     if (!writer) { toast('Sem serial', 'err'); return; }
     if (!confirm('Vai disparar ENCODER_OFFSET_CALIBRATION — motor vai girar ~1 volta. Continuar?')) return;
-    await sendCmd('w axis0.requested_state 7');
+    await withSerialExclusive(() => writeProp('axis0.requested_state', 7));
     logLine('enc-diag: requested_state=7 (ENCODER_OFFSET_CALIBRATION)', 'tx');
     toast('🔁 Offset cal disparada — aguarde o motor parar', 'ok');
   });
@@ -20691,8 +20915,15 @@ wireSetupTab();
     out.style.display = '';
     out.innerHTML = '⏳ lendo…';
     const rows = [];
+    const values = await withSerialExclusive(async () => {
+      const acc = {};
+      for (const path of Object.keys(AS5047_EXPECTED)) {
+        acc[path] = (await readProp(path).catch(() => null)) ?? '?';
+      }
+      return acc;
+    });
     for (const [path, exp] of Object.entries(AS5047_EXPECTED)) {
-      const v = (await readProp(path).catch(() => null)) ?? '?';
+      const v = values[path];
       const raw  = String(v).trim();
       const norm = exp.isBool ? normalizeBoolStr(raw) : raw;
       const match = norm === exp.val;
@@ -20723,7 +20954,7 @@ wireSetupTab();
       'Continuar?')) return;
     const out = $('enc-diag-mt-out');
     out.textContent = '⏳ mtzero…';
-    const reply = await execPropOffb('sys.mtzero').catch(() => 'FAIL');
+    const reply = await withSerialExclusive(() => execPropOffb('sys.mtzero').catch(() => 'FAIL'));
     const ok = reply && reply.indexOf('OK') === 0;
     out.textContent = reply || '(sem resposta)';
     out.style.color = ok ? '#66bb6a' : '#ef5350';
@@ -20745,7 +20976,7 @@ wireSetupTab();
     const out = $('enc-diag-mt-out');
     out.textContent = '⏳ programando EEPROM…';
     out.style.color = '#ffca28';
-    const reply = await execPropOffb('sys.mteeprom').catch(() => 'FAIL');
+    const reply = await withSerialExclusive(() => execPropOffb('sys.mteeprom').catch(() => 'FAIL'));
     const ok = reply && reply.indexOf('OK') === 0;
     out.textContent = reply || '(sem resposta)';
     out.style.color = ok ? '#66bb6a' : '#ef5350';
@@ -20826,7 +21057,15 @@ wireSetupTab();
   // Poll roda APENAS quando a aba Encoder está visível pra não saturar o serial
   // (sem isso, ficava lendo pos_estimate 4x/s mesmo com o user em outra aba).
   let pollTimer = null;
+  // Um tick por vez — com 250 ms de intervalo, um read que demore (timeout
+  // de 2 s) empilharia vários ticks em paralelo no canal serial.
+  let tickInFlight = false;
   async function tick() {
+    if (tickInFlight) return;
+    tickInFlight = true;
+    try { await tickInner(); } finally { tickInFlight = false; }
+  }
+  async function tickInner() {
     if (!writer) {
       posEl.textContent = '—';
       idxEl.textContent = '—';
@@ -20868,7 +21107,7 @@ wireSetupTab();
     statusEl.textContent = '…';
     statusEl.style.color = 'var(--muted)';
     try {
-      await writeProp('axis0.requested_state', '1');
+      await withSerialExclusive(() => writeProp('axis0.requested_state', '1'));
       statusEl.textContent = '✓ ' + t('enc.cap_status_idle');
       statusEl.style.color = 'var(--ok, #34d399)';
     } catch (e) {
@@ -20888,6 +21127,9 @@ wireSetupTab();
       // Pausa o poll do display pra evitar disputa no serial durante a captura
       stopPoll();
 
+      // Canal exclusivo do começo ao fim (inclui ss + reconexão): nenhum
+      // poll da aba (diagnóstico live, etc.) intercala com os writes.
+      const ok = await withSerialExclusive(async () => {
       // PRIMEIRO: zera axis.zeroofs pra nao contaminar a leitura de pos_estimate.
       // zeroofs e um offset virtual no FFB layer que afeta o HID position. Se
       // estiver != 0, o "centro mecanico" visivel pelo user (atraves do HID
@@ -20932,12 +21174,16 @@ wireSetupTab();
       // Sem popup intermediario — o save+reboot e tudo um passo so.
       statusEl.textContent = t('enc.cap_status_rebooting');
       statusEl.style.color = 'var(--muted)';
-      const ok = await sendCmdAndAutoReconnect('ss', 'ODrive save', /*readBack=*/true,
+      return await sendCmdAndAutoReconnect('ss', 'ODrive save', /*readBack=*/true,
         (state) => {
           if (state === 'rebooting')    statusEl.textContent = t('enc.cap_status_rebooting');
           else if (state === 'reconnecting') statusEl.textContent = t('enc.cap_status_reconnecting');
           else if (state === 'reading') statusEl.textContent = t('enc.cap_status_reading');
         }).catch(() => false);
+      });
+      // O readAll pós-reconexão rodou com o gate levantado e pulou a checagem
+      // do MT6835 — refaz agora que o canal está livre.
+      if (typeof window.refreshEncoderModeUi === 'function') await window.refreshEncoderModeUi(true);
       if (ok) {
         statusEl.textContent = '✓ ' + t('enc.cap_status_reconnected');
         statusEl.style.color = 'var(--ok, #34d399)';
