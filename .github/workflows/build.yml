@@ -9,7 +9,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Fixado no 24.04 (arm-none-eabi-gcc 13.2): o ubuntu-latest migrou para o
+    # 26.04 (GCC 14.2) e o build quebrou sem mudança de código. Trocar de versão
+    # só depois de validar o firmware no toolchain novo.
+    runs-on: ubuntu-24.04
 
     steps:
     # 1. Checkout the repository and its submodules with full history for versioning
