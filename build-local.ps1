@@ -2,7 +2,9 @@ param(
   [string]$ToolchainBin = "",
   [string]$MsysBash = "C:\msys64\usr\bin\bash.exe",
   [switch]$NoClean,
-  [switch]$SkipSubmoduleInit
+  [switch]$SkipSubmoduleInit,
+  # DRV8301 gate-drive peak current: 0 = 1.7 A (stock), 1 = 0.7 A, 2 = 0.25 A
+  [ValidateSet(0, 1, 2)][int]$DrvGateCurrent = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -148,7 +150,7 @@ if (-not $NoClean) {
   $cmdLines += "/mingw64/bin/mingw32-make clean"
 }
 
-$cmdLines += '/mingw64/bin/mingw32-make -j$(nproc)'
+$cmdLines += ('/mingw64/bin/mingw32-make -j$(nproc) DRV_GATE_CURRENT={0}' -f $DrvGateCurrent)
 $cmd = ($cmdLines -join "`n")
 
 Write-Host "Running build in $firmwareDir"

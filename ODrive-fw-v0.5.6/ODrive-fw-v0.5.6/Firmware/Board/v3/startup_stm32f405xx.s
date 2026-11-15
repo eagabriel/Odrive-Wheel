@@ -74,10 +74,70 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler:  
+Reset_Handler:
   ldr   sp, =_estack     /* set stack pointer */
 
-/* Copy the data segment initializers from flash to SRAM */  
+#ifndef BOOT_DELAY_MS
+#define BOOT_DELAY_MS 2000
+#endif
+
+#if BOOT_DELAY_MS > 0
+/* Odrive-Wheel: power-up settle delay.
+ *
+ * Runs before ANY other firmware action: before the .data copy, before
+ * SystemInit and clock setup, before early_start_checks, before any GPIO,
+ * EXTI (encoder Z index), ADC, flash read or flash write. It only touches RCC,
+ * SysTick and r0-r4, so it needs no initialized RAM.
+ *
+ * It runs after a power-on reset, a brown-out reset or a reset from the
+ * NRST pin alone (reset button). It does NOT run after a software reset
+ * (ss, sys.reboot, DFU entry, and the extra soft reset early_start_checks()
+ * issues on every power-up) or a watchdog reset.
+ *
+ * RCC_CSR reset flags are sticky, so they are cleared on EVERY boot right
+ * after being read (RMVF). Otherwise a stale SFTRSTF from an earlier software
+ * reboot would hide the next button press. Note that any reset also pulses
+ * NRST internally, so PINRSTF alone (no other source flag) means the button.
+ *
+ * If VDD dips below the BOR level during the wait the chip resets, BORRSTF
+ * is set again and the countdown restarts, so startup only proceeds after
+ * BOOT_DELAY_MS of uninterrupted power.
+ *
+ * Timing: after reset the core runs from the 16 MHz HSI, so SysTick with
+ * LOAD = 15999 (processor clock) overflows every 1 ms.
+ */
+  ldr   r0, =0x40023874          /* RCC->CSR */
+  ldr   r1, [r0]
+  orr   r3, r1, #0x01000000      /* RMVF: clear the reset flags (always) */
+  str   r3, [r0]
+  ldr   r2, =0x0A000000          /* PORRSTF (bit 27) | BORRSTF (bit 25) */
+  tst   r1, r2
+  bne   PowerUpDelayStart
+  ldr   r2, =0xFE000000          /* all reset source flags, bits 31..25 */
+  and   r3, r1, r2
+  cmp   r3, #0x04000000          /* PINRSTF (bit 26) and nothing else */
+  bne   PowerUpDelayDone
+PowerUpDelayStart:
+  ldr   r2, =0xE000E010          /* SysTick CTRL (LOAD at +4, VAL at +8) */
+  ldr   r3, =15999
+  str   r3, [r2, #4]
+  movs  r3, #0
+  str   r3, [r2, #8]
+  movs  r3, #5                   /* ENABLE | CLKSOURCE = processor clock */
+  str   r3, [r2]
+  ldr   r4, =BOOT_DELAY_MS
+PowerUpDelayLoop:
+  ldr   r3, [r2]                 /* reading CTRL clears COUNTFLAG */
+  tst   r3, #0x10000             /* COUNTFLAG */
+  beq   PowerUpDelayLoop
+  subs  r4, r4, #1
+  bne   PowerUpDelayLoop
+  movs  r3, #0
+  str   r3, [r2]                 /* SysTick off, the RTOS sets it up later */
+PowerUpDelayDone:
+#endif
+
+/* Copy the data segment initializers from flash to SRAM */
   movs  r1, #0
   b  LoopCopyDataInit
 

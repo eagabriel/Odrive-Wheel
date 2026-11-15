@@ -129,6 +129,26 @@ public:
     float I_bus_ = 0.0f; // this motors contribution to the bus current
     float phase_current_rev_gain_ = 0.0f; // Reverse gain for ADC to Amps (to be set by DRV8301_setup)
     FieldOrientedController current_control_;
+
+    // Odrive-Wheel — FFB-oriented feedforward knobs. Kept OUT of Config_t on
+    // purpose: Config_t is serialized to NVM as a raw CRC'd blob, so growing it
+    // would invalidate every user's stored ODrive config. These live in the
+    // FFB EEPROM instead (ffb_task.cpp) and are set via sys.ffr / sys.bemfhz.
+    //
+    // ff_r_enable_: resistive feedforward from the current SETPOINT only
+    //   (vd += R*id_sp, vq += R*iq_sp). Unlike config_.R_wL_FF_enable it does
+    //   not touch phase_vel, so PLL noise never reaches the voltage command.
+    //   Lets a torque step get its resistive voltage in the same cycle while
+    //   current_control_bandwidth stays low for noise rejection.
+    // bemf_ff_filter_hz_: >0 enables bEMF feedforward using phase_vel passed
+    //   through a 1st-order low-pass at this cutoff. A wheel's bEMF changes
+    //   slowly (hand-limited acceleration), so 10-20 Hz keeps the benefit
+    //   (no drag while rotating) and removes the encoder-count jitter that
+    //   makes the stock bEMF_FF_enable buzz. 0 = off (stock flag untouched).
+    bool  ff_r_enable_        = false;
+    float bemf_ff_filter_hz_  = 0.0f;
+    float bemf_ff_vel_filt_   = 0.0f;  // [rad/s elec] filter state
+
     float effective_current_lim_ = 10.0f; // [A]
     float max_allowed_current_ = 0.0f; // [A] set in setup()
     float max_dc_calib_ = 0.0f; // [A] set in setup()

@@ -36,6 +36,13 @@ const ClassIdentifier EffectsCalculator::getInfo(){
 	return info;
 }
 
+EffectsStateGuard::EffectsStateGuard(EffectsCalculator& calculator) : calculator_(calculator) {
+	calculator_.effects_state_mutex_.Lock();
+}
+EffectsStateGuard::~EffectsStateGuard() {
+	calculator_.effects_state_mutex_.Unlock();
+}
+
 EffectsCalculator::EffectsCalculator() : CommandHandler("fx", CLSID_EFFECTSCALC),
 		Thread("FXCalc", EFFECT_THREAD_MEM, EFFECT_THREAD_PRIO)
 {
@@ -87,7 +94,68 @@ void EffectsCalculator::setActive(bool active)
 	setClipLed(active);
 }
 
+// Playback fixes adapted from TelksBr/ODrive-Wheel-Forge v1.0.8
+// (c950329e, fd664a1). Runtime state only; EEPROM encoding is unchanged.
+void EffectsCalculator::setPaused(bool paused) {
+	if (effects_paused_ == paused) return;
+	const uint32_t now_ms = HAL_GetTick();
+	if (paused) {
+		// Account for the interval since the last FFB sample before freezing.
+		// This also makes frequency changes during Pause use the paused phase.
+		for (auto& effect : effects) advanceEffectClock(effect, now_ms);
+		effects_paused_ = true;
+		for (auto& effect : effects) {
+			if (effect.state != EFFECT_STATE_INACTIVE) {
+				effect.pauseStartTime = now_ms;
+				effect.pauseClockPending = true;
+			}
+		}
+		return;
+	}
+	for (auto& effect : effects) {
+		if (effect.state != EFFECT_STATE_INACTIVE && effect.pauseClockPending) {
+			const uint32_t paused_ms = now_ms - effect.pauseStartTime;
+			effect.startTime += paused_ms;
+			effect.phaseLastTick += paused_ms;
+			effect.pauseClockPending = false;
+		}
+	}
+	effects_paused_ = false;
+}
+
+void EffectsCalculator::noteEffectStartedWhilePaused(FFB_Effect* effect, uint32_t start_tick) {
+	if (effects_paused_ && effect) {
+		effect->pauseStartTime = start_tick;
+		effect->pauseClockPending = true;
+	}
+}
+
+void EffectsCalculator::advanceEffectClock(FFB_Effect& effect, uint32_t now_ms) {
+	if (effects_paused_ || effect.state == EFFECT_STATE_INACTIVE) return;
+	if (effect.startDelayPending) {
+		if (now_ms - effect.startTime < effect.pendingStartDelay) return;
+		effect.startTime += effect.pendingStartDelay;
+		effect.startDelayPending = false;
+		effect.phaseLastTick = effect.startTime;
+	}
+	const bool periodic = effect.type >= FFB_EFFECT_SQUARE && effect.type <= FFB_EFFECT_SAWTOOTHDOWN;
+	if (periodic) {
+		const uint32_t period_ms = effect.period;
+		const uint32_t elapsed_ms = now_ms - effect.phaseLastTick;
+		effect.phaseLastTick = now_ms;
+		const uint32_t sum_ms = effect.phaseElapsedMs + elapsed_ms % period_ms;
+		effect.phaseElapsedMs = (uint16_t)(sum_ms >= period_ms ? sum_ms - period_ms : sum_ms);
+	}
+	// Expire even while actuators are disabled, so PID GET never reports a
+	// finite effect as playing after its duration elapsed.
+	if (effect.duration != FFB_EFFECT_DURATION_INFINITE && effect.duration != 0 &&
+	    now_ms - effect.startTime >= effect.duration) {
+		effect.state = EFFECT_STATE_INACTIVE;
+	}
+}
+
 void EffectsCalculator::updateSamplerate(float newSamplerate){
+	EffectsStateGuard state_lock(*this);
 	this->calcfrequency = newSamplerate;
 	for (auto& e : eq_) e.setSamplerate(newSamplerate);
 	for(FFB_Effect &effect : this->effects){
@@ -117,12 +185,15 @@ An inertia condition uses axis acceleration as the metric.
  */
 void EffectsCalculator::calculateEffects(std::vector<std::unique_ptr<Axis>> &axes)
 {
+	EffectsStateGuard state_lock(*this);
+	const uint32_t now_ms = HAL_GetTick();
+	for (auto& effect : effects) advanceEffectClock(effect, now_ms);
 	for (auto &axis : axes) {
 		axis->setEffectTorque(0);
 		axis->calculateAxisEffects(isActive());
 	}
 
-	if(!isActive()){
+	if(!isActive() || effects_paused_){
 		return;
 	}
 
@@ -139,28 +210,13 @@ void EffectsCalculator::calculateEffects(std::vector<std::unique_ptr<Axis>> &axe
 	{
 		FFB_Effect *effect = &effects[fxi];
 
-		// Effect activated and not infinite (0 or 0xffff)
-		if (effect->state != EFFECT_STATE_INACTIVE && effect->duration != FFB_EFFECT_DURATION_INFINITE && effect->duration != 0){
-			// Start delay not yet reached
-			if(HAL_GetTick() < effect->startTime){
-				continue;
-			}
-			// If effect has expired make inactive
-			if (HAL_GetTick() - effect->startTime > effect->duration)
-			{
-				effect->state = EFFECT_STATE_INACTIVE;
-				for(uint8_t axis=0 ; axis < axisCount ; axis++)
-					calcStatsEffectType(effect->type, 0,axis); // record a 0 on the ended force
-			}
-		}
-
 		// Filter out inactive effects
-		if (effect->state == EFFECT_STATE_INACTIVE)
+		if (effect->state == EFFECT_STATE_INACTIVE || effect->startDelayPending)
 		{
 			continue;
 		}
 
-		force = calcNonConditionEffectForce(effect);
+		force = calcNonConditionEffectForce(effect, now_ms);
 
 		for(uint8_t axis=0 ; axis < axisCount ; axis++) // Calculate effects for all axes
 		{
@@ -189,13 +245,13 @@ void EffectsCalculator::calculateEffects(std::vector<std::unique_ptr<Axis>> &axe
  * Calculates forces from a non conditional effect
  * Periodic and constant effects
  */
-int32_t EffectsCalculator::calcNonConditionEffectForce(FFB_Effect *effect) {
+int32_t EffectsCalculator::calcNonConditionEffectForce(FFB_Effect *effect, uint32_t now_ms) {
 	int32_t force_vector = 0;
 	int32_t magnitude = effect->magnitude;
 
 	// If using an envelope modulate the magnitude based on time
 	if(effect->useEnvelope){
-		magnitude = getEnvelopeMagnitude(effect);
+		magnitude = getEnvelopeMagnitude(effect, now_ms);
 	}
 	switch (effect->type){
 
@@ -210,7 +266,7 @@ int32_t EffectsCalculator::calcNonConditionEffectForce(FFB_Effect *effect) {
 		// Bug 7: guarda contra duration<=0 (div/zero) e clampa interpolação
 		// entre startLevel e endLevel — evita extrapolação quando elapsed
 		// ultrapassa duration.
-		float elapsed_time = (micros() / 1000.0f) - (float)effect->startTime;
+		uint32_t elapsed_time = now_ms - effect->startTime;
 		int32_t duration = effect->duration;
 		if (duration <= 0) {
 			force_vector = effect->endLevel;
@@ -237,9 +293,10 @@ int32_t EffectsCalculator::calcNonConditionEffectForce(FFB_Effect *effect) {
 		// contra period == 0 (div/zero).
 		uint32_t period_ms = std::max<uint32_t>((uint32_t)effect->period, 1);
 		uint32_t period_us = period_ms * 1000;
-		uint32_t elapsed_us = micros() - ((uint32_t)effect->startTime * 1000);
-		uint32_t phase_us = ((uint32_t)effect->phase * period_us) / 36000;
-		uint32_t cycle_pos_us = (elapsed_us + phase_us) % period_us;
+		uint32_t elapsed_phase_us = (uint32_t)effect->phaseElapsedMs * 1000u;
+		// Reduce 1000/36000 to 1/36 to avoid a 32-bit multiplication overflow.
+		uint32_t phase_us = ((uint32_t)effect->phase * period_ms) / 36u;
+		uint32_t cycle_pos_us = (elapsed_phase_us + phase_us) % period_us;
 		float phase_norm = (float)cycle_pos_us / (float)period_us; // [0.0, 1.0)
 
 		if (effect->type == FFB_EFFECT_SQUARE) {
@@ -408,6 +465,11 @@ int32_t EffectsCalculator::calcComponentForce(FFB_Effect *effect, int32_t forceV
 		// Unsupported effect
 		break;
 	}
+	// Waveforms already receive their HID gain in calcNonConditionEffectForce.
+	// Conditions must receive it too, after their filters, exactly once.
+	if (effect->type >= FFB_EFFECT_SPRING && effect->type <= FFB_EFFECT_FRICTION) {
+		result_torque = (int32_t)((int64_t)result_torque * effect->gain / 255);
+	}
 	return (result_torque * global_gain) / 255; // Apply global gain
 }
 
@@ -462,13 +524,13 @@ int32_t EffectsCalculator::calcConditionEffectForce(FFB_Effect *effect, float  m
  * until the fade time where the strength changes to the fade level until the stop time of the effect.
  * Infinite effects can't have an envelope and return the normal magnitude.
  */
-int32_t EffectsCalculator::getEnvelopeMagnitude(FFB_Effect *effect)
+int32_t EffectsCalculator::getEnvelopeMagnitude(FFB_Effect *effect, uint32_t now_ms)
 {
 	if(effect->duration == FFB_EFFECT_DURATION_INFINITE || effect->duration == 0){
 		return effect->magnitude; // Effect is infinite. envelope is invalid
 	}
 	int32_t scaler = abs(effect->magnitude);
-	uint32_t elapsed_time = HAL_GetTick() - effect->startTime;
+	uint32_t elapsed_time = now_ms - effect->startTime;
 	if (elapsed_time > effect->duration) {
 		elapsed_time = effect->duration; // Bônus: clampa elapsed pra evitar underflow em (duration-elapsed)
 	}

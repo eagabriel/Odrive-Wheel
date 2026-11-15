@@ -18,6 +18,14 @@ const SPI_InitTypeDef Drv8301::spi_config_ = {
     .CRCPolynomial = 10,
 };
 
+// Gate-drive peak current (CTRL1 bits [1:0]): 0b00 = 1.7 A (stock), 0b01 = 0.7 A,
+// 0b10 = 0.25 A. Slower edges reduce switching noise coupled into the shunt
+// sense lines, at the cost of higher switching losses. Selected at build time
+// with DRV_GATE_CURRENT=<n> in the Makefile.
+#ifndef DRV8301_GATE_CURRENT_SETTING
+#define DRV8301_GATE_CURRENT_SETTING 0b00
+#endif
+
 bool Drv8301::config(float requested_gain, float* actual_gain) {
     // Calculate gain setting: Snap down to have equal or larger range as
     // requested or largest possible range otherwise
@@ -45,7 +53,7 @@ bool Drv8301::config(float requested_gain, float* actual_gain) {
         | (0b01 << 4) // OCP_MODE: latch shut down
         | (0b0 << 3) // 6x PWM mode
         | (0b0 << 2) // don't reset latched faults
-        | (0b00 << 0); // gate-drive peak current: 1.7A
+        | (DRV8301_GATE_CURRENT_SETTING << 0); // gate-drive peak current
 
     new_config.control_register_2 =
           (0b0 << 6) // OC_TOFF: cycle by cycle

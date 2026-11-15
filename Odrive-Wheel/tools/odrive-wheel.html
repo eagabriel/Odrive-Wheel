@@ -1750,7 +1750,7 @@
   <div class="header-actions">
     <!-- Sponsor / BuyMeACoffee links (à esquerda do Connect) -->
     <span class="tool-version" title="HTML tool version"
-          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.32</span>
+          style="font-size:11px;color:var(--muted);font-family:ui-monospace,Consolas,monospace;letter-spacing:0.5px;margin-right:2px;white-space:nowrap">V0.34</span>
     <!-- PIX (Brazil): abre modal com QR code pre-gerado inline (offline).
          Cor #32BCAD do branding oficial do PIX. -->
     <button id="btn-pix-open" type="button"
@@ -2113,6 +2113,87 @@ const I18N = {
     'pt.results_section_derived':'Cálculos derivados',
     'pt.results_torque_applied':'Torque aplicado no launch (axis.maxtorque × fxratio)',
     'pt.results_inertia':       'Inércia (J) do conjunto motor+volante',
+    'pt.results_inertia_quality':'Qualidade da medida',
+    'pt.use_j_osc':             'Usar na proteção anti-oscilação',
+    'pt.use_j_osc_low':         'A qualidade da medida de J está BAIXA. Gravar mesmo assim em axis.oscj?',
+    'pt.use_j_osc_ok':          'J = {j} kg·m² gravado em axis.oscj — clique Salvar pra persistir',
+    'pt.use_j_osc_fail':        'Falha ao gravar axis.oscj (serial conectada?)',
+    'group.ffb_oscguard': 'Anti-oscilação (volante solto)',
+    'osct.title': '🛡 Testar anti-oscilação',
+    'osct.subtitle': '— sem jogo, com o volante na mesa',
+    'osct.s1_t': 'Ligar a detecção sem força',
+    'osct.s1_d': 'A proteção só observa (força ~0). O diagnóstico abaixo passa a atualizar a cada oscilação.',
+    'osct.s2_t': 'Ativar a mola (jogo fechado)',
+    'osct.s2_d': 'Mola de centro no máximo e damper em zero, para o volante balançar sozinho quando você soltar.',
+    'osct.s3_t': 'Teste A — volante solto',
+    'osct.s3_d': 'Clique, gire o volante ~90° e solte. Esperado: a detecção arma (Ativações sobe).',
+    'osct.s4_t': 'Teste B — com as mãos',
+    'osct.s4_d': 'Clique, segure firme fora do centro e balance rápido. Esperado: não arma.',
+    'osct.s5_t': 'Ligar a proteção de verdade',
+    'osct.s5_d': 'Depois repita o Teste A: o balanço deve parar em 1–2 idas e voltas.',
+    'osct.s6_t': 'Terminar',
+    'osct.s6_d': 'Volta mola, damper e proteção como estavam antes do teste.',
+    'osct.no_j': 'axis.oscj = 0: sem o J a detecção é só pelo movimento e não dá para separar volante solto de mãos no volante. Meça no Performance Test, no Teste de aceleração e RPM, e use o botão "Usar na proteção anti-oscilação".',
+    'osct.goto_pt': 'Ir ao teste de aceleração e RPM',
+    'osct.j_link': '↗ Medir (Performance Test › Teste de aceleração e RPM)',
+    'osct.snap_warn': 'Teste em andamento: mola e proteção alteradas. Clique Restaurar originais antes de Salvar. Originais:',
+    'osct.btn_obs': '👁 Modo observação',
+    'osct.btn_bench': '🌀 Ativar mola',
+    'osct.btn_arm': '▶ Ativar proteção',
+    'osct.btn_restore': '↺ Restaurar originais',
+    'osct.btn_zero': '⟲ Zerar',
+    'osct.btn_a': 'Iniciar A (8 s)',
+    'osct.btn_b': 'Iniciar B (8 s)',
+    'osct.live': 'Atualizar ao vivo',
+    'osct.diag_title': 'Diagnóstico — última oscilação medida',
+    'osct.device': 'No dispositivo:',
+    'osct.run_a': 'Gravando… {s} s — gire ~90° e SOLTE',
+    'osct.run_b': 'Gravando… {s} s — segure firme e balance rápido',
+    'osct.mode_off': 'proteção desligada',
+    'osct.mode_obs': 'só observando',
+    'osct.mode_on': 'proteção ativa · força {g}',
+    'osct.mode_bench': '+ mola ativa',
+    'osct.d_state': 'Estado',
+    'osct.d_count': 'Ativações',
+    'osct.d_conf': 'Confiança (arma em 3)',
+    'osct.d_amp': 'Amplitude',
+    'osct.d_freq': 'Frequência',
+    'osct.d_peakspd': 'Vel. pico',
+    'osct.d_hands': 'Volante',
+    'osct.d_nm': 'Força da proteção',
+    'osct.st_armed': 'ARMADA',
+    'osct.st_wait': 'aguardando',
+    'osct.h_free': 'solto',
+    'osct.h_hands': 'com as mãos',
+    'osct.h_unk': 'indefinido',
+    'osct.h_none': 'sem dado',
+    'osct.not_connected': 'Conecte a serial primeiro',
+    'osct.no_j_short': 'Configure axis.oscj (Performance Test) antes do teste',
+    'osct.need_obs': 'Faça o passo 1 (Modo observação) antes do teste',
+    'osct.read_fail': 'Falha ao ler os valores atuais — nada foi alterado',
+    'osct.write_fail': 'Falha ao gravar {k}',
+    'osct.ok_obs': 'Modo observação: oscguard=1 (força desprezível)',
+    'osct.ok_bench': 'Mola ativa: idlespring=255, axisdamper=0 — só age com o jogo fechado',
+    'osct.ok_arm': 'Proteção ativa: oscguard={g}',
+    'osct.ok_restore': 'Originais restaurados',
+    'osct.nothing_restore': 'Nada a restaurar',
+    'osct.ok_zero': 'Diagnóstico zerado',
+    'osct.res_meta_a': 'ativações {c} · melhor ratio {r} · {n} oscilações',
+    'osct.res_meta_b': 'ativações {c} · {n} oscilações',
+    'osct.v_a_armed': 'Armou {c}× — volante solto reconhecido. J coerente.',
+    'osct.v_a_none': 'Poucas oscilações medidas. Gire mais (~90°) antes de soltar e confira se a mola está ativa e o jogo fechado.',
+    'osct.v_a_free': 'Volante solto reconhecido (melhor ratio {r}), mas o balanço da mola foi fraco ou lento demais para armar. J coerente.',
+    'osct.v_a_unclear': 'Inconclusivo: repita girando mais antes de soltar.',
+    'osct.v_a_bad': 'Nenhuma oscilação pareceu solta. Se repetir, confira o J.',
+    'osct.v_b_false': 'Armou {c}× com as mãos no volante (falso positivo). Mande a linha osctest do console.',
+    'osct.v_b_none': 'Poucas oscilações medidas. Balance mais rápido, 2–3 vezes por segundo, fora do centro.',
+    'osct.v_b_ok': 'Não armou com as mãos no volante.',
+    'osct.v_all_ok': '✓ Detecção OK. Próximo: passo 5 (Ativar proteção) e repetir o Teste A.',
+    'pt.q_high':                'ALTA',
+    'pt.q_medium':              'MÉDIA',
+    'pt.q_low':                 'BAIXA',
+    'pt.q_estimate':            'ESTIMATIVA (T assumido, ±30%)',
+    'pt.q_saturated':           'MOTOR SATUROU {ms} ms (J é limite inferior)',
     'pt.results_breakaway':     'Friction breakaway (CF mínima pra mover)',
     'pt.rec_title':             '💡 Recomendações de filtros',
     'pt.rec_subtitle':          'Cutoff sugerido baseado na inércia (J) medida e no torque de atrito estimado durante o launch (mais preciso se coastdown também foi feito). <b>Aplicar</b> escreve em RAM — clique no botão <b>Save</b> no topo da página pra persistir na EEPROM.',
@@ -2359,6 +2440,7 @@ const I18N = {
     'ovl.series_vbus':          'vbus (V) — tensão do bus DC',
     'ovl.series_ibus':          'ibus (A) — corrente do bus DC',
     'ovl.series_iq':            'Iq motor (A) — corrente quadratura',
+    'ovl.iq_smooth':            'Suavização do Iq (média móvel, ms; 0 = cru)',
     'ovl.series_ibr':           'I brake (A) — corrente do brake resistor',
     'ovl.series_fet_temp':      'FET temp (°C) — temperatura do inversor (thermistor da placa)',
     'ovl.series_motor_temp':    'Motor temp (°C) — temperatura do motor (thermistor externo se presente)',
@@ -2379,6 +2461,12 @@ const I18N = {
     'ovl.clipout_hint':        'Conta amostras com |Iq| ≥ 95% × current_lim sobre janela rolante 30s. Mede quanto o motor não conseguiu entregar o torque que o firmware mandou (perda de detalhe físico). Cor: 🟢 <1%, 🟡 1–5%, 🟠 5–10%, 🔴 >10%. current_lim vem do Motor Cal (rode Performance Test pra cachear).',
     'ovl.clipout_label':       'Clip OUT',
     'ovl.clipout_no_lim':      'configure current_lim no Motor Cal',
+    'ovl.show_oscguard':       'Anti-oscilação — mostra quando a proteção de volante solto está agindo',
+    'ovl.oscguard_hint':       'Lido do relatório HID (bit no byte de estado). ATIVA em vermelho enquanto a proteção age; depois mostra quantas vezes agiu e há quanto tempo. Só tem efeito se axis.oscguard > 0 (aba FFB Wheel).',
+    'ovl.oscguard_label':      'Anti-oscilação',
+    'ovl.oscguard_active':     'ATIVA',
+    'ovl.oscguard_idle':       'inativa',
+    'ovl.oscguard_ago':        'última há {s} s',
     'ovl.btn_open':            '⧉ Abrir overlay',
     'ovl.btn_close':           '✕ Fechar overlay',
     'ovl.status_closed':       'Overlay fechado.',
@@ -2504,7 +2592,7 @@ const I18N = {
     'group.motor_temp': 'Temperatura',
     'group.motor_thermistor_fet': 'Termistor FET (onboard)',
     'group.motor_thermistor_ntc': 'Termistor do motor (NTC offboard)',
-    'group.motor_ff': 'Feed-forward',
+    'group.motor_ff': 'Resposta elétrica do motor',
     'group.motor_acim': 'ACIM (induction only)',
     // Groups (Encoder)
     'group.enc_mode': 'Modo / resolução',
@@ -2812,6 +2900,7 @@ const I18N = {
     'enc.mt_no_serial':             'Conecte à placa pra verificar se o MT6835 está ativo.',
     'enc.mt_not_active':            '⚠ MT6835 selecionado, mas ainda não está ativo na placa. Clique Salvar (grava e reinicia). Set Zero e Program EEPROM ficam disponíveis depois disso.',
     'enc.mt_active_start_live':     'MT6835 ativo — clique ▶ Iniciar live pra ver o status do chip.',
+    'enc.mt_programming':           '💾 Gravando a EEPROM do MT6835 — NÃO desligue a placa e NÃO mexa no cabo do encoder. O live não consulta o chip nesta janela (o datasheet proíbe qualquer acesso SPI por 6 s). Os botões voltam sozinhos.',
     // Encoder diagnostics panel
     'enc.diag_title':              '🔬 Diagnóstico do Encoder',
     'enc.diag_section_spi':        'Contadores SPI ABS (sys.encraw!)',
@@ -3127,6 +3216,87 @@ const I18N = {
     'pt.results_section_derived':'Derived calculations',
     'pt.results_torque_applied':'Torque applied during launch (axis.maxtorque × fxratio)',
     'pt.results_inertia':       'Inertia (J) of motor+wheel assembly',
+    'pt.results_inertia_quality':'Measurement quality',
+    'pt.use_j_osc':             'Use for anti-oscillation',
+    'pt.use_j_osc_low':         'J measurement quality is LOW. Write it to axis.oscj anyway?',
+    'pt.use_j_osc_ok':          'J = {j} kg·m² written to axis.oscj — click Save to persist',
+    'pt.use_j_osc_fail':        'Failed to write axis.oscj (serial connected?)',
+    'group.ffb_oscguard': 'Anti-oscillation (hands-off)',
+    'osct.title': '🛡 Anti-oscillation test',
+    'osct.subtitle': '— no game, wheel on the desk',
+    'osct.s1_t': 'Turn on detection without force',
+    'osct.s1_d': 'The protection only observes (force ~0). The diagnostics below start updating on every oscillation.',
+    'osct.s2_t': 'Enable the spring (game closed)',
+    'osct.s2_d': 'Center spring at maximum and damper at zero, so the wheel swings on its own when you let go.',
+    'osct.s3_t': 'Test A — hands off',
+    'osct.s3_d': 'Click, turn the wheel ~90° and let go. Expected: detection arms (Activations goes up).',
+    'osct.s4_t': 'Test B — hands on',
+    'osct.s4_d': 'Click, hold firmly off-center and wiggle fast. Expected: it does not arm.',
+    'osct.s5_t': 'Turn on the real protection',
+    'osct.s5_d': 'Then repeat Test A: the swing should stop within 1–2 cycles.',
+    'osct.s6_t': 'Finish',
+    'osct.s6_d': 'Puts spring, damper and protection back as they were before the test.',
+    'osct.no_j': 'axis.oscj = 0: without J detection is motion-only and cannot tell hands-off from hands-on. Measure it in the Performance Test, in the Acceleration and RPM test, and use the "Use for anti-oscillation" button.',
+    'osct.goto_pt': 'Go to the acceleration and RPM test',
+    'osct.j_link': '↗ Measure (Performance Test › Acceleration and RPM test)',
+    'osct.snap_warn': 'Test in progress: spring and protection changed. Click Restore originals before Save. Originals:',
+    'osct.btn_obs': '👁 Observation mode',
+    'osct.btn_bench': '🌀 Enable spring',
+    'osct.btn_arm': '▶ Enable protection',
+    'osct.btn_restore': '↺ Restore originals',
+    'osct.btn_zero': '⟲ Reset',
+    'osct.btn_a': 'Start A (8 s)',
+    'osct.btn_b': 'Start B (8 s)',
+    'osct.live': 'Live update',
+    'osct.diag_title': 'Diagnostics — last measured oscillation',
+    'osct.device': 'On device:',
+    'osct.run_a': 'Recording… {s} s — turn ~90° and LET GO',
+    'osct.run_b': 'Recording… {s} s — hold firmly and wiggle fast',
+    'osct.mode_off': 'protection off',
+    'osct.mode_obs': 'observing only',
+    'osct.mode_on': 'protection on · strength {g}',
+    'osct.mode_bench': '+ spring on',
+    'osct.d_state': 'State',
+    'osct.d_count': 'Activations',
+    'osct.d_conf': 'Confidence (arms at 3)',
+    'osct.d_amp': 'Amplitude',
+    'osct.d_freq': 'Frequency',
+    'osct.d_peakspd': 'Peak speed',
+    'osct.d_hands': 'Wheel',
+    'osct.d_nm': 'Protection force',
+    'osct.st_armed': 'ARMED',
+    'osct.st_wait': 'waiting',
+    'osct.h_free': 'free',
+    'osct.h_hands': 'hands on',
+    'osct.h_unk': 'unclear',
+    'osct.h_none': 'no data',
+    'osct.not_connected': 'Connect the serial port first',
+    'osct.no_j_short': 'Set axis.oscj (Performance Test) before the test',
+    'osct.need_obs': 'Do step 1 (Observation mode) before the test',
+    'osct.read_fail': 'Failed to read current values — nothing was changed',
+    'osct.write_fail': 'Failed to write {k}',
+    'osct.ok_obs': 'Observation mode: oscguard=1 (negligible force)',
+    'osct.ok_bench': 'Spring on: idlespring=255, axisdamper=0 — only acts with the game closed',
+    'osct.ok_arm': 'Protection on: oscguard={g}',
+    'osct.ok_restore': 'Originals restored',
+    'osct.nothing_restore': 'Nothing to restore',
+    'osct.ok_zero': 'Diagnostics reset',
+    'osct.res_meta_a': 'activations {c} · best ratio {r} · {n} oscillations',
+    'osct.res_meta_b': 'activations {c} · {n} oscillations',
+    'osct.v_a_armed': 'Armed {c}× — hands-off recognized. J is consistent.',
+    'osct.v_a_none': 'Too few oscillations measured. Turn further (~90°) before letting go and check that the spring is on and the game is closed.',
+    'osct.v_a_free': 'Hands-off recognized (best ratio {r}), but the spring swing was too weak or slow to arm. J is consistent.',
+    'osct.v_a_unclear': 'Inconclusive: repeat, turning further before letting go.',
+    'osct.v_a_bad': 'No oscillation looked free. If it repeats, check J.',
+    'osct.v_b_false': 'Armed {c}× with hands on the wheel (false positive). Send the osctest line from the console.',
+    'osct.v_b_none': 'Too few oscillations measured. Wiggle faster, 2–3 times per second, off-center.',
+    'osct.v_b_ok': 'Did not arm with hands on the wheel.',
+    'osct.v_all_ok': '✓ Detection OK. Next: step 5 (Enable protection) and repeat Test A.',
+    'pt.q_high':                'HIGH',
+    'pt.q_medium':              'MEDIUM',
+    'pt.q_low':                 'LOW',
+    'pt.q_estimate':            'ESTIMATE (assumed T, ±30%)',
+    'pt.q_saturated':           'MOTOR SATURATED {ms} ms (J is a lower bound)',
     'pt.results_breakaway':     'Friction breakaway (min CF to move)',
     // Motor test results — save/load (EN)
     'cal.title':                '📂 Save / load test result',
@@ -3373,6 +3543,7 @@ const I18N = {
     'ovl.series_vbus':          'vbus (V) — DC bus voltage',
     'ovl.series_ibus':          'ibus (A) — DC bus current',
     'ovl.series_iq':            'Iq motor (A) — quadrature current',
+    'ovl.iq_smooth':            'Iq smoothing (moving average, ms; 0 = raw)',
     'ovl.series_ibr':           'I brake (A) — brake resistor current',
     'ovl.series_fet_temp':      'FET temp (°C) — inverter temperature (board thermistor)',
     'ovl.series_motor_temp':    'Motor temp (°C) — motor temperature (external thermistor if present)',
@@ -3393,6 +3564,12 @@ const I18N = {
     'ovl.clipout_hint':        'Counts samples with |Iq| ≥ 95% × current_lim over a 30s rolling window. Measures how often the motor failed to deliver the torque the firmware commanded (physical detail loss). Color: 🟢 <1%, 🟡 1–5%, 🟠 5–10%, 🔴 >10%. current_lim comes from Motor Cal (run Performance Test to cache).',
     'ovl.clipout_label':       'Clip OUT',
     'ovl.clipout_no_lim':      'set current_lim via Motor Cal',
+    'ovl.show_oscguard':       'Anti-oscillation — shows when the hands-off protection is acting',
+    'ovl.oscguard_hint':       'Read from the HID report (bit in the state byte). ACTIVE in red while the protection acts; afterwards shows how many times it acted and how long ago. Only matters if axis.oscguard > 0 (FFB Wheel tab).',
+    'ovl.oscguard_label':      'Anti-oscillation',
+    'ovl.oscguard_active':     'ACTIVE',
+    'ovl.oscguard_idle':       'idle',
+    'ovl.oscguard_ago':        'last {s} s ago',
     'ovl.btn_open':            '⧉ Open overlay',
     'ovl.btn_close':           '✕ Close overlay',
     'ovl.status_closed':       'Overlay closed.',
@@ -3515,7 +3692,7 @@ const I18N = {
     'group.motor_temp': 'Temperature',
     'group.motor_thermistor_fet': 'FET thermistor (onboard)',
     'group.motor_thermistor_ntc': 'Motor thermistor (offboard NTC)',
-    'group.motor_ff': 'Feed-forward',
+    'group.motor_ff': 'Motor electrical response',
     'group.motor_acim': 'ACIM (induction only)',
     'group.enc_mode': 'Mode / resolution',
     'group.enc_index': 'Index / offset',
@@ -3818,6 +3995,7 @@ const I18N = {
     'enc.mt_no_serial':             'Connect to the board to check whether the MT6835 is active.',
     'enc.mt_not_active':            '⚠ MT6835 selected, but not active on the board yet. Click Save (writes and reboots). Set Zero and Program EEPROM become available after that.',
     'enc.mt_active_start_live':     'MT6835 active — click ▶ Start live to see the chip status.',
+    'enc.mt_programming':           '💾 Programming the MT6835 EEPROM — do NOT power off the board and do NOT touch the encoder cable. Live polling does not query the chip during this window (the datasheet forbids any SPI access for 6 s). The buttons come back on their own.',
     // Encoder diagnostics panel
     'enc.diag_title':              '🔬 Encoder Diagnostics',
     'enc.diag_section_spi':        'ABS SPI counters (sys.encraw!)',
@@ -3968,7 +4146,7 @@ const FIELD_DESC = {
     'config.brake_resistance':              'Valor do resistor de freio em ohms. Bata com o resistor físico — erro aqui faz brake calcular PWM errado. Você pode verificar a potência dissipada no resistor durante o brake ativando P brake em Tools-Overlay.',
     'config.enable_brake_resistor':         'Habilita o circuito de brake. Sem isto, regen vai pra fonte e pode disparar OVP.',
     'config.dc_bus_undervoltage_trip_level':'Tensão mínima do bus DC. Abaixo disso ODrive desarma com erro UNDER_VOLTAGE.',
-    'config.dc_bus_overvoltage_trip_level': 'Tensão máxima do bus DC. Acima disso ODrive desarma. Setar entre fonte+5V e cap rating.',
+    'config.dc_bus_overvoltage_trip_level': 'Tensão máxima do bus DC. Acima disso ODrive desarma. Deve ficar acima do fim da rampa do freio e abaixo do rating dos capacitores. Quick Start usa tensão da fonte + 2 V.',
     'config.enable_dc_bus_overvoltage_ramp':'Ativa rampa proporcional de brake baseada em tensão (preventivo antes do trip).',
     'config.dc_bus_overvoltage_ramp_start': 'Tensão onde o brake começa a aumentar duty proporcional. Ex: 25V.',
     'config.dc_bus_overvoltage_ramp_end':   'Tensão onde brake satura em 100%. Ex: 27V (deve ser < trip).',
@@ -4086,10 +4264,10 @@ const FIELD_DESC = {
     'axis0.controller.config.vel_limit':          'Velocidade máxima em turns/s. Pra wheel use 10+ pra não bater em manobras.',
     'axis0.controller.config.vel_limit_tolerance':'Multiplicador antes de erro overspeed disparar (1.2 = 20% margem).',
     'axis0.controller.config.enable_overspeed_error':'Dispara erro se vel passar limite × tolerance.',
-    'axis0.controller.config.electrical_power_bandwidth':'Filtro do estimador de potência elétrica em rad/s (equivalente em Hz ao lado). Menor = ignora picos.',
-    'axis0.controller.config.mechanical_power_bandwidth':'Filtro do estimador de potência mecânica em rad/s (equivalente em Hz ao lado).',
-    'axis0.controller.config.spinout_electrical_power_threshold':'Threshold de potência elétrica pra spinout (W). Sobe pra 50 se FFB intenso disparar.',
-    'axis0.controller.config.spinout_mechanical_power_threshold':'Threshold de potência mecânica negativa (W). -50 é seguro.',
+    'axis0.controller.config.electrical_power_bandwidth':'Filtro do estimador de potência elétrica em rad/s (equivalente em Hz ao lado), usado na detecção de spinout. Menor = ignora picos curtos (impactos). Default e Quick Start: 10 (stock 20).',
+    'axis0.controller.config.mechanical_power_bandwidth':'Filtro do estimador de potência mecânica em rad/s (equivalente em Hz ao lado), usado na detecção de spinout. Default e Quick Start: 10 (stock 20).',
+    'axis0.controller.config.spinout_electrical_power_threshold':'Threshold de potência elétrica pra SPINOUT_DETECTED (W). Dispara só se, ao mesmo tempo, a potência mecânica estiver abaixo do threshold mecânico. Default e Quick Start: 150 W (stock ODrive 10). Mais alto = menos disparos falsos em batente/contra-esterço, mas disparos fracos (comutação errada com pouco torque) deixam de ser detectados.',
+    'axis0.controller.config.spinout_mechanical_power_threshold':'Threshold de potência mecânica de frenagem pra SPINOUT_DETECTED (W, negativo). Default e Quick Start: -150 W (stock ODrive -10). Num impacto de batente a frenagem legítima chega a centenas de W.',
     // FFB Wheel
     'axis.range':         'Rotação total do volante em graus (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Torque máximo entregue ao motor em Nm. Sobe pra usar mais do motor; cuidado com mãos.',
@@ -4097,11 +4275,18 @@ const FIELD_DESC = {
     'axis.invert':        'Inverte APENAS a posição HID reportada ao jogo (sem mexer em fios). Útil quando o encoder gira no sentido contrário ao esperado pelo jogo. Independente de axis.ffbinvert. Persiste em EE.',
     'axis.ffbinvert':     'Inverte APENAS o torque FFB recebido do jogo (não mexe na posição). Útil quando o FFB empurra no sentido errado (ex: FFFSake Forwarder e outras stacks que já mandam FFB com sinal trocado). Independente de axis.invert. Persiste em EE.',
     'sys.vbusdiv':        'Divisor de tensão do VBUS sense (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). ODrive v3.6 oficial = 11. Valor errado afeta proteção de overvoltage e cálculo do brake — confira com multímetro depois de ajustar.',
+    'sys.ffr':            'Antecipa parte da tensão necessária para produzir a força pedida. Pode tornar mudanças de força mais rápidas, principalmente com a malha de corrente ajustada para uma resposta mais suave. É a alternativa mais simples ao R_wL_FF_enable: compensa a resistência sem usar a velocidade estimada. Não aumenta o torque máximo nem adiciona amortecimento. Precisa de resistência do motor bem calibrada. Se R_wL_FF_enable estiver ligado, ele tem prioridade: ativar ambos não soma benefícios. Salvar com sys.save!.',
+    'sys.bemfhz':         'Ajuda a manter a força pedida enquanto você gira o volante, compensando a tensão gerada pelo movimento. É a alternativa filtrada ao bEMF_FF_enable: valores baixos suavizam o ruído, mas atrasam a compensação nas mudanças rápidas de velocidade; valores altos acompanham mais rápido, mas podem aumentar zumbido ou vibração. Faixa inicial para experimentar: 10–20 Hz. Acima de zero, substitui bEMF_FF_enable. Zero desliga apenas esta versão filtrada; para desligar as duas, desmarque também bEMF_FF_enable em avançado. Depende de torque_constant e pole_pairs corretos. Salvar com sys.save!.',
+    'sys.dbsoft':         'Suaviza a entrada das pequenas correções de corrente na borda da zona morta. Pode reduzir pequenos estalos ou vibrações quando a força está quase estável. Em troca, pequenas diferenças entre corrente pedida e medida são menos corrigidas. Só tem efeito se current_control_deadband for maior que zero. Desligado mantém a zona morta, mas usa uma transição abrupta. Este ajuste é independente das compensações de força e movimento acima. Salvar com sys.save!.',
+    'axis0.motor.config.R_wL_FF_enable': 'Alternativa avançada ao ff_r_setpoint. Inclui a compensação da resistência e do acoplamento elétrico causado pela rotação. Pode melhorar o acompanhamento da força em movimento, mas usa a velocidade estimada sem filtro adicional e pode aumentar zumbido ou vibração se ela estiver ruidosa. Para começar, prefira ff_r_setpoint; avalie esta opção com resistência e indutância bem calibradas se precisar da compensação mais completa. Tem prioridade sobre ff_r_setpoint: ligar ambos não duplica a compensação. É independente da compensação de movimento bemf_ff_filter_hz / bEMF_FF_enable.',
+    'axis0.motor.config.bEMF_FF_enable': 'Alternativa avançada ao bemf_ff_filter_hz. Compensa a tensão gerada pelo movimento usando a velocidade estimada sem filtro adicional. Acompanha mudanças de velocidade diretamente, mas pode transmitir ruído ao motor. Prefira a versão filtrada se esta causar zumbido ou vibração; considere a versão sem filtro quando a estimativa de velocidade estiver limpa. Só atua com bemf_ff_filter_hz em zero. Para desligar toda esta compensação de movimento, desmarque aqui e coloque bemf_ff_filter_hz em zero.',
     'axis.idlespring':    'Mola centralizadora SÓ quando jogo está OFF (FFB inativo). Volta a 0 quando jogo conecta. 0=desativado.',
     'axis.axisdamper':    'Damper SEMPRE ativo (com ou sem jogo conectado), somado ao FFB. Adiciona "peso" ao volante.',
     'axis.axisinertia':   'Inertia SEMPRE ativa (com ou sem jogo), proporcional à aceleração. Sensação de "massa".',
     'axis.axisfriction':  'Friction SEMPRE ativa (com ou sem jogo). Atrito constante quando volante gira.',
     'axis.esgain':        'Batente eletrônico — força da MOLA (0-255). Aplica torque crescente quando volante passa ±range/2. SEMPRE ativo (com ou sem jogo). 0=desativado (mola+damper desligados), 127=médio, 255=duro como bumper.',
+    'axis.oscguard': 'Proteção contra a oscilação que aparece ao SOLTAR o volante (o FFB do jogo realimenta o aro e ele começa a chacoalhar cada vez mais). Fica em zero na pilotagem normal: só age depois de reconhecer 3 meias oscilações seguidas rápidas, regulares e crescendo — e, com J configurado, só se o volante estiver de fato solto. Quando age, corta 80% do FFB do jogo e amortece contra a velocidade, com um freio calibrado pelo J (oscj) para não vibrar. Sai sozinha quando você pega o volante (~0,1–0,2 s) ou gira continuamente. Este valor é a força do freio: 0 = desligada (padrão), recomendado 150. O freio nunca passa de 80% do maxtorque × oscguard/255.',
+    'axis.oscj': 'Inércia do conjunto motor + aro em kg·m². Com ela a proteção CONFIRMA que o volante está solto antes de agir (sem as mãos, o aro obedece só ao motor: J·Δω ≈ impulso do torque) e percebe quando você pega o volante de volta. Sem ela (0), a detecção é só pelo movimento e pode agir em contra-esterços rápidos e regulares. Meça no Performance Test, no Teste de aceleração e RPM, e use o botão "Usar na proteção anti-oscilação".',
     'axis.esdamp':        'Batente eletrônico — AMORTECIMENTO (0-255). Independente da mola — dissipa energia cinética da batida no batente pra evitar ricochete. 0=sem damper (mola pura = vai bater no outro lado), 15=leve (default — segura bouncing sem travar o volante), 50=moderado, 100=agressivo (volante "trava" no fundo do batente).',
     'axis.maxtorquerate': 'Slew limiter em counts/ms. 0=off. Sobe pra suavizar transientes; CUIDADO mata dinâmicas.',
     'axis.expo':          'Curva exponencial de resposta. 0=linear. Positivo=centro morto, negativo=centro sensível.',
@@ -4126,7 +4311,7 @@ const FIELD_DESC = {
     'config.brake_resistance':              'Brake resistor value in ohms. Must match physical resistor — wrong value causes incorrect PWM duty. You can check the power dissipated in the resistor during braking by enabling P brake in Tools-Overlay.',
     'config.enable_brake_resistor':         'Enables brake circuit. Without this, regen flows to PSU and can trigger OVP.',
     'config.dc_bus_undervoltage_trip_level':'Minimum DC bus voltage. Below this ODrive disarms with UNDER_VOLTAGE error.',
-    'config.dc_bus_overvoltage_trip_level': 'Maximum DC bus voltage. Above this ODrive disarms. Set between PSU+5V and cap rating.',
+    'config.dc_bus_overvoltage_trip_level': 'Maximum DC bus voltage. Above this ODrive disarms. Must sit above the brake ramp end and below the capacitor rating. Quick Start uses PSU voltage + 2 V.',
     'config.enable_dc_bus_overvoltage_ramp':'Enables proportional brake duty based on voltage (preventive before trip).',
     'config.dc_bus_overvoltage_ramp_start': 'Voltage where brake starts ramping duty. Ex: 25V.',
     'config.dc_bus_overvoltage_ramp_end':   'Voltage where brake saturates at 100%. Ex: 27V (must be < trip).',
@@ -4236,21 +4421,28 @@ const FIELD_DESC = {
     'axis0.controller.config.vel_limit':          'Max velocity in turns/s. For wheel use 10+ to handle aggressive maneuvers.',
     'axis0.controller.config.vel_limit_tolerance':'Multiplier before overspeed error fires (1.2 = 20% margin).',
     'axis0.controller.config.enable_overspeed_error':'Fires error if vel exceeds limit × tolerance.',
-    'axis0.controller.config.electrical_power_bandwidth':'Electrical power estimator filter in rad/s (Hz equivalent shown alongside). Lower = ignores spikes.',
-    'axis0.controller.config.mechanical_power_bandwidth':'Mechanical power estimator filter in rad/s (Hz equivalent shown alongside).',
-    'axis0.controller.config.spinout_electrical_power_threshold':'Spinout electrical power threshold (W). Raise to 50 if intense FFB triggers it.',
-    'axis0.controller.config.spinout_mechanical_power_threshold':'Spinout negative mechanical power threshold (W). -50 is safe.',
+    'axis0.controller.config.electrical_power_bandwidth':'Electrical power estimator filter in rad/s (Hz equivalent shown alongside), used by spinout detection. Lower = ignores short spikes (impacts). Default and Quick Start: 10 (stock 20).',
+    'axis0.controller.config.mechanical_power_bandwidth':'Mechanical power estimator filter in rad/s (Hz equivalent shown alongside), used by spinout detection. Default and Quick Start: 10 (stock 20).',
+    'axis0.controller.config.spinout_electrical_power_threshold':'Electrical power threshold for SPINOUT_DETECTED (W). Only trips if, at the same time, mechanical power is below the mechanical threshold. Default and Quick Start: 150 W (stock ODrive 10). Higher = fewer false trips on endstops/counter-steer, but weak runaways (wrong commutation with little torque) are no longer caught.',
+    'axis0.controller.config.spinout_mechanical_power_threshold':'Braking mechanical power threshold for SPINOUT_DETECTED (W, negative). Default and Quick Start: -150 W (stock ODrive -10). On an endstop hit legitimate braking reaches hundreds of W.',
     'axis.range':         'Total wheel rotation in degrees (lock-to-lock). Default 900.',
     'axis.maxtorque':     'Max torque delivered to motor in Nm. Raise to use more of motor; mind your hands.',
     'axis.fxratio':       'Final multiplier 0..1. Scales force overall while preserving dynamics. Default 0.80.',
     'axis.invert':        'Inverts ONLY the HID position reported to the game (no rewiring needed). Useful when the encoder rotates in the opposite direction the game expects. Independent from axis.ffbinvert. Persists to EEPROM.',
     'axis.ffbinvert':     'Inverts ONLY the FFB torque received from the game (does not touch position). Useful when FFB pushes in the wrong direction (e.g. FFFSake Forwarder and other stacks that already send FFB with flipped sign). Independent from axis.invert. Persists to EEPROM.',
     'sys.vbusdiv':        'VBUS sense voltage divider (R1+R2)/R2. Default 19 (MKS XDrive Mini, 18k+1k). Official ODrive v3.6 = 11. Wrong value affects overvoltage protection and brake calculation — verify with a multimeter after changing.',
+    'sys.ffr':            'Anticipates part of the voltage needed to produce the requested force. May improve force changes, especially with a softer current-loop response. This is the simpler alternative to R_wL_FF_enable: it compensates resistance without using estimated speed. Does not increase maximum torque or add damping. Requires correctly calibrated motor resistance. R_wL_FF_enable takes priority when enabled; enabling both provides no extra compensation. Save with sys.save!.',
+    'sys.bemfhz':         'Helps maintain requested force while you turn the wheel by compensating voltage generated by motion. This is the filtered alternative to bEMF_FF_enable: lower values smooth noise but delay compensation during rapid speed changes; higher values respond faster but may increase buzzing or vibration. An initial range to try is 10–20 Hz. Above zero, this replaces bEMF_FF_enable. Zero disables only this filtered version; to disable both, also uncheck bEMF_FF_enable in advanced settings. Requires correct torque_constant and pole_pairs. Save with sys.save!.',
+    'sys.dbsoft':         'Makes small current corrections enter gradually at the edge of the deadband. May reduce small clicks or vibrations when force is nearly steady. The tradeoff is less correction of small differences between requested and measured current. Only works when current_control_deadband is greater than zero. Off keeps the deadband but uses an abrupt transition. This is independent of the force and motion compensation options above. Save with sys.save!.',
+    'axis0.motor.config.R_wL_FF_enable': 'Advanced alternative to ff_r_setpoint. Compensates resistance and electrical coupling caused by rotation. May improve force tracking during motion, but uses estimated speed without extra filtering and may increase buzzing or vibration if it is noisy. Start with ff_r_setpoint; consider this more complete option with correctly calibrated resistance and inductance. Takes priority over ff_r_setpoint: enabling both does not double the compensation. Independent of bemf_ff_filter_hz / bEMF_FF_enable motion compensation.',
+    'axis0.motor.config.bEMF_FF_enable': 'Advanced alternative to bemf_ff_filter_hz. Compensates voltage generated by motion using estimated speed without extra filtering. Follows speed changes directly but may transmit noise to the motor. Prefer the filtered version if this causes buzzing or vibration; consider this version when the speed estimate is clean. Only operates when bemf_ff_filter_hz is zero. To disable all of this motion compensation, uncheck this and set bemf_ff_filter_hz to zero.',
     'axis.idlespring':    'Centering spring ONLY when game is OFF (FFB inactive). Returns to 0 when game connects. 0=disabled.',
     'axis.axisdamper':    'Damper ALWAYS active (with or without game connected), added to game FFB. Adds "weight" to wheel.',
     'axis.axisinertia':   'Inertia ALWAYS active (with or without game), based on acceleration. "Mass" feel.',
     'axis.axisfriction':  'Friction ALWAYS active (with or without game). Constant friction when wheel turns.',
     'axis.esgain':        'Electronic endstop — SPRING strength (0-255). Applies growing torque when wheel passes ±range/2. ALWAYS active (with or without game). 0=disabled (spring+damper off), 127=medium, 255=hard bumper.',
+    'axis.oscguard': 'Protection against the oscillation that appears when you LET GO of the wheel (the game FFB feeds the rim back and it shakes more and more). Stays at zero during normal driving: it only acts after 3 consecutive half-oscillations that are fast, regular and growing — and, with J set, only if the wheel is really free. When active it cuts 80% of the game FFB and damps against velocity, with a brake calibrated by J (oscj) so it does not buzz. Releases on its own when you grab the wheel (~0.1–0.2 s) or turn continuously. This value is the brake strength: 0 = off (default), 150 recommended. The brake never exceeds 80% of maxtorque × oscguard/255.',
+    'axis.oscj': 'Inertia of the motor + rim assembly in kg·m². With it the protection CONFIRMS the wheel is free before acting (hands off, the rim follows only the motor: J·Δω ≈ torque impulse) and notices when you grab it again. Without it (0), detection is motion-only and may act on fast, regular counter-steering. Measure it in the Performance Test, in the Acceleration and RPM test, and use the "Use for anti-oscillation" button.',
     'axis.esdamp':        'Electronic endstop — DAMPER (0-255). Independent from spring — dissipates kinetic energy of the impact to prevent bouncing. 0=no damper (pure spring = bounces to other side), 15=light (default — stops bouncing without locking the wheel), 50=moderate, 100=aggressive (wheel "locks" deep in endstop).',
     'axis.maxtorquerate': 'Slew limiter in counts/ms. 0=off. Raise to smooth transients; CAREFUL kills dynamics.',
     'axis.expo':          'Exponential response curve. 0=linear. Positive=dead center, negative=sensitive center.',
@@ -4286,6 +4478,9 @@ const FIELD_RANGE = {
   'config.dc_max_negative_current':       '-100..0 A',
   'config.max_regen_current':             '0–100 A',
   'sys.vbusdiv':                          '1–50',
+  'sys.ffr':                              '0/1',
+  'sys.bemfhz':                           '0 (off) – 500 Hz (10–20 típico)',
+  'sys.dbsoft':                           '0/1',
   // ODrive — Comm
   'config.uart_a_baudrate':               '9600–921600',
   'config.uart_b_baudrate':               '9600–921600',
@@ -4367,6 +4562,8 @@ const FIELD_RANGE = {
   'axis.axisinertia':   '0–255',
   'axis.axisfriction':  '0–255',
   'axis.esgain':        '0–255',
+  'axis.oscguard': '0–255 (0 = off · 255 = 80% maxtorque)',
+  'axis.oscj': '0–0.6 kg·m² (0 = sem J)',
   'axis.esdamp':        '0–255',
   'axis.maxtorquerate': '0–65535',
   'axis.expo':          '-32767..32767',
@@ -4525,8 +4722,7 @@ const ADVANCED_GROUPS = new Set([
   'Comunicação',                           // UART/CAN — usamos USB CDC
   // Axis 0
   'Modo de operação',                      // operating mode flags raramente tocados
-  // 'Calibration Lockin' fica VISÍVEL: lockin.current é o primeiro ajuste
-  // quando a calibração do encoder falha com volante montado.
+  'Calibration Lockin',                    // ajustes avançados de calibração
   'General Lockin',                        // open-loop spin params
   'Sensorless Ramp',                       // sensorless commutation — não usado
   // Motor
@@ -4537,12 +4733,15 @@ const ADVANCED_GROUPS = new Set([
   'Posição circular',                      // circular position — não usado em wheel
   'Homing / mirror',                       // homing / mirror axis — não usado
   'Anticogging',                           // campos + painéis de cal/captura/aplicar e Auto-tune PI
+  'Slew rate / curva',                     // pós-processamento avançado do eixo
 ]);
 
 // Campos avulsos escondidos (mesmo toggle "mostrar avançado" dos grupos),
 // pra quando o campo sem uso no FFB está no meio de um grupo útil.
 // Continuam no JSON de perfil/export e na lista de comandos do Console.
 const ADVANCED_FIELDS = new Set([
+  'axis0.motor.config.R_wL_FF_enable',                   // alternativa completa ao sys.ffr
+  'axis0.motor.config.bEMF_FF_enable',                   // alternativa sem filtro ao sys.bemfhz
   'axis0.config.startup_homing',                          // volante não faz homing
   'axis0.encoder.config.sincos_gpio_pin_sin',             // encoder sin/cos — não usado
   'axis0.encoder.config.sincos_gpio_pin_cos',
@@ -4573,7 +4772,7 @@ const GROUP_KEY_MAP = {
   'Temperatura':                           'group.motor_temp',  // legacy, mantido por compat
   'Termistor FET (onboard)':               'group.motor_thermistor_fet',
   'Termistor do motor (NTC offboard)':     'group.motor_thermistor_ntc',
-  'Feed-forward':                          'group.motor_ff',
+  'Resposta elétrica do motor':             'group.motor_ff',
   'ACIM (induction only)':                 'group.motor_acim',
   // Encoder
   'Modo / resolução':                      'group.enc_mode',
@@ -4592,6 +4791,7 @@ const GROUP_KEY_MAP = {
   // FFB Wheel
   'Escala de força':                                              'group.ffb_force_scale',
   'Axis effects sempre-ativos (somam ao FFB do jogo)':            'group.ffb_axis_effects',
+  'Anti-oscilação (volante solto)':                               'group.ffb_oscguard',
   'Slew rate / curva':                                            'group.ffb_slew',
   // FFB Effects
   'Master gain':                           'group.ffb_master',
@@ -4851,7 +5051,13 @@ const SCHEMA = [
       FX('axis0.motor.motor_thermistor.config.poly_coefficient_2',   'Polynomial c2'),
       FX('axis0.motor.motor_thermistor.config.poly_coefficient_3',   'Polynomial c3'),
 
-      { group: 'Feed-forward' },
+      { group: 'Resposta elétrica do motor' },
+      // Odrive-Wheel — vivem na EEPROM do FFB (sys.*), não no NVM do ODrive,
+      // pra não invalidar a config salva (Config_t é blob com CRC).
+      ICMD('ff_r_setpoint',     'sys.ffr',    'offb', 'bool'),
+      ICMD('bemf_ff_filter_hz', 'sys.bemfhz', 'offb', 'float'),
+      ICMD('deadband_soft',     'sys.dbsoft', 'offb', 'bool'),
+      // Alternativas originais do ODrive, acessíveis no modo avançado.
       B('R_wL_FF_enable'),
       B('bEMF_FF_enable'),
 
@@ -4978,6 +5184,10 @@ const SCHEMA = [
       I('axisfriction', 'Axis friction'),       // friction sempre ativa (0-255, default 0)
       I('esgain',       'EndStop gain esgain'), // batente eletrônico — força da mola (0-255, default 0)
       I('esdamp',       'EndStop damper esdamp'),// batente eletrônico — amortecimento, independente da mola (0-255, default 15)
+
+      { group: 'Anti-oscilação (volante solto)' },
+      I('oscguard', 'Anti-oscillation strength'),   // 0 = desligada (default)
+      F('oscj',     'Wheel inertia J (kg·m²)'),     // inércia — o Performance Test preenche
 
       { group: 'Slew rate / curva' },
       I('maxtorquerate', 'Max torque rate'),    // limite de mudança de torque por ms (0=off)
@@ -5323,6 +5533,9 @@ function buildCommandList() {
   offb('sys.eedump?',    'Dump raw EEPROM');
   offb('sys.eeformat!',  '⚠ Force format EEPROM (escape hatch)');
   offb('sys.vbusdiv',    'VBUS voltage divider (1-50, default 19 MKS)');
+  offb('sys.ffr',        'R*I feedforward do setpoint (0/1)');
+  offb('sys.bemfhz',     'bEMF feedforward filtrado — cutoff Hz (0 = off)');
+  offb('sys.dbsoft',     'Deadband soft/contínuo (0/1)');
   offb('sys.reboot!',    'Reset chip');
   offb('sys.uptime?',    'Uptime em ms');
   offb('sys.ping?',      'Ping (resposta deve ser OK)');
@@ -5353,6 +5566,10 @@ function buildCommandList() {
   offb('axis.axisfriction',  'Friction sempre ativa (0-255)');
   offb('axis.esgain',        'Batente eletrônico — força da mola (0-255)');
   offb('axis.esdamp',        'Batente eletrônico — amortecimento (0-255)');
+  offb('axis.oscguard',      'Anti-oscilação — força (0 = desligada)');
+  offb('axis.oscj',          'Anti-oscilação — inércia J (kg·m²)');
+  offb('axis.oscdiag?',      'Anti-oscilação — diagnóstico');
+  offb('axis.osccount',      'Anti-oscilação — ativações (=0 zera)');
   offb('axis.maxtorquerate', 'Slew limit (counts/ms, 0=off)');
   offb('axis.expo',          'Curva exponencial (-32767..32767)');
   offb('axis.exposcale',     'Divisor pro expo (1-255)');
@@ -6328,7 +6545,7 @@ function _hidIsOpenAndLive(dev) {
    interface CDC). Os dois APIs convivem.
 
    Report IDs (de inc/ffb_defs.h):
-     0x01  SET_EFFECT_REPORT          (12 bytes)
+     0x01  SET_EFFECT_REPORT          (17 bytes)
      0x03  SET_CONDITION_REPORT       (14 bytes)
      0x05  SET_CONSTANT_FORCE_REPORT  (3 bytes)
      0x0A  EFFECT_OPERATION_REPORT    (3 bytes)
@@ -6503,7 +6720,7 @@ function wireFFBTestTab() {
   // sendFeature mantido pra futuro (NEW_EFFECT) mas não usamos por agora.
 
   // ---------- Construtores de report (byte layouts do nosso descriptor) ----------
-  // SET_EFFECT_REPORT (id 0x01) — 12 bytes
+  // SET_EFFECT_REPORT (id 0x01) — 17 bytes (payload, without report ID)
   const buildSetEffect = (blockIdx, type, durationMs = 0xFFFF, gain = 255) => [
     blockIdx, type,
     durationMs & 0xFF, (durationMs >> 8) & 0xFF,    // Duration LE
@@ -6512,6 +6729,7 @@ function wireFFBTestTab() {
     0, 0,                                            // StartDelay
     gain,                                            // Gain
     0,                                               // TriggerButton
+    1, 0xA0, 0x8C, 0x50, 0x46,                     // X enabled; X=36000 (+1), Y=18000 (0)
   ];
 
   // SET_CONSTANT_FORCE_REPORT (id 0x05) — 3 bytes
@@ -7595,11 +7813,11 @@ function wireSetupTab() {
 
   // ---- Botão "Definir tensão" no Step 4 (Power) — OBRIGATÓRIO
   // Click → lê vbus atual + configura AUTOMATICAMENTE os 5 valores:
-  //   undervoltage_trip = V - 5
-  //   overvoltage_trip  = V + 5
+  //   undervoltage_trip = V - 8
+  //   overvoltage_trip  = V + 2
   //   enable_overvoltage_ramp = True
-  //   overvoltage_ramp_start = V
-  //   overvoltage_ramp_end   = V + 3
+  //   overvoltage_ramp_start = V + 0.1
+  //   overvoltage_ramp_end   = ramp_start + 1  (= V + 1.1)
   // Esses valores garantem proteção apertada em volta da tensão real.
   // O flag _setupVbusDefined é checado pelo Apply Power — sem clicar aqui
   // primeiro, o Apply Power recusa.
@@ -7661,13 +7879,14 @@ function wireSetupTab() {
       el.style.color = v > 10 ? 'var(--ok)' : 'var(--warn)';
 
       // 2. Calcula os 5 valores de proteção em torno da tensão real.
-      // ramp_start = V+0.5 garante que duty do brake só começa a subir
-      // depois que a fonte realmente para de conseguir absorver (deixa
-      // pequena folga acima do nominal antes do brake atuar).
-      const uv        = v - 5;
-      const ov        = v + 5;
-      const rampStart = v + 0.5;
-      const rampEnd   = v + 3;
+      // ramp_start = V+0.1: o freio começa a atuar logo acima do nominal da
+      // fonte; a rampa satura 1 V depois. Trip de sobretensão em V+2 deixa
+      // 0.9 V entre freio a 100% e desarme. Undervoltage em V-8 tolera
+      // quedas fortes da fonte em picos de torque.
+      const uv        = v - 8;
+      const ov        = v + 2;
+      const rampStart = v + 0.1;
+      const rampEnd   = rampStart + 1;
 
       // 3. Escreve os 5 configs manualmente COM settle delay entre write e
       //    readback. Fix pra queue desync: se o write demora pra ODrive
@@ -7788,7 +8007,7 @@ function wireSetupTab() {
     // que tiramos do form (mas que ainda precisam ser configurados):
     //   enable_brake_resistor = True
     //   dc_max_negative_current = -7
-    //   max_regen_current = 0.1   (threshold abaixo do qual regen vai pra
+    //   max_regen_current = 0.05  (threshold abaixo do qual regen vai pra
     //                              fonte; valor pequeno mas != 0 evita que
     //                              qualquer micro-regen dispare brake)
     const r = await _setupWriteFromForm([
@@ -7799,7 +8018,7 @@ function wireSetupTab() {
       { path: 'sys.vbusdiv',                            type: 'number' },
       { path: 'config.enable_brake_resistor',           type: 'bool',   value: true },
       { path: 'config.dc_max_negative_current',         type: 'number', value: -7 },
-      { path: 'config.max_regen_current',               type: 'number', value: 0.1 },
+      { path: 'config.max_regen_current',               type: 'number', value: 0.05 },
     ]);
     toast(t('setup.toast_written').replace('{ok}', r.ok).replace('{fail}', r.fail),
           r.fail === 0 ? 'ok' : 'warn');
@@ -7963,6 +8182,13 @@ function wireSetupTab() {
       { path: 'axis0.config.startup_motor_calibration',           value: incrementalNoZ, type: 'bool' },
       { path: 'axis0.config.startup_encoder_offset_calibration',  value: incrementalNoZ, type: 'bool' },
       { path: 'axis0.config.startup_closed_loop_control',         value: true,           type: 'bool' },
+      // Spinout: thresholds ±150 W e filtro de potência 10 rad/s — impactos
+      // de batente / contra-esterço não disparam SPINOUT_DETECTED; disparo
+      // real (comutação errada) é sustentado e continua sendo detectado.
+      { path: 'axis0.controller.config.spinout_electrical_power_threshold',  value: 150,  type: 'number' },
+      { path: 'axis0.controller.config.spinout_mechanical_power_threshold',  value: -150, type: 'number' },
+      { path: 'axis0.controller.config.electrical_power_bandwidth',          value: 10,   type: 'number' },
+      { path: 'axis0.controller.config.mechanical_power_bandwidth',          value: 10,   type: 'number' },
       // Desativa limites de velocidade pro primeiro setup — usuários novos
       // batiam em ERROR_OVERSPEED ao girar o volante manualmente.
       // Podem reativar depois na aba Controller quando o conjunto estiver
@@ -7975,7 +8201,8 @@ function wireSetupTab() {
     for (const f of fields) {
       const inp = document.getElementById('in-' + f.path);
       if (!inp) { fail++; logLine('mark-precal: input não achado: ' + f.path, 'err'); continue; }
-      inp.checked = !!f.value;
+      if (f.type === 'bool') inp.checked = !!f.value;
+      else                   inp.value   = String(f.value);
       try { await writeOne(inp); ok++; }
       catch (e) { fail++; logLine('mark-precal write fail: ' + f.path, 'err'); }
     }
@@ -8057,11 +8284,21 @@ function wireSetupTab() {
       // (verde, ✓ synced) e escreve no device. Necessário porque o save
       // unificado depois escreve a partir do DOM; se ficasse só na RAM via
       // writeProp, o save iria SOBRESCREVER com o valor velho do checkbox.
+      //
+      // O Step 9 roda ANTES do Z existir, então detecta "incremental sem Z" e
+      // liga startup_motor_calibration + startup_encoder_offset_calibration
+      // (cal a cada boot). Com o Z configurado aqui, motor e encoder ficam
+      // pre_calibrated e o phase_offset vale relativo ao Z — então essas duas
+      // calibrações de boot precisam ser DESLIGADAS, senão o motor continua
+      // calibrando (e girando) a cada boot sem necessidade.
       setSt('setup.step10_writing', 'var(--accent)');
       const flagFields = [
-        { path: 'axis0.encoder.config.pre_calibrated',       value: true },
-        { path: 'axis0.encoder.config.use_index',            value: true },
-        { path: 'axis0.config.startup_encoder_index_search', value: true },
+        { path: 'axis0.motor.config.pre_calibrated',                value: true },
+        { path: 'axis0.encoder.config.pre_calibrated',              value: true },
+        { path: 'axis0.encoder.config.use_index',                   value: true },
+        { path: 'axis0.config.startup_encoder_index_search',        value: true },
+        { path: 'axis0.config.startup_motor_calibration',           value: false },
+        { path: 'axis0.config.startup_encoder_offset_calibration',  value: false },
       ];
       for (const f of flagFields) {
         const inp = document.getElementById('in-' + f.path);
@@ -8337,10 +8574,12 @@ const overlayState = {
   // Janela de aquisição em segundos — controla a capacidade dos buffers de
   // chart (windowSec × 100 amostras). Persiste via localStorage. Range 1..1200s.
   windowSec:   60,
+  iqSmoothMs:  0,     // média móvel do Iq no chart (ms a 1 kHz); 0 = cru
   // Pause de aquisição — quando true, o listener HID sai cedo e nenhum push
   // acontece (nem chart nem power accumulators). Draw timer continua rodando
   // pra manter o overlay visível (freeze frame).
   paused:      false,
+  hidErrors:   null,        // Live errors remain active while charts are paused.
   // Histórico decimado p/ charts (~100 Hz, janela 60s = 6000 entries cada)
   //   ft/mt = FET/motor temp em °C (int8 no HID, -128 = sensor off → NaN).
   //   Push condicionado no _ovlOnHidReport pra não sujar buffer com valores
@@ -8375,6 +8614,8 @@ const overlayState = {
   // Detecta perda de detalhe físico: jogo pediu torque, firmware deixou passar,
   // motor não entregou porque bateu no current_lim. current_lim_A lido uma vez
   // no open (motorCal.device.current_lim_A).
+  // Proteção anti-oscilação — bit 0x40 do byte de estado do relatório HID.
+  oscGuard: { active: false, count: 0, lastOnMs: 0 },
   clipOut: {
     current_lim_A: null,    // A — limite de corrente do motor
     samples:       [],      // [{t, sat: 0|1}] @ 1 kHz, janela 30s
@@ -8406,6 +8647,33 @@ function ovlMaxSamples() {
   const w = overlayState.windowSec;
   return Math.max(100, Math.round((isFinite(w) ? w : 60) * 100));
 }
+// Média móvel do Iq a 1 kHz — ring buffer + soma corrente. N (amostras = ms)
+// vem de overlayState.iqSmoothMs; 0/1 = passa o valor cru. A soma é
+// recomputada a cada 1000 amostras pra não acumular erro de float.
+const _OVL_IQ_RING_LEN = 512;
+const _ovlIqRing = new Float32Array(_OVL_IQ_RING_LEN);
+let   _ovlIqIdx = 0, _ovlIqSum = 0, _ovlIqCount = 0, _ovlIqResync = 0;
+function _ovlIqSmooth(iq) {
+  const n = Math.min(Math.max(Math.round(overlayState.iqSmoothMs || 0), 0), _OVL_IQ_RING_LEN);
+  _ovlIqRing[_ovlIqIdx] = iq;
+  _ovlIqIdx = (_ovlIqIdx + 1) % _OVL_IQ_RING_LEN;
+  if (_ovlIqCount < _OVL_IQ_RING_LEN) _ovlIqCount++;
+  if (n <= 1) return iq;
+  const avail = Math.min(n, _ovlIqCount);
+  if (++_ovlIqResync >= 1000 || _ovlIqSum === 0) {
+    // Resync: soma direta das últimas `avail` amostras.
+    _ovlIqResync = 0;
+    let s = 0;
+    for (let i = 1; i <= avail; i++) s += _ovlIqRing[(_ovlIqIdx - i + _OVL_IQ_RING_LEN) % _OVL_IQ_RING_LEN];
+    _ovlIqSum = s;
+  } else {
+    // Incremental: entra a amostra nova, sai a que ficou n+1 atrás.
+    const out = (avail >= n) ? _ovlIqRing[(_ovlIqIdx - n - 1 + _OVL_IQ_RING_LEN) % _OVL_IQ_RING_LEN] : 0;
+    _ovlIqSum += iq - out;
+  }
+  return _ovlIqSum / avail;
+}
+
 function ovlPush(group, key, val) {
   if (val === null || val === undefined || isNaN(val)) return;
   overlayState[group][key].push(val);
@@ -8483,6 +8751,11 @@ function buildOverlayHTML() {
           <input type="checkbox" id="ovl-show-iq" checked>
           <span data-i18n="ovl.series_iq">Iq motor (A) — corrente quadratura</span>
         </label>
+        <label style="color:#66bb6a;display:flex;align-items:center;gap:8px;padding-left:26px;font-size:14px">
+          <span data-i18n="ovl.iq_smooth">Suavização do Iq (média móvel, ms; 0 = cru)</span>
+          <input type="number" id="ovl-iq-smooth-ms" min="0" max="500" step="1" value="0"
+                 style="width:70px;background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:2px 6px">
+        </label>
         <label style="color:#ef5350;cursor:pointer;display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="ovl-show-ibr" checked>
           <span data-i18n="ovl.series_ibr">I brake (A) — corrente do brake resistor</span>
@@ -8515,6 +8788,14 @@ function buildOverlayHTML() {
             <span data-i18n="ovl.show_motor_power">P motor (W) — potência mecânica + perdas no cobre</span>
             <span style="color:var(--muted);font-size:11px;line-height:1.4"
                   data-i18n="ovl.motor_power_hint">P_mech = τ·ω·2π (sinal indica direção da energia: + motor empurra, − wheel devolve). P_copper = 1.5·R_phase·⟨Iq²⟩ — perda resistiva no enrolamento. Ambos a 1 kHz via HID. R_phase vem do Motor Cal (Coastdown ou Performance Test salvos).</span>
+          </span>
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:flex-start;gap:8px">
+          <input type="checkbox" id="ovl-show-oscguard" style="margin-top:3px">
+          <span style="display:flex;flex-direction:column;gap:2px">
+            <span data-i18n="ovl.show_oscguard">Anti-oscilação — mostra quando a proteção de volante solto está agindo</span>
+            <span style="color:var(--muted);font-size:11px;line-height:1.4"
+                  data-i18n="ovl.oscguard_hint">Lido do relatório HID (bit no byte de estado).</span>
           </span>
         </label>
         <label style="cursor:pointer;display:flex;align-items:flex-start;gap:8px">
@@ -8612,6 +8893,14 @@ function _ovlPipStyles() {
       flex-direction: column;
     }
     .ovl-panel.hidden { display: none; }
+    .ovl-errors {
+      flex: 0 1 auto; min-height: 0; max-height: 35%; overflow: auto;
+      padding: 5px 8px; border: 1px solid #ef5350; border-radius: 4px;
+      background: #321719; color: #ffcdd2; font-size: 11px;
+      font-family: ui-monospace, Consolas, monospace;
+      overflow-wrap: anywhere; white-space: pre-line;
+    }
+    .ovl-errors[hidden] { display: none; }
     .ovl-panel canvas {
       width: 100%;
       flex: 1 1 0;
@@ -8735,6 +9024,7 @@ function _ovlPipStyles() {
 function _ovlPipHTML() {
   return `
     <div class="ovl-root">
+      <div class="ovl-errors" id="pip-errors" role="status" hidden></div>
       <div class="ovl-panel" id="pip-panel-bus">
         <div class="ovl-info-bar" id="pip-info-bus">
           <span class="ovl-pbrake" id="pip-pbrake" hidden></span>
@@ -8742,6 +9032,7 @@ function _ovlPipHTML() {
         </div>
         <div class="ovl-info-bar ovl-info-bar-2" id="pip-info-bus-2">
           <span class="ovl-clipout" id="pip-clipout" hidden></span>
+          <span class="ovl-clipout" id="pip-oscguard" hidden></span>
         </div>
         <canvas id="pip-bus-chart"></canvas>
       </div>
@@ -9147,8 +9438,9 @@ function _ovlFmtSigned2(v) {
 // buffers de P_brake e P_motor a 1 kHz cheio, e decima 10× pra charts.
 function _ovlOnHidReport(event) {
   if (event.reportId !== 0x01) return;
-  // Pause "freeze frame" — descarta o report inteiro (chart e power accumulators).
-  // Draw timer segue rodando; overlay mantém os últimos valores até despausar.
+  _ovlCaptureErrors(event.data);
+  if (event.data.byteLength < 30) return;
+  // Pause freezes charts/power only; HID errors above remain live.
   if (overlayState.paused) return;
 
   // Offsets (sem o report_id, que o HID já strippa):
@@ -9181,7 +9473,15 @@ function _ovlOnHidReport(event) {
   const ftRaw = tempPresent ? event.data.getInt8(30) : -128;
   const mtRaw = tempPresent ? event.data.getInt8(31) : -128;
   const errPresent = event.data.byteLength >= 49;
-  const axisState = errPresent ? event.data.getInt8(32)        : 0;
+  const stateRaw  = errPresent ? event.data.getUint8(32)       : 0;
+  const axisState = stateRaw & 0x3F;          // bit 6 = anti-oscilação ativa
+  const oscActive = errPresent && (stateRaw & 0x40) !== 0;
+  {
+    const og = overlayState.oscGuard;
+    if (oscActive && !og.active) og.count++;
+    if (oscActive) og.lastOnMs = performance.now();
+    og.active = oscActive;
+  }
   const axisErr   = errPresent ? event.data.getUint32(33, true) : 0;
   const motorErr  = errPresent ? event.data.getUint32(37, true) : 0;
   const encErr    = errPresent ? event.data.getUint32(41, true) : 0;
@@ -9200,19 +9500,64 @@ function _ovlOnHidReport(event) {
   _ovlAccumMotorPower(torque, vel, iq);
   _ovlAccumClipOut(iq);
 
+  // Média móvel opcional do Iq (só pro chart — P_motor/clip usam o cru).
+  // Iq_measured do firmware é a amostra crua de 8 kHz decimada a 1 kHz, então
+  // o traço sem suavização mostra todo o ruído do ADC; com N ms de média o
+  // ruído branco cai ~√N e um componente coerente (zumbido) fica visível.
+  const iqChart = _ovlIqSmooth(iq);
+
   // Charts decimados 10× (1 kHz → 100 Hz) pra não estourar GC
   if (++_ovlPushSkip < _OVL_CHART_DECIM) return;
   _ovlPushSkip = 0;
 
   ovlPush('bus', 'vbus', vbus);
   ovlPush('bus', 'ibus', ibus);
-  ovlPush('bus', 'iq',   iq);
+  ovlPush('bus', 'iq',   iqChart);
   ovlPush('bus', 'ibr',  ibr);
   // Temps só se sensor válido (-128 = sensor off). ovlPush já filtra NaN.
   if (ftRaw !== -128) ovlPush('bus', 'ft', ftRaw);
   if (mtRaw !== -128) ovlPush('bus', 'mt', mtRaw);
   ovlPush('whl', 'trq',  torque);
   ovlPush('whl', 'pos',  posDeg);
+}
+
+// Capture before chart pause/decimation. No serial reads and no DOM work at 1 kHz.
+function _ovlCaptureErrors(data) {
+  const present = data.byteLength >= 49;
+  const prev = overlayState.hidErrors;
+  const values = present
+    ? [data.getUint32(33, true), data.getUint32(37, true),
+       data.getUint32(41, true), data.getUint32(45, true)]
+    : null;
+  if (!prev || prev.present !== present ||
+      (present && values.some((value, i) => value !== prev.values[i]))) {
+    overlayState.hidErrors = { present, values, receivedAt: performance.now() };
+  } else {
+    prev.receivedAt = performance.now();
+  }
+}
+
+function _ovlUpdateErrors() {
+  const el = overlayState.pipWin?.document.getElementById('pip-errors');
+  if (!el) return;
+  const snapshot = overlayState.hidErrors;
+  let text = '';
+  if (snapshot) {
+    if (!snapshot.present) {
+      text = currentLang === 'pt' ? 'Erros indisponíveis neste relatório HID.' : 'Errors unavailable in this HID report.';
+    } else {
+      const labels = ['Axis', 'Motor', 'Encoder', 'Controller'];
+      const maps = [ERR_BITS_AXIS, ERR_BITS_MOTOR, ERR_BITS_ENCODER, ERR_BITS_CTRL];
+      text = snapshot.values.map((value, i) => value
+        ? labels[i] + ' 0x' + value.toString(16).toUpperCase().padStart(8, '0')
+          + ' — ' + decodeErr(value.toString(16), maps[i]) : '').filter(Boolean).join('\n');
+    }
+    if (text && performance.now() - snapshot.receivedAt > 1500) {
+      text += '\n' + (currentLang === 'pt' ? 'HID sem atualização — última leitura.' : 'No HID update — last reading.');
+    }
+  }
+  if (el.textContent !== text) el.textContent = text;
+  el.hidden = !text;
 }
 
 // Acumula I² no buffer rolante de 60s e empurra cutoff antigos. Render é
@@ -9311,6 +9656,32 @@ function _ovlUpdateBadges() {
     }
   }
 
+  // ---- Anti-oscilação ----
+  const ogEnabled = document.getElementById('ovl-show-oscguard')?.checked;
+  const ogBadge   = pipDoc.getElementById('pip-oscguard');
+  if (ogBadge) {
+    if (!ogEnabled) {
+      ogBadge.hidden = true;
+    } else {
+      ogBadge.hidden = false;
+      const og = overlayState.oscGuard;
+      ogBadge.classList.remove('clip-ok', 'clip-warn', 'clip-mid', 'clip-bad');
+      let txt = '🛡 ' + t('ovl.oscguard_label') + ': ';
+      if (og.active) {
+        txt += t('ovl.oscguard_active');
+        ogBadge.classList.add('clip-bad');
+      } else if (og.count > 0) {
+        const ago = Math.max(0, Math.round((performance.now() - og.lastOnMs) / 1000));
+        txt += og.count + '× · ' + t('ovl.oscguard_ago').replace('{s}', ago);
+        ogBadge.classList.add('clip-warn');
+      } else {
+        txt += t('ovl.oscguard_idle');
+        ogBadge.classList.add('clip-ok');
+      }
+      ogBadge.textContent = txt;
+    }
+  }
+
   // ---- Clip OUT ----
   const coEnabled = document.getElementById('ovl-show-clipout')?.checked;
   const coBadge   = pipDoc.getElementById('pip-clipout');
@@ -9364,6 +9735,7 @@ function _ovlStartDraw() {
     drawOvlWhlChart();
     _ovlUpdateBadges();
     _ovlUpdateConnIndicator();
+    _ovlUpdateErrors();
   }, 33);
 }
 function _ovlStopDraw() {
@@ -9470,6 +9842,7 @@ async function overlayOpenPiP() {
     return;
   }
   overlayState.pipWin = pip;
+  overlayState.hidErrors = null;
 
   // Title vazio — minimiza a barra de título do PiP
   pip.document.title = '';
@@ -9687,7 +10060,7 @@ async function _loggerStart() {
   // análise cross-tool.
   const header = 'timestamp_ms,pos_deg,vel_tps,iq_a,torque_nm,vbus_v,ibus_a,ibrake_a,'
                + 'rx,ry,rz,slider,fet_temp_c,motor_temp_c,buttons,'
-               + 'axis_state,axis_error,motor_error,encoder_error,controller_error\n';
+               + 'axis_state,axis_error,motor_error,encoder_error,controller_error,osc_guard\n';
   const headerBytes = _logState.textEncoder.encode(header);
   try { await writer.write(headerBytes); }
   catch (e) { logLine('logger: falha ao escrever header — ' + e.message, 'err'); await _loggerStop(); return; }
@@ -9731,7 +10104,9 @@ function _loggerHidListener(event) {
   const ibrRaw = d.getInt16(28, true);
   const ft     = d.byteLength >= 32 ? d.getInt8(30)        : -128;
   const mt     = d.byteLength >= 32 ? d.getInt8(31)        : -128;
-  const state  = d.byteLength >= 49 ? d.getInt8(32)        : 0;
+  const stateRaw = d.byteLength >= 49 ? d.getUint8(32)     : 0;
+  const state  = stateRaw & 0x3F;             // bit 6 = anti-oscilação ativa
+  const oscOn  = (stateRaw & 0x40) ? 1 : 0;
   const axisE  = d.byteLength >= 49 ? d.getUint32(33, true) : 0;
   const motE   = d.byteLength >= 49 ? d.getUint32(37, true) : 0;
   const encE   = d.byteLength >= 49 ? d.getUint32(41, true) : 0;
@@ -9761,7 +10136,7 @@ function _loggerHidListener(event) {
     ft + ',' + mt + ',' +
     buttons + ',' +
     state + ',' +
-    axisE + ',' + motE + ',' + encE + ',' + ctrlE + '\n'
+    axisE + ',' + motE + ',' + encE + ',' + ctrlE + ',' + oscOn + '\n'
   );
   _logState.sampleCount++;
 }
@@ -9872,6 +10247,8 @@ function wireOverlayTab() {
   if (cbBP && typeof saved.show_brake_power === 'boolean') cbBP.checked = saved.show_brake_power;
   const cbMP = document.getElementById('ovl-show-motor-power');
   if (cbMP && typeof saved.show_motor_power === 'boolean') cbMP.checked = saved.show_motor_power;
+  const cbOG = document.getElementById('ovl-show-oscguard');
+  if (cbOG && typeof saved.show_oscguard === 'boolean') cbOG.checked = saved.show_oscguard;
   const cbCO = document.getElementById('ovl-show-clipout');
   if (cbCO && typeof saved.show_clipout === 'boolean') cbCO.checked = saved.show_clipout;
 
@@ -9889,6 +10266,28 @@ function wireOverlayTab() {
     overlayState.windowSec = initial;
   }
 
+  // Suavização do Iq (ms de média móvel) — 0 = cru. Clamp 0..500.
+  const inpIqS = document.getElementById('ovl-iq-smooth-ms');
+  const clampIqS = (raw) => {
+    const n = Math.round(Number(raw));
+    if (!isFinite(n) || n < 0) return 0;
+    return Math.min(n, 500);
+  };
+  if (inpIqS) {
+    const initial = clampIqS(saved.iq_smooth_ms ?? 0);
+    inpIqS.value = String(initial);
+    overlayState.iqSmoothMs = initial;
+    const applyIqS = () => {
+      const v = clampIqS(inpIqS.value);
+      inpIqS.value = String(v);
+      overlayState.iqSmoothMs = v;
+      _ovlIqSum = 0; // força resync da média com o N novo
+      persist();
+    };
+    inpIqS.addEventListener('change', applyIqS);
+    inpIqS.addEventListener('blur', applyIqS);
+  }
+
   function persist() {
     const obj = {
       show_vbus:  document.getElementById('ovl-show-vbus')?.checked,
@@ -9902,8 +10301,10 @@ function wireOverlayTab() {
       show_brake_power: document.getElementById('ovl-show-brake-power')?.checked,
       show_motor_power: document.getElementById('ovl-show-motor-power')?.checked,
       show_clipout:     document.getElementById('ovl-show-clipout')?.checked,
+      show_oscguard:    document.getElementById('ovl-show-oscguard')?.checked,
       enable_fft:       document.getElementById('ovl-enable-fft')?.checked,
       window_sec:       overlayState.windowSec,
+      iq_smooth_ms:     overlayState.iqSmoothMs,
     };
     try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch (e) {}
   }
@@ -9978,6 +10379,10 @@ function wireOverlayTab() {
       // Quick Start/Motor tab, então toggle off→on serve como "refresh".
       _ovlReadCurrentLim();
     }
+  });
+  if (cbOG) cbOG.addEventListener('change', () => {
+    persist();
+    if (cbOG.checked) overlayState.oscGuard.count = 0;   // contagem nova
   });
 
   // Estado inicial do botão Close (só aparece quando o PiP está aberto)
@@ -10931,7 +11336,7 @@ function buildPerfTestHTML() {
     <!-- Test 1: Acceleration and RPM — primeiro dos 3 testes da aba.        -->
     <!-- Visual idêntico ao Coastdown e Frequency sweep (debug-section box). -->
     <!-- ================================================================== -->
-    <div class="debug-section" style="grid-column:1/-1;border-top:1px dashed var(--border);padding-top:14px;margin-top:14px">
+    <div id="pt-test1" class="debug-section" style="grid-column:1/-1;border-top:1px dashed var(--border);padding-top:14px;margin-top:14px">
       <h3 data-i18n="pt.test1_title">🐰 Acceleration and RPM test</h3>
       <p style="color:var(--fg-muted);font-size:13px;margin:0 0 10px" data-i18n="pt.subtitle"></p>
       <div class="pt-actions">
@@ -10967,8 +11372,9 @@ function buildPerfTestHTML() {
         <tr><td data-i18n="pt.results_torque_applied">Torque aplicado no launch</td>
             <td><span class="pkval" id="pt-r-torque-applied">—</span></td></tr>
         <tr><td data-i18n="pt.results_inertia">Inércia (J) do conjunto motor+volante</td>
-            <td><span class="pkval" id="pt-r-inertia-si">—</span> <span style="color:var(--fg-muted);font-size:11px">(ODrive: <span id="pt-r-inertia-odrive">—</span> N·m/(turn/s²))</span></td></tr>
-        <tr><td style="color:var(--fg-muted);font-size:11px;padding-left:12px">Qualidade da medida</td>
+            <td><span class="pkval" id="pt-r-inertia-si">—</span> <span style="color:var(--fg-muted);font-size:11px">(ODrive: <span id="pt-r-inertia-odrive">—</span> N·m/(turn/s²))</span>
+              <button id="pt-use-j-osc" style="margin-left:8px;font-size:11px;padding:2px 8px" data-i18n="pt.use_j_osc">Usar na proteção anti-oscilação</button></td></tr>
+        <tr><td style="color:var(--fg-muted);font-size:11px;padding-left:12px" data-i18n="pt.results_inertia_quality">Qualidade da medida</td>
             <td><span id="pt-r-inertia-quality" style="font-family:var(--mono,monospace);font-size:11px;color:var(--fg-muted)">—</span></td></tr>
         <tr><td data-i18n="pt.results_breakaway">Friction breakaway</td>
             <td><span class="pkval" id="pt-r-breakaway">—</span></td></tr>
@@ -11261,6 +11667,7 @@ function wirePerfTestTab() {
     durationMs & 0xFF, (durationMs >> 8) & 0xFF,
     0, 0,  0, 0,  0, 0,
     gain, 0,
+    1, 0xA0, 0x8C, 0x50, 0x46, // X enabled; positive unit direction
   ];
   const buildConstantForce = (blockIdx, magS16) => {
     const m = magS16 & 0xFFFF;
@@ -12064,6 +12471,7 @@ function _wireCoastdownUI(hidHelpers) {
       axisinertia:  null,
       esgain:       null,
       esdamp:       null,
+      oscguard:     null,   // anti-oscilação — desligada durante o teste
       idlespring:   null,   // restaurado por último
     };
 
@@ -12094,6 +12502,7 @@ function _wireCoastdownUI(hidHelpers) {
       savedState.esgain       = await readIntOffb('axis.esgain');
       savedState.esdamp       = await readIntOffb('axis.esdamp');
       savedState.idlespring   = await readIntOffb('axis.idlespring');
+      savedState.oscguard     = await readIntOffb('axis.oscguard');
 
       logLine('coastdown: estado salvo — ' +
         'axisfriction=' + savedState.axisfriction +
@@ -12104,7 +12513,7 @@ function _wireCoastdownUI(hidHelpers) {
         ', idlespring=' + savedState.idlespring, 'rx');
 
       // Zera todos. Ordem aqui não importa (todos vão pra zero).
-      for (const k of ['axisfriction', 'axisdamper', 'axisinertia', 'esgain', 'esdamp', 'idlespring']) {
+      for (const k of ['axisfriction', 'axisdamper', 'axisinertia', 'esgain', 'esdamp', 'oscguard', 'idlespring']) {
         if (savedState[k] !== null && savedState[k] !== 0) {
           await writePropOffb('axis.' + k, '0');
         }
@@ -12128,6 +12537,7 @@ function _wireCoastdownUI(hidHelpers) {
         0xFF, 0xFF,                    // duration infinite
         0, 0, 0, 0, 0, 0,
         255, 0,                        // gain
+        1, 0xA0, 0x8C, 0x50, 0x46, // X enabled; positive unit direction
       ]);
       await hidHelpers.sendOutput(0x0A, [1, 1, 0]); // Start, infinite loop
       await new Promise(r => setTimeout(r, 20));
@@ -12294,7 +12704,7 @@ function _wireCoastdownUI(hidHelpers) {
       // Se idlespring voltasse primeiro, ele puxaria o volante pro centro
       // enquanto os outros efeitos ainda estão zerados → "pancada".
       const restoreOrder = ['axisfriction', 'axisdamper', 'axisinertia',
-                            'esgain', 'esdamp', 'idlespring'];
+                            'esgain', 'esdamp', 'oscguard', 'idlespring'];
       for (const k of restoreOrder) {
         const v = savedState[k];
         if (v === null || v === 0) continue;
@@ -12427,6 +12837,7 @@ function _wireFreqSweepUI(hidHelpers) {
         axisfriction: null, axisdamper: null, axisinertia: null,
         esgain: null, esdamp: null, idlespring: null,
         filterCfFreq: null, filterCfQ: null,
+        oscguard: null,
       };
       let inputBuf = [];
       let inputListener = null;
@@ -12448,6 +12859,14 @@ function _wireFreqSweepUI(hidHelpers) {
       savedState.idlespring   = await readIntOffb('axis.idlespring');
       savedState.filterCfFreq = await readIntOffb('fx.filterCfFreq');
       savedState.filterCfQ    = await readIntOffb('fx.filterCfQ');
+      // Anti-oscilação: desligada nos DOIS modos. A varredura faz o motor
+      // oscilar o aro sozinho — exatamente o padrão que a proteção reconhece
+      // como "volante solto" — e ela amorteceria a própria medição.
+      savedState.oscguard     = await readIntOffb('axis.oscguard');
+      if (savedState.oscguard) {
+        await writePropOffb('axis.oscguard', '0');
+        logLine('freqsweep: axis.oscguard ' + savedState.oscguard + ' → 0 (durante o teste)', 'tx');
+      }
       logLine('freqsweep: estado salvo — filterCfFreq=' + savedState.filterCfFreq +
               ', filterCfQ=' + savedState.filterCfQ +
               ', axisfriction=' + savedState.axisfriction +
@@ -12504,11 +12923,13 @@ function _wireFreqSweepUI(hidHelpers) {
       // CF block 1
       await hidHelpers.sendOutput(0x01, [
         1, 1, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0,
+        1, 0xA0, 0x8C, 0x50, 0x46,
       ]);
       await hidHelpers.sendOutput(0x0A, [1, 1, 0]);
       // SINE block 4 — criado mas não iniciado (mag inicial = 0)
       await hidHelpers.sendOutput(0x01, [
         FS_SINE_BLOCK, FS_SINE_TYPE, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0,
+        1, 0xA0, 0x8C, 0x50, 0x46,
       ]);
       // Report ID 0x04 = HID_ID_PRIDREP (Set Periodic) — NÃO 0x09 (sem handler)
       await hidHelpers.sendOutput(0x04, buildPeriodic(FS_SINE_BLOCK, 0, 0, 0, 1000));
@@ -12997,6 +13418,11 @@ function _wireFreqSweepUI(hidHelpers) {
       } catch {}
       try { await hidHelpers.stopAllHID(); } catch {}
 
+      // Anti-oscilação foi desligada nos dois modos — restaura sempre.
+      if (savedState.oscguard) {
+        try { await writePropOffb('axis.oscguard', String(savedState.oscguard)); }
+        catch (e) { logLine('freqsweep: falha restaurar axis.oscguard', 'err'); }
+      }
       // Restaura SÓ se zeramos (modo natural). No modo "com efeitos" nada
       // foi alterado, então não precisa restaurar nada.
       if (zeroEffects) {
@@ -13202,7 +13628,7 @@ async function ptRunSequence(hid) {
   await hid.stopEffect('sp');
   // Mantém damper 25% ativo — atrito viscoso é parte do "feel" estático
   // Configura CF começando em magnitude 0
-  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0]);
+  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0, 1, 0xA0, 0x8C, 0x50, 0x46]);
   await hid.sendOutput(0x05, hid.buildConstantForce(PT_BLOCK.cf, 0));
   await hid.sendOutput(0x0A, [PT_BLOCK.cf, 1, 0]);
   // Captura posição inicial via primeiro HID report após Start
@@ -13243,7 +13669,7 @@ async function ptRunSequence(hid) {
   _ptSetPhase('push');
   logLine('perftest: Phase 3/6 — Spring OFF, CF +20%, indo até |pos| > ' + (halfRange - PT_EXTREME_TOLERANCE_DEG).toFixed(0) + '°', 'tx');
   // Damper 25% continua ativo
-  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0]);
+  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0, 1, 0xA0, 0x8C, 0x50, 0x46]);
   await hid.sendOutput(0x05, hid.buildConstantForce(PT_BLOCK.cf, hid.pctToMag(20)));
   await hid.sendOutput(0x0A, [PT_BLOCK.cf, 1, 0]);
   let extremeCount = 0;
@@ -13286,7 +13712,7 @@ async function ptRunSequence(hid) {
   await hid.sendOutput(0x05, hid.buildConstantForce(PT_BLOCK.cf, 0));
   await sleep(50);
 
-  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0]);
+  await hid.sendOutput(0x01, [PT_BLOCK.cf, PT_TYPE.cf, 0xFF, 0xFF, 0,0, 0,0, 0,0, 255, 0, 1, 0xA0, 0x8C, 0x50, 0x46]);
   await hid.sendOutput(0x05, hid.buildConstantForce(PT_BLOCK.cf, launchDir * 32767));
 
   // Setup listener + promise
@@ -14019,28 +14445,43 @@ function _ptComputeResults(samples, rangeCfg, endStopPos, extra) {
     // Peak |vel| pra definir zona [30%, 80%]
     const peakV = Math.max(...vs.map(v => Math.abs(v.vel)));
     const vLo = 0.30 * peakV, vHi = 0.80 * peakV;
-    const VSPAN = 2;  // diff central ±2 amostras (~40ms @ 50Hz)
-    const findIq = (t) => {
-      // Iq sample mais próximo no tempo (Iq também a ~50Hz)
-      let best = null, bestDt = Infinity;
+    // Janela em TEMPO, não em amostras. Os dados vêm do HID a 1 kHz; a versão
+    // anterior usava ±2 amostras (pensada pro polling serial a 50 Hz = ±40 ms),
+    // o que a 1 kHz dá só 4 ms — e o filtro dt >= 5 ms descartava quase tudo.
+    // Sobravam só as amostras em volta de atrasos do relatório HID, n~3 e CV
+    // sem significado. ±10 ms suaviza o ruído do PLL na derivada e ainda é
+    // curto perto da fase de aceleração (~100+ ms).
+    const HALF_WIN_MS = 10;
+    const MIN_WIN_MS  = 15;   // tolera jitter do HID sem aceitar janela curta
+    // Iq médio na mesma janela da α (em vez da amostra mais próxima): tira o
+    // ripple de corrente, que a 1 kHz é visível amostra a amostra.
+    const iqMeanIn = (t0, t1) => {
+      let sum = 0, n = 0;
       for (const s of is) {
-        const d = Math.abs(s.t - t);
-        if (d < bestDt) { bestDt = d; best = s; }
+        if (s.t < t0) continue;
+        if (s.t > t1) break;
+        sum += Math.abs(s.iq); n++;
       }
-      return best;
+      return n ? sum / n : null;
     };
-    for (let i = VSPAN; i < vs.length - VSPAN; i++) {
+    let j0 = 0, j1 = 0;
+    for (let i = 0; i < vs.length; i++) {
       const vi = Math.abs(vs[i].vel);
       if (vi < vLo || vi > vHi) continue;
-      const dt = (vs[i+VSPAN].t - vs[i-VSPAN].t) / 1000;
-      if (dt < 0.005) continue;
-      const dv = (Math.abs(vs[i+VSPAN].vel) - Math.abs(vs[i-VSPAN].vel)) * 2 * Math.PI;  // rad/s
-      const alpha = dv / dt;
+      const tc0 = vs[i].t - HALF_WIN_MS, tc1 = vs[i].t + HALF_WIN_MS;
+      // vs é ordenado por t: avança os ponteiros das bordas da janela
+      while (j0 < i && vs[j0].t < tc0) j0++;
+      if (j1 < i) j1 = i;
+      while (j1 + 1 < vs.length && vs[j1 + 1].t <= tc1) j1++;
+      const dtMs = vs[j1].t - vs[j0].t;
+      if (dtMs < MIN_WIN_MS) continue;
+      const dv = (Math.abs(vs[j1].vel) - Math.abs(vs[j0].vel)) * 2 * Math.PI;  // rad/s
+      const alpha = dv / (dtMs / 1000);
       if (alpha <= 0.1) continue;  // exige aceleração positiva real
-      const iqMatch = findIq(vs[i].t);
-      if (!iqMatch) continue;
+      const iqAvg = iqMeanIn(vs[j0].t, vs[j1].t);
+      if (iqAvg === null) continue;
       // Direção do torque: alinhado com sinal da velocidade
-      const T = Math.abs(iqMatch.iq) * tc;
+      const T = iqAvg * tc;
       const J = T / alpha;
       if (J > 0 && isFinite(J) && J < 10) inertiaSamples.push(J);  // sanity clamp
     }
@@ -14088,17 +14529,17 @@ function _ptComputeResults(samples, rangeCfg, endStopPos, extra) {
   let qualColor = '';
   if (inertiaCV !== null) {
     const cvPct = inertiaCV * 100;
-    if (cvPct < 5)       { qualBadge = '🟢 ALTA';  qualColor = '#34d399'; }
-    else if (cvPct < 15) { qualBadge = '🟡 MÉDIA'; qualColor = '#fbbf24'; }
-    else                 { qualBadge = '🔴 BAIXA'; qualColor = '#ef5350'; }
+    if (cvPct < 5)       { qualBadge = '🟢 ' + t('pt.q_high');   qualColor = '#34d399'; }
+    else if (cvPct < 15) { qualBadge = '🟡 ' + t('pt.q_medium'); qualColor = '#fbbf24'; }
+    else                 { qualBadge = '🔴 ' + t('pt.q_low');    qualColor = '#ef5350'; }
     qualBadge += ' (CV=' + cvPct.toFixed(1) + '% · n=' + inertiaSamples.length + ')';
   } else if (inertiaSource && inertiaSource.indexOf('T_assumed') === 0) {
-    qualBadge = '⚠ ESTIMATIVA (T assumido, ±30%)';
+    qualBadge = '⚠ ' + t('pt.q_estimate');
     qualColor = '#fbbf24';
   }
   // Warning extra se motor saturou (Iq ≥ 95% × current_lim por >100ms)
   if (extra.iqSatMs > 100) {
-    qualBadge += ' · ⚠ MOTOR SATUROU ' + extra.iqSatMs.toFixed(0) + 'ms (J é limite inferior)';
+    qualBadge += ' · ⚠ ' + t('pt.q_saturated').replace('{ms}', extra.iqSatMs.toFixed(0));
     qualColor = '#ef5350';
   }
   setIf('pt-r-inertia-si', inertiaKgM2 !== null ? inertiaKgM2.toFixed(5) + ' kg·m²' : '—');
@@ -14128,6 +14569,406 @@ function _ptComputeResults(samples, rangeCfg, endStopPos, extra) {
   requestAnimationFrame(() => _ptDrawChart(samples, peakRPMIdx, peakAccelIdx, extra));
   return true;
 }
+
+// =========================================================================
+// 🛡 Teste da anti-oscilação (aba FFB Wheel)
+// -------------------------------------------------------------------------
+// Roteiro em passos numerados pra validar a detecção de volante solto sem
+// jogo: modo observação (força desprezível, diagnóstico ligado), mola de
+// centro pra provocar o balanço, testes A (solto) / B (com as mãos) e só
+// então a proteção de verdade. Os valores originais ficam guardados — também
+// no localStorage, caso a página recarregue no meio — até "Restaurar".
+// =========================================================================
+const OSCT_KEYS    = ['oscguard', 'idlespring', 'axisdamper'];
+const OSCT_LS_KEY  = 'odw.osctest.snapshot';
+const OSCT_TEST_MS = 8000;
+const OSCT_POLL_MS = 300;
+const _osct = { snap: null, cur: {}, timer: null, busy: false, run: null, results: { A: null, B: null } };
+
+function _osctStep(n, key, buttons) {
+  return `
+    <div style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--border)">
+      <div style="width:22px;height:22px;border-radius:50%;background:#2a2a2a;color:#60a5fa;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">${n}</div>
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--fg)"><span data-i18n="osct.s${n}_t"></span> <span id="osct-st${n}"></span></div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.45" data-i18n="osct.s${n}_d"></div>
+        <div id="osct-res${n}" style="font-size:12px;line-height:1.45"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${buttons}</div>
+    </div>`;
+}
+
+// Abre o Performance Test já no "Teste de aceleração e RPM" — é ele que mede o
+// J usado pela anti-oscilação (botão "Usar na proteção anti-oscilação").
+function _gotoPerfTestAccel() {
+  selectTab('perftest');
+  const sec = document.getElementById('pt-test1');
+  if (!sec) return;
+  requestAnimationFrame(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  sec.style.transition = 'box-shadow .3s';
+  sec.style.boxShadow = '0 0 0 2px #60a5fa';
+  setTimeout(() => { sec.style.boxShadow = ''; }, 2500);
+}
+
+function _osctBuildPanel() {
+  const el = document.createElement('div');
+  el.id = 'osct-panel';
+  el.classList.add('advanced-section');
+  el.style.cssText = 'grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px 12px;background:#1a1a1a;border:1px solid #3b82f6;border-radius:6px';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <b style="color:#60a5fa;font-size:13px" data-i18n="osct.title">🛡 Testar anti-oscilação</b>
+      <span style="font-size:11px;color:var(--muted)" data-i18n="osct.subtitle"></span>
+      <span id="osct-mode" style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:3px;background:#3a3a3a;color:#999">—</span>
+    </div>
+    <div id="osct-noj" hidden style="font-size:12px;line-height:1.5;color:var(--fg);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);border-radius:4px;padding:6px 10px">
+      ⚠ <span data-i18n="osct.no_j"></span>
+      <button id="osct-goto-pt" style="margin-left:8px;font-size:11px;padding:2px 8px" data-i18n="osct.goto_pt"></button>
+    </div>
+    <div id="osct-snapwarn" hidden style="font-size:12px;line-height:1.5;color:var(--fg);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.4);border-radius:4px;padding:6px 10px">
+      ⚠ <span data-i18n="osct.snap_warn"></span>
+      <span id="osct-snap" style="font-family:var(--mono,monospace)"></span>
+    </div>
+    ${_osctStep(1, 's1', '<button id="osct-obs" data-i18n="osct.btn_obs"></button>')}
+    ${_osctStep(2, 's2', '<button id="osct-bench" data-i18n="osct.btn_bench"></button>')}
+    ${_osctStep(3, 's3', '<button id="osct-test-a" class="primary" data-i18n="osct.btn_a"></button>')}
+    ${_osctStep(4, 's4', '<button id="osct-test-b" class="primary" data-i18n="osct.btn_b"></button>')}
+    ${_osctStep(5, 's5', '<button id="osct-arm" class="warn" data-i18n="osct.btn_arm"></button>')}
+    ${_osctStep(6, 's6', '<button id="osct-restore" data-i18n="osct.btn_restore"></button>')}
+    <div id="osct-run" style="font-size:13px;font-weight:600;color:#fbbf24;min-height:0"></div>
+    <div class="advanced-section" style="display:flex;flex-direction:column;gap:6px">
+    <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <b style="font-size:12px;color:var(--fg)" data-i18n="osct.diag_title"></b>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="osct-live"> <span data-i18n="osct.live"></span>
+      </label>
+      <button id="osct-zero" style="font-size:11px;padding:2px 8px" data-i18n="osct.btn_zero"></button>
+    </div>
+    <div id="osct-diag" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px"></div>
+    <div style="font-family:var(--mono,monospace);font-size:11px;color:var(--muted)">
+      <span data-i18n="osct.device"></span> <span id="osct-cur">—</span>
+    </div>
+    </div>
+  `;
+  return el;
+}
+
+function _osctFmt(v, dec) { return Number.isFinite(v) ? v.toFixed(dec) : '—'; }
+
+// O firmware manda ratio=-1 quando não há J ou torque suficiente na última
+// meia oscilação — vira NaN aqui.
+function _osctParse(raw) {
+  if (!raw || raw.indexOf('=') < 0) return null;
+  const d = {};
+  String(raw).replace(/(\w+)=(\S+)/g, (_, k, v) => { d[k] = parseFloat(v); return ''; });
+  if (!('count' in d)) return null;
+  if (!(d.ratio >= 0)) d.ratio = NaN;
+  return d;
+}
+
+function _osctHands(r) {
+  if (!Number.isFinite(r)) return { txt: t('osct.h_none'),  col: 'var(--muted)' };
+  if (r <= 0.45)           return { txt: t('osct.h_free'),  col: '#34d399' };
+  if (r > 0.70)            return { txt: t('osct.h_hands'), col: '#60a5fa' };
+  return { txt: t('osct.h_unk'), col: '#fbbf24' };
+}
+
+function _osctRenderDiag(d) {
+  const box = document.getElementById('osct-diag');
+  if (!box) return;
+  const cell = (label, value, color, sub) =>
+    '<div style="background:#0e0e0e;border:1px solid var(--border);border-radius:4px;padding:4px 8px">'
+    + '<div style="font-size:10px;color:var(--muted)">' + label + '</div>'
+    + '<div style="font-family:var(--mono,monospace);font-size:14px;font-weight:600;color:' + (color || 'var(--fg)') + '">' + value
+    + (sub ? ' <span style="font-size:10px;font-weight:400;color:var(--muted)">' + sub + '</span>' : '') + '</div></div>';
+  const on = d && d.active === 1;
+  const h = _osctHands(d ? d.ratio : NaN);
+  const conf = d && Number.isFinite(d.conf) ? d.conf : null;
+  box.innerHTML = [
+    cell(t('osct.d_state'),   d ? (on ? t('osct.st_armed') : t('osct.st_wait')) : '—', on ? '#f87171' : null),
+    cell(t('osct.d_count'),   d ? String(d.count) : '—'),
+    cell(t('osct.d_conf'),    conf === null ? '—' : conf + ' / 3', conf !== null && conf >= 3 ? '#f87171' : null),
+    cell(t('osct.d_hands'),   d ? h.txt : '—', d ? h.col : null, d && Number.isFinite(d.ratio) ? 'ratio ' + d.ratio.toFixed(2) : ''),
+    cell(t('osct.d_amp'),     d ? '±' + _osctFmt(d.amp, 1) + '°' : '—'),
+    cell(t('osct.d_freq'),    d ? _osctFmt(d.freq, 2) + ' Hz' : '—'),
+    cell(t('osct.d_peakspd'), d ? _osctFmt(d.peakspd, 0) + ' °/s' : '—'),
+    cell(t('osct.d_nm'),      d ? _osctFmt(d.nm, 2) + ' N·m' : '—', null, d ? 'pico ' + _osctFmt(d.peaknm, 2) : ''),
+  ].join('');
+}
+
+function _osctRenderState() {
+  const c = _osct.cur;
+  const cur = document.getElementById('osct-cur');
+  if (cur) cur.textContent = ['oscguard', 'oscj', 'idlespring', 'axisdamper']
+    .map(k => k + '=' + (c[k] === undefined || c[k] === null ? '—' : c[k])).join('  ');
+  const noj = document.getElementById('osct-noj');
+  if (noj) noj.hidden = !(c.oscj === 0);
+  const sw = document.getElementById('osct-snapwarn');
+  if (sw) sw.hidden = !_osct.snap;
+  const sp = document.getElementById('osct-snap');
+  if (sp) sp.textContent = _osct.snap ? OSCT_KEYS.map(k => k + '=' + _osct.snap[k]).join('  ') : '';
+  const g = c.oscguard;
+  const springOn = !!_osct.snap && c.idlespring >= 200 && c.axisdamper === 0;
+  const badge = document.getElementById('osct-mode');
+  if (badge) {
+    let txt = '—', bg = '#3a3a3a', fg = '#999';
+    if (g === 0)      { txt = t('osct.mode_off'); }
+    else if (g === 1) { txt = t('osct.mode_obs'); bg = 'rgba(59,130,246,0.2)'; fg = '#60a5fa'; }
+    else if (g > 1)   { txt = t('osct.mode_on').replace('{g}', g); bg = 'rgba(245,158,11,0.2)'; fg = '#fbbf24'; }
+    if (springOn) txt += ' ' + t('osct.mode_bench');
+    badge.textContent = txt; badge.style.background = bg; badge.style.color = fg;
+  }
+  const tick = (n, ok) => { const el = document.getElementById('osct-st' + n); if (el) { el.textContent = ok ? '✓' : ''; el.style.color = '#34d399'; } };
+  tick(1, g >= 1);
+  tick(2, springOn);
+  tick(5, g > 1);
+}
+
+async function _osctRead(k) {
+  const v = await readPropOffb('axis.' + k);
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+async function _osctWrite(k, v) {
+  const r = await writePropOffb('axis.' + k, String(v));
+  if (r === null) throw new Error(t('osct.write_fail').replace('{k}', 'axis.' + k));
+  const inp = document.getElementById('in-axis.' + k);
+  if (inp) setInputValue(inp, String(r).trim(), /*markSynced=*/true);
+  const n = parseFloat(r);
+  if (Number.isFinite(n)) _osct.cur[k] = n;
+  return r;
+}
+async function _osctRefreshCur() {
+  for (const k of ['oscguard', 'oscj', 'idlespring', 'axisdamper']) {
+    _osct.cur[k] = await _osctRead(k);
+  }
+  _osctRenderState();
+}
+function _osctSaveSnap() {
+  try {
+    if (_osct.snap) localStorage.setItem(OSCT_LS_KEY, JSON.stringify(_osct.snap));
+    else localStorage.removeItem(OSCT_LS_KEY);
+  } catch (e) {}
+}
+async function _osctEnsureSnap() {
+  if (_osct.snap) return true;
+  const s = {};
+  for (const k of OSCT_KEYS) {
+    const v = await _osctRead(k);
+    if (v === null) return false;
+    s[k] = v;
+  }
+  _osct.snap = s;
+  _osctSaveSnap();
+  return true;
+}
+function _osctSetLive(on) {
+  const live = document.getElementById('osct-live');
+  if (live) live.checked = on;
+  if (on) _osctStartPoll();
+}
+
+// Ações dos botões: todas exigem serial e guardam os originais antes de mexer.
+async function _osctAction(fn) {
+  if (!writer) { toast(t('osct.not_connected'), 'warn'); return; }
+  try { await fn(); }
+  catch (e) { toast(String(e.message || e), 'err'); }
+  try { await _osctRefreshCur(); } catch (e) {}
+}
+function _osctObs() {
+  return _osctAction(async () => {
+    if (!await _osctEnsureSnap()) { toast(t('osct.read_fail'), 'err'); return; }
+    await _osctWrite('oscguard', 1);
+    await _osctWrite('osccount', 0);
+    _osctSetLive(true);
+    toast(t('osct.ok_obs'), 'ok');
+  });
+}
+function _osctBench() {
+  return _osctAction(async () => {
+    if (!await _osctEnsureSnap()) { toast(t('osct.read_fail'), 'err'); return; }
+    await _osctWrite('idlespring', 255);
+    await _osctWrite('axisdamper', 0);
+    toast(t('osct.ok_bench'), 'ok');
+  });
+}
+function _osctArm() {
+  return _osctAction(async () => {
+    if (!await _osctEnsureSnap()) { toast(t('osct.read_fail'), 'err'); return; }
+    // Força recomendada: 150 (≈ 47 % do maxtorque).
+    const g = 150;
+    await _osctWrite('oscguard', g);
+    await _osctWrite('osccount', 0);
+    _osctSetLive(true);
+    toast(t('osct.ok_arm').replace('{g}', g), 'ok');
+  });
+}
+function _osctRestore() {
+  return _osctAction(async () => {
+    if (!_osct.snap) { toast(t('osct.nothing_restore'), 'warn'); return; }
+    for (const k of OSCT_KEYS) await _osctWrite(k, _osct.snap[k]);
+    _osct.snap = null;
+    _osctSaveSnap();
+    toast(t('osct.ok_restore'), 'ok');
+  });
+}
+function _osctZero() {
+  return _osctAction(async () => {
+    await _osctWrite('osccount', 0);
+    toast(t('osct.ok_zero'), 'ok');
+  });
+}
+
+// ---- Poll do diagnóstico (só com a aba visível, ou durante um teste) ----
+function _osctStartPoll() {
+  if (!_osct.timer) _osct.timer = setInterval(_osctTick, OSCT_POLL_MS);
+}
+function _osctStopPoll() {
+  if (_osct.timer) { clearInterval(_osct.timer); _osct.timer = null; }
+}
+async function _osctTick() {
+  const visible = document.getElementById('tab-ffb-wheel')?.classList.contains('active');
+  const live = document.getElementById('osct-live')?.checked;
+  if (!_osct.run && !live) { _osctStopPoll(); return; }
+  if (!_osct.run && !visible) return;
+  if (_osct.busy || !writer) return;
+  _osct.busy = true;
+  try {
+    const d = _osctParse(await readPropOffb('axis.oscdiag'));
+    if (d) {
+      _osctRenderDiag(d);
+      if (_osct.run) _osctRunStep(d);
+    }
+  } finally { _osct.busy = false; }
+  if (_osct.run && performance.now() - _osct.run.t0 >= OSCT_TEST_MS) _osctFinish();
+}
+
+// ---- Testes A / B ----
+// O ratio do diagnóstico é o da última meia oscilação: cada valor novo é uma
+// meia oscilação medida. No A vale se ARMOU — ou, sem armar, se alguma
+// oscilação pareceu solta. A mediana não serve: no fim do balanço a mola
+// quase não faz força e o atrito do conjunto (que não entra no modelo)
+// domina, empurrando o ratio pra cima mesmo com o J certo.
+async function _osctStartTest(which) {
+  if (_osct.run) return;
+  if (!writer) { toast(t('osct.not_connected'), 'warn'); return; }
+  await _osctRefreshCur();
+  if (!(_osct.cur.oscj > 0))     { toast(t('osct.no_j_short'), 'warn'); return; }
+  if (!(_osct.cur.oscguard > 0)) { toast(t('osct.need_obs'), 'warn'); return; }
+  try { await _osctWrite('osccount', 0); }
+  catch (e) { toast(String(e.message || e), 'err'); return; }
+  _osct.run = { which, t0: performance.now(), ratios: [], last: undefined, count: 0, maxAmp: 0 };
+  ['osct-test-a', 'osct-test-b'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = true; });
+  const res = document.getElementById(which === 'A' ? 'osct-res3' : 'osct-res4');
+  if (res) res.innerHTML = '';
+  _osctSetLive(true);
+  _osctRunStep(null);
+}
+function _osctRunStep(d) {
+  const r = _osct.run;
+  if (d) {
+    // halfs = contador de meias oscilações do firmware; sem ele (versão
+    // anterior), cada valor novo de ratio conta como uma meia oscilação.
+    const key = Number.isFinite(d.halfs) ? d.halfs : d.ratio;
+    if (Number.isFinite(d.ratio) && key !== r.last) r.ratios.push(d.ratio);
+    r.last = key;
+    r.count = d.count || 0;
+    if (Number.isFinite(d.amp) && d.amp > r.maxAmp) r.maxAmp = d.amp;
+  }
+  const left = Math.max(0, Math.ceil((OSCT_TEST_MS - (performance.now() - r.t0)) / 1000));
+  const el = document.getElementById('osct-run');
+  if (el) el.textContent = '⏺ ' + t(r.which === 'A' ? 'osct.run_a' : 'osct.run_b').replace('{s}', left);
+}
+function _osctVerdict(which, best, n, count) {
+  const c = (k) => t(k).replace('{c}', count).replace('{r}', _osctFmt(best, 2));
+  if (which === 'A') {
+    if (count > 0)    return { kind: 'ok',   text: c('osct.v_a_armed') };
+    if (n < 2)        return { kind: 'warn', text: t('osct.v_a_none') };
+    if (best <= 0.45) return { kind: 'ok',   text: c('osct.v_a_free') };
+    if (best <= 0.70) return { kind: 'warn', text: t('osct.v_a_unclear') };
+    return { kind: 'bad', text: t('osct.v_a_bad') };
+  }
+  if (count > 0) return { kind: 'bad',  text: c('osct.v_b_false') };
+  if (n < 2)     return { kind: 'warn', text: t('osct.v_b_none') };
+  return { kind: 'ok', text: t('osct.v_b_ok') };
+}
+function _osctFinish() {
+  const r = _osct.run;
+  _osct.run = null;
+  const n = r.ratios.length;
+  const best = n ? Math.min(...r.ratios) : NaN;
+  _osct.results[r.which] = { best, n, count: r.count, ...(_osctVerdict(r.which, best, n, r.count)) };
+  logLine('osctest ' + r.which + ': ativações ' + r.count + ', ' + n + ' meias oscilações, ratios '
+          + r.ratios.map(x => x.toFixed(2)).join(' ') + ', amplitude máx ±' + _osctFmt(r.maxAmp, 1) + '°', 'rx');
+  ['osct-test-a', 'osct-test-b'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = false; });
+  const el = document.getElementById('osct-run');
+  if (el) el.textContent = '';
+  _osctRenderResults();
+}
+function _osctRenderResults() {
+  const col = { ok: '#34d399', warn: '#fbbf24', bad: '#f87171' };
+  const icon = { ok: '✓', warn: '⚠', bad: '✕' };
+  for (const [w, n] of [['A', 3], ['B', 4]]) {
+    const res = _osct.results[w];
+    const box = document.getElementById('osct-res' + n);
+    const st = document.getElementById('osct-st' + n);
+    if (!res || !box) continue;
+    const meta = t(w === 'A' ? 'osct.res_meta_a' : 'osct.res_meta_b')
+      .replace('{r}', _osctFmt(res.best, 2)).replace('{n}', res.n).replace('{c}', res.count);
+    box.innerHTML = '<span style="color:' + col[res.kind] + '">' + icon[res.kind] + ' ' + res.text + '</span>'
+      + ' <span style="color:var(--muted);font-family:var(--mono,monospace);font-size:10px">(' + meta + ')</span>';
+    if (st) { st.textContent = icon[res.kind]; st.style.color = col[res.kind]; }
+  }
+  const a = _osct.results.A, b = _osct.results.B;
+  const box5 = document.getElementById('osct-res5');
+  if (box5) box5.innerHTML = (a && b && a.kind === 'ok' && b.kind === 'ok')
+    ? '<span style="color:#34d399;font-weight:600">' + t('osct.v_all_ok') + '</span>' : '';
+}
+
+function _osctWire() {
+  if (!document.getElementById('osct-panel')) return;
+  try {
+    const raw = localStorage.getItem(OSCT_LS_KEY);
+    const s = raw ? JSON.parse(raw) : null;
+    if (s && OSCT_KEYS.every(k => Number.isFinite(s[k]))) _osct.snap = s;
+  } catch (e) {}
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  on('osct-obs', _osctObs);
+  on('osct-bench', _osctBench);
+  on('osct-arm', _osctArm);
+  on('osct-restore', _osctRestore);
+  on('osct-zero', _osctZero);
+  on('osct-test-a', () => _osctStartTest('A'));
+  on('osct-test-b', () => _osctStartTest('B'));
+  on('osct-goto-pt', _gotoPerfTestAccel);
+  const live = document.getElementById('osct-live');
+  if (live) live.addEventListener('change', () => {
+    if (live.checked) {
+      _osctStartPoll();
+      if (writer) _osctRefreshCur().catch(() => {});
+    }
+  });
+  _osctRenderDiag(null);
+  _osctRenderState();
+  // Textos estáticos do painel (applyI18n cobre as trocas de idioma depois).
+  document.querySelectorAll('#osct-panel [data-i18n]').forEach(x => { x.textContent = t(x.dataset.i18n); });
+}
+
+// Botão "Usar na proteção anti-oscilação": grava o J medido em axis.oscj.
+// A proteção usa J pra confirmar que o volante está SOLTO antes de agir.
+document.addEventListener('click', async (ev) => {
+  if (!ev.target || ev.target.id !== 'pt-use-j-osc') return;
+  const J = ptResults && ptResults.inertiaKgM2;
+  if (!(J > 0)) { toast('—', 'warn'); return; }
+  if (ptResults.inertiaCV !== null && ptResults.inertiaCV !== undefined
+      && ptResults.inertiaCV * 100 >= 15 && !confirm(t('pt.use_j_osc_low'))) return;
+  const reply = await writePropOffb('axis.oscj', J.toFixed(5)).catch(() => null);
+  if (reply === null) { toast(t('pt.use_j_osc_fail'), 'err'); return; }
+  const inp = document.getElementById('in-axis.oscj');
+  if (inp) setInputValue(inp, String(reply).trim(), /*markSynced=*/true);
+  toast(t('pt.use_j_osc_ok').replace('{j}', J.toFixed(5)), 'ok');
+  logLine('perftest: axis.oscj = ' + J.toFixed(5) + ' (resposta ' + reply + ')', 'tx');
+});
 
 // Chart com 2 sub-plots stacked:
 //   Top    (50% height): RPM (azul, eixo esq) + Position (roxo, eixo dir, ±halfRange)
@@ -15531,6 +16372,11 @@ function buildTabs() {
 
     tab.fields.forEach(fld => {
       if (fld.group) {
+        // FFB Wheel — painel de teste da anti-oscilação fecha a seção dela.
+        if (tab.id === 'ffb-wheel' && fld.group === 'Slew rate / curva') {
+          panel.appendChild(_osctBuildPanel());
+          setTimeout(_osctWire, 0);
+        }
         const g = document.createElement('div');
         g.className = 'group';
         _inAdvanced = ADVANCED_GROUPS.has(fld.group);
@@ -15803,6 +16649,16 @@ function buildTabs() {
         btnWrite.title = 'Gravar no device';
         btnWrite.onclick = () => writeOne(input);
         valWrap.appendChild(btnWrite);
+      }
+      // J da anti-oscilação: atalho pro teste que mede (Aceleração e RPM).
+      if (path === 'axis.oscj') {
+        const lnk = document.createElement('a');
+        lnk.href = '#';
+        lnk.dataset.i18n = 'osct.j_link';
+        lnk.textContent = t('osct.j_link');
+        lnk.style.cssText = 'margin-left:8px;font-size:11px;color:#60a5fa;white-space:nowrap';
+        lnk.onclick = (ev) => { ev.preventDefault(); _gotoPerfTestAccel(); };
+        valWrap.appendChild(lnk);
       }
       if (RAD_S_FIELDS.has(path)) {
         const hzEl = document.createElement('span');
@@ -20604,6 +21460,7 @@ wireSetupTab();
       <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <button id="enc-diag-mt-zero"    class="ok" style="font-size:12px" title="Grava a posição atual como ZERO_POS do MT6835 (volátil — persiste com Program EEPROM). Requer motor desarmado.">🎯 Set Zero</button>
         <button id="enc-diag-mt-eeprom"  class="danger" style="font-size:12px" title="Persiste todo o register map (ZERO_POS, HYST, BW) na EEPROM interna do MT6835. NÃO desligar por 6 s após o comando (datasheet 7.6.6). Requer motor desarmado.">💾 Program EEPROM (6 s)</button>
+        <button id="enc-diag-mt-verify"  class="" style="font-size:12px" title="Lê ZERO_POS (regs 0x009/0x00A) e compara com o valor guardado no último Program EEPROM deste navegador. Use DEPOIS de desligar e religar a placa inteira: se forem iguais, o zero persistiu na EEPROM do chip.">🔍 Verificar ZERO_POS</button>
         <span id="enc-diag-mt-out" style="font-size:11px;color:var(--muted);font-family:var(--mono,monospace)"></span>
       </div>
       <div style="margin-top:6px;font-size:10px;color:var(--muted);line-height:1.4">
@@ -20628,17 +21485,43 @@ wireSetupTab();
   // trocar o dropdown só vale depois de Salvar + reboot.
   let mtActive = null;
 
+  // Janela de gravação da EEPROM do MT6835. Depois do comando Program EEPROM o
+  // datasheet (7.6.6) proíbe QUALQUER acesso SPI ao chip por >= 6 s. O firmware
+  // só pausa a thread de ângulo; sys.mtstatus/mtread/mtwrite continuam
+  // acessando o chip. Então todo consumidor no HTML (live poll, checkMtActive,
+  // botões) precisa respeitar esta janela. performance.now() em ms.
+  let mtProgUntil = 0;
+  const MT_PROG_WINDOW_MS = 7500;   // firmware pausa 6.5 s + margem
+  const mtProgBusy = () => performance.now() < mtProgUntil;
+  window._mtProgBusy = mtProgBusy;
+
+  // Último ZERO_POS programado (regs 0x009/0x00A) — guardado no navegador pra
+  // o "Verificar ZERO_POS" provar a persistência depois de um power-cycle.
+  const MT_ZERO_SNAP_KEY = 'odrive_wheel_mt_zero_snapshot';
+  const mtSnapLoad = () => { try { return JSON.parse(localStorage.getItem(MT_ZERO_SNAP_KEY) || 'null'); } catch (e) { return null; } };
+  const mtSnapSave = (o) => { try { localStorage.setItem(MT_ZERO_SNAP_KEY, JSON.stringify(o)); } catch (e) {} };
+  // Lê um registro do MT6835: "reg[0x009]=0xNN" → número, ou null.
+  async function mtReadReg(addr) {
+    const r = await writePropOffb('sys.mtread', addr).catch(() => null);
+    const m = r && String(r).match(/\]=0x([0-9a-fA-F]{1,2})/);
+    return m ? parseInt(m[1], 16) : null;
+  }
+  const hex2 = (n) => '0x' + n.toString(16).toUpperCase().padStart(2, '0');
+
   const $ = (id) => document.getElementById(id);
   const selectedEncMode = () => document.getElementById('in-axis0.encoder.config.mode')?.value;
 
   // Mensagem + estado dos botões do painel MT6835 conforme serial / ativo / live.
   function updateMtActiveUi() {
     const note = $('enc-diag-mt-note');
-    const usable = !!writer && mtActive === true;
+    const busy = mtProgBusy();
+    const usable = !!writer && mtActive === true && !busy;
     $('enc-diag-mt-zero').disabled   = !usable;
     $('enc-diag-mt-eeprom').disabled = !usable;
+    $('enc-diag-mt-verify').disabled = !usable;
     let key = null, warn = false;
-    if (!writer)                  { key = 'enc.mt_no_serial'; }
+    if (busy)                     { key = 'enc.mt_programming'; warn = true; }
+    else if (!writer)             { key = 'enc.mt_no_serial'; }
     else if (mtActive === false)  { key = 'enc.mt_not_active'; warn = true; }
     else if (mtActive === true && !running) { key = 'enc.mt_active_start_live'; }
     if (!key) { note.style.display = 'none'; return; }
@@ -20652,6 +21535,7 @@ wireSetupTab();
   // Consulta única ao firmware, fora do polling live (que já consulta a 1 Hz).
   async function checkMtActive() {
     if (!writer || running) return;
+    if (mtProgBusy()) return;   // janela de gravação: sem SPI no chip
     if (typeof window._isBulkBusy === 'function' && window._isBulkBusy()) return;
     const r = await withSerialExclusive(() => execPropOffb('sys.mtstatus').catch(() => null));
     if (r !== null) mtActive = r.indexOf('boot=') === 0;
@@ -20820,6 +21704,10 @@ wireSetupTab();
     // Visibilidade do painel segue o modo selecionado (refreshEncoderModeUi);
     // aqui só atualiza o estado "ativo" e os indicadores.
     if (selectedEncMode() !== '261') return;
+    // Janela de gravação da EEPROM: sys.mtstatus lê o reg 0x113 via SPI e o
+    // datasheet proíbe qualquer acesso ao chip por 6 s. Pula e mantém os
+    // últimos indicadores.
+    if (mtProgBusy()) { updateMtActiveUi(); return; }
     const mtReply = await execPropOffb('sys.mtstatus').catch(() => null);
     if (mtReply !== null) mtActive = mtReply.indexOf('boot=') === 0;
     updateMtActiveUi();
@@ -20976,27 +21864,89 @@ wireSetupTab();
     const out = $('enc-diag-mt-out');
     out.textContent = '⏳ programando EEPROM…';
     out.style.color = '#ffca28';
+
+    // Fecha a janela ANTES de qualquer coisa: a partir daqui nenhum consumidor
+    // do HTML (live poll, checkMtActive) pode tocar o SPI do chip. 9 s cobre a
+    // leitura de ZERO_POS abaixo + o envio do comando; depois do ack vira
+    // MT_PROG_WINDOW_MS contados do ack.
+    mtProgUntil = performance.now() + 9000;
+    updateMtActiveUi();
+
+    // Snapshot do ZERO_POS que vai ser gravado (lido ANTES do comando — depois
+    // dele o chip não pode ser acessado). Serve de referência pro "Verificar".
+    const z9 = await withSerialExclusive(() => mtReadReg(9));
+    const zA = await withSerialExclusive(() => mtReadReg(10));
+
     const reply = await withSerialExclusive(() => execPropOffb('sys.mteeprom').catch(() => 'FAIL'));
     const ok = reply && reply.indexOf('OK') === 0;
     out.textContent = reply || '(sem resposta)';
     out.style.color = ok ? '#66bb6a' : '#ef5350';
     logLine('mt6835: sys.mteeprom! → ' + reply, ok ? 'rx' : 'err');
-    if (ok) {
-      toast('💾 Programando… NÃO DESLIGUE por 6s', 'ok');
-      // Countdown visual de 6.5s pra reforçar o aviso.
-      let secLeft = 6;
-      const orig = out.textContent;
-      const tick = setInterval(() => {
-        out.textContent = orig + '  |  ⏱ NÃO DESLIGUE: ' + secLeft + 's';
-        if (--secLeft < 0) {
-          clearInterval(tick);
-          out.textContent = orig + '  |  ✓ Seguro pra desligar';
-          toast('✓ EEPROM programada — seguro pra desligar', 'ok');
-        }
-      }, 1000);
-    } else {
+    if (!ok) {
+      mtProgUntil = 0;        // comando não aceito → nada a proteger
+      updateMtActiveUi();
       toast('❌ Falhou (motor armado?)', 'err');
+      return;
     }
+
+    // Ack recebido: a janela de 6 s do datasheet começa agora.
+    mtProgUntil = performance.now() + MT_PROG_WINDOW_MS;
+    if (z9 !== null && zA !== null) mtSnapSave({ z9, zA, ts: Date.now() });
+    updateMtActiveUi();
+    toast('💾 Programando… NÃO DESLIGUE por 6s', 'ok');
+
+    // Countdown visual até o fim da janela; ao terminar libera os botões e
+    // relê ZERO_POS (nesse ponto só prova que o registro está como esperado —
+    // a persistência de verdade se confirma depois de religar a placa).
+    const orig = out.textContent;
+    const tick = setInterval(async () => {
+      const left = Math.ceil((mtProgUntil - performance.now()) / 1000);
+      if (left > 0) {
+        out.textContent = orig + '  |  ⏱ NÃO DESLIGUE: ' + left + 's';
+        return;
+      }
+      clearInterval(tick);
+      updateMtActiveUi();
+      const zs = (z9 !== null && zA !== null)
+        ? ' | ZERO_POS regs 0x009=' + hex2(z9) + ' 0x00A=' + hex2(zA) + ' (guardado)'
+        : '';
+      out.textContent = orig + '  |  ✓ Seguro pra desligar' + zs;
+      toast('✓ EEPROM programada — desligue e religue a placa e clique "Verificar ZERO_POS"', 'ok');
+    }, 500);
+  });
+
+  // ----- MT6835 Verificar ZERO_POS -----
+  // Compara os regs 0x009/0x00A atuais com o snapshot do último Program EEPROM.
+  // Rodar DEPOIS de desligar e religar a placa inteira (encoder incluído): o
+  // registro volta da EEPROM do chip, então se for igual ao snapshot o zero
+  // persistiu. Sem power-cycle a comparação sempre dá igual e não prova nada.
+  $('enc-diag-mt-verify').addEventListener('click', async () => {
+    if (!writer) { toast('Sem serial', 'err'); return; }
+    if (mtProgBusy()) { toast('Aguarde o fim da gravação da EEPROM', 'warn'); return; }
+    const out = $('enc-diag-mt-out');
+    out.textContent = '⏳ lendo ZERO_POS…';
+    out.style.color = '#ffca28';
+    const z9 = await withSerialExclusive(() => mtReadReg(9));
+    const zA = await withSerialExclusive(() => mtReadReg(10));
+    if (z9 === null || zA === null) {
+      out.textContent = 'FAIL — leitura dos registros falhou (MT6835 ativo? motor/encoder ok?)';
+      out.style.color = '#ef5350';
+      return;
+    }
+    const cur = 'ZERO_POS regs 0x009=' + hex2(z9) + ' 0x00A=' + hex2(zA);
+    const snap = mtSnapLoad();
+    if (!snap) {
+      out.textContent = cur + ' — sem snapshot neste navegador (rode Program EEPROM antes).';
+      out.style.color = 'var(--muted)';
+    } else if (snap.z9 === z9 && snap.zA === zA) {
+      out.textContent = '✓ ' + cur + ' = igual ao último Program EEPROM. Se você religou a placa antes, o zero PERSISTIU.';
+      out.style.color = '#66bb6a';
+    } else {
+      out.textContent = '⚠ ' + cur + ' ≠ gravado (0x009=' + hex2(snap.z9) + ' 0x00A=' + hex2(snap.zA) +
+                        '). O zero NÃO persistiu — ou houve outro Set Zero depois.';
+      out.style.color = '#ef5350';
+    }
+    logLine('mt6835: verify ' + out.textContent, 'rx');
   });
 
 })();

@@ -34,6 +34,10 @@ public:
     // a static torque uncertainty of approximately deadband * torque_constant.
     // 0 = disabled (stock behaviour). Set via Motor::config_.current_control_deadband.
     float current_control_deadband_ = 0.0f; // [A]
+    // Odrive-Wheel: deadband shape. false = hard (error is 0 inside the band
+    // and passed whole outside — discontinuous at the edge). true = soft
+    // (error minus the band, sign preserved — continuous). Set via sys.dbsoft.
+    bool deadband_soft_ = false;
     float I_measured_report_filter_k_ = 1.0f;
 
     // Inputs

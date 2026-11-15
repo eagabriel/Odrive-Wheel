@@ -58,10 +58,12 @@ private:
 
 
 	void set_filters(FFB_Effect* effect);
+	void updateStatusReport();
 
 	uint8_t directionEnableMask; // Has to be adjusted if bit is not last bit after axis enable bits
 	uint16_t used_effects = 0;
 	bool ffb_active = false;
+	bool actuators_enabled = true;
 	FFB_BlockLoad_Feature_Data_t blockLoad_report;
 	FFB_PIDPool_Feature_Data_t pool_report;
 

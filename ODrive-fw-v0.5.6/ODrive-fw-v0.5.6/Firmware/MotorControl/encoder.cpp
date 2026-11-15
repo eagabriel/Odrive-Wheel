@@ -462,7 +462,25 @@ bool Encoder::run_offset_calibration() {
 
     // We use shadow_count_ to do the calibration, but the offset is used by count_in_cpr_
     // Therefore we have to sync them for calibration
-    shadow_count_ = count_in_cpr_;
+    //
+    // Odrive-Wheel fix: stock did `shadow_count_ = count_in_cpr_` only. For an
+    // incremental encoder the next update() computes delta = timer CNT -
+    // shadow_count_, and CNT was not touched, so the whole linear/circular
+    // difference was ADDED to count_in_cpr_. After an index hit that
+    // difference is index_offset * cpr (set_linear_count in enc_index_cb), so
+    // the calibration measured phase_offset in a circular frame shifted by
+    // index_offset. Boots that skip the offset calibration don't get that
+    // shift (count_in_cpr_ = 0 at Z), so the saved phase_offset commutated
+    // wrong by index_offset * cpr counts; with the wheel center captured
+    // (index_offset != 0) FFB could even come out inverted.
+    // set_linear_count() moves the timer too, so there is no jump; the linear
+    // frame (wheel position, index_offset) is restored on every exit below.
+    struct LinearFrameRestore {
+        Encoder* enc;
+        int32_t  linear_minus_circular;
+        ~LinearFrameRestore() { enc->set_linear_count(enc->shadow_count_ + linear_minus_circular); }
+    } linear_restore{this, shadow_count_ - count_in_cpr_};
+    set_linear_count(count_in_cpr_);
 
     CRITICAL_SECTION() {
         // Reset state variables

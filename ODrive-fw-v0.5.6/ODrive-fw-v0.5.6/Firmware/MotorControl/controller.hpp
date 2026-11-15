@@ -50,13 +50,18 @@ public:
         float mirror_ratio = 1.0f;
         float torque_mirror_ratio = 0.0f;
         uint8_t load_encoder_axis = -1;  // default depends on Axis number and is set in load_configuration(). Set to -1 to select sensorless estimator.
-        // FFB wheel tuning: spinout detection mais tolerante a picos legítimos
-        // de potência (counter-torque com MAIRA, kicks fortes do FFB, etc).
-        // Bandwidth mantido no stock (20 rad/s) — só os thresholds foram subidos.
-        float mechanical_power_bandwidth = 20.0f; // [rad/s] filter cutoff for mechanical power (stock)
-        float electrical_power_bandwidth = 20.0f; // [rad/s] filter cutoff for electrical power (stock)
-        float spinout_electrical_power_threshold =  50.0f; // [W] (era 10.0 stock) — só dispara em sustained high power
-        float spinout_mechanical_power_threshold = -50.0f; // [W] (era -10.0 stock) — só dispara em sustained high regen
+        // FFB wheel tuning: spinout detection tolerante a picos legítimos de
+        // potência (batente, contra-esterço, kicks fortes do FFB). Num impacto,
+        // a frenagem mecânica chega a centenas de W (22 Nm a 2 volta/s ≈ -270 W)
+        // e o erro de R + perdas do inversor aparecem como potência elétrica
+        // "positiva" falsa. Thresholds em ±150 W e filtro mais lento (10 rad/s,
+        // τ ≈ 100 ms): impactos de dezenas de ms não passam, um disparo real
+        // (comutação errada) é sustentado e continua sendo pego em ~0.1-0.2 s.
+        // Custo: disparos fracos (< ~150 W) deixam de ser detectados.
+        float mechanical_power_bandwidth = 10.0f; // [rad/s] filter cutoff for mechanical power (stock 20)
+        float electrical_power_bandwidth = 10.0f; // [rad/s] filter cutoff for electrical power (stock 20)
+        float spinout_electrical_power_threshold =  150.0f; // [W] (stock 10)
+        float spinout_mechanical_power_threshold = -150.0f; // [W] (stock -10)
 
         // custom setters
         Controller* parent;

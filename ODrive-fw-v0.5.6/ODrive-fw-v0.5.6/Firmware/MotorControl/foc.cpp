@@ -150,8 +150,21 @@ ODriveIntf::MotorIntf::Error FieldOrientedController::get_alpha_beta_output(
         // 0 (default in stock) = disabled. Configured via
         // motor.config.current_control_deadband, propagated by Motor.
         if (current_control_deadband_ > 0.0f) {
-            if (std::abs(Ierr_d) < current_control_deadband_) Ierr_d = 0.0f;
-            if (std::abs(Ierr_q) < current_control_deadband_) Ierr_q = 0.0f;
+            if (deadband_soft_) {
+                // Soft: subtract the band, keep the sign. Continuous at the
+                // edge, so a noise peak just above the band produces a tiny
+                // error instead of a full-size impulse. Above the band the
+                // response is the stock one shifted by `band`.
+                auto soft = [this](float e) {
+                    float a = std::abs(e) - current_control_deadband_;
+                    return (a > 0.0f) ? std::copysign(a, e) : 0.0f;
+                };
+                Ierr_d = soft(Ierr_d);
+                Ierr_q = soft(Ierr_q);
+            } else {
+                if (std::abs(Ierr_d) < current_control_deadband_) Ierr_d = 0.0f;
+                if (std::abs(Ierr_q) < current_control_deadband_) Ierr_q = 0.0f;
+            }
         }
 
         // Apply PI control (V{d,q}_setpoint act as feed-forward terms in this mode)

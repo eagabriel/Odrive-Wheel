@@ -144,6 +144,7 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id,
                                 hid_report_type_t report_type,
                                 uint8_t *buffer, uint16_t reqlen) {
     (void)instance;
+    if (!buffer || reqlen == 0) return 0;
     uint16_t n = usbhid_hidGet_bridge(report_id, report_type, buffer, reqlen);
     if (n == 0) {
         // Fallback: preenche com zeros pra não STALL (Windows interpreta STALL = erro 10)

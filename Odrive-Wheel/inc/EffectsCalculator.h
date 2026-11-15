@@ -37,6 +37,20 @@
 #include "FastAvg.h"
 #include "constants.h"
 #include "EqCascade.h"
+#include "mutex.hpp"
+
+class EffectsCalculator;
+// Only task code takes this lock. It never masks the motor control interrupt.
+// Nested helpers deliberately do not lock; the entry-point owns the guard.
+class EffectsStateGuard {
+public:
+	explicit EffectsStateGuard(EffectsCalculator& calculator);
+	~EffectsStateGuard();
+	EffectsStateGuard(const EffectsStateGuard&) = delete;
+	EffectsStateGuard& operator=(const EffectsStateGuard&) = delete;
+private:
+	EffectsCalculator& calculator_;
+};
 
 // Stubs do ChoosableClass do OpenFFBoard
 #ifdef __cplusplus
@@ -107,6 +121,10 @@ public:
 
 	bool isActive();
 	void setActive(bool active);
+	void setPaused(bool paused);
+	bool isPaused() const { return effects_paused_; }
+	void noteEffectStartedWhilePaused(FFB_Effect* effect, uint32_t start_tick);
+	void advanceEffectClock(FFB_Effect& effect, uint32_t now_ms);
 	void calculateEffects(std::vector<std::unique_ptr<Axis>> &axes);
 	virtual void setFilters(FFB_Effect* effect);
 	void setGain(uint8_t gain);
@@ -151,6 +169,7 @@ public:
 	// novos criados depois — efeitos já alocados pelo jogo continuam com o
 	// filtro antigo.
 	void applyFilterChanges() {
+		EffectsStateGuard state_lock(*this);
 		for (auto &e : effects) {
 			if (e.type != FFB_EFFECT_NONE) setFilters(&e);
 		}
@@ -176,6 +195,8 @@ public:
 	uint8_t getGlobalGain() const { return global_gain; }
 
 private:
+	friend class EffectsStateGuard;
+	cpp_freertos::MutexStandard effects_state_mutex_;
 	//uint8_t directionEnableMask = 0;
 	// Filters
 	effect_biquad_t filter[2];		// 0 is the default profile and the custom for CFFilter, CUSTOM_PROFILE_ID is the custom slot
@@ -196,16 +217,17 @@ private:
 
 	// FFB status
 	bool effects_active = false; // If FFB is on
+	bool effects_paused_ = false;
 	uint32_t effects_used = 0;
 	std::array<effect_stat_t,12> effects_stats; // [0..12 effect types]
 	std::array<effect_stat_t,12> effects_statslast; // [0..12 effect types]
 	bool isMonitorEffect = false;
 
 	int32_t calcComponentForce(FFB_Effect *effect, int32_t forceVector, std::vector<std::unique_ptr<Axis>> &axes, uint8_t axis);
-	int32_t calcNonConditionEffectForce(FFB_Effect* effect);
+	int32_t calcNonConditionEffectForce(FFB_Effect* effect, uint32_t now_ms);
 	float speedRampupPct();
 	int32_t calcConditionEffectForce(FFB_Effect *effect, float metric, uint8_t gain, uint8_t idx, float scale, float angle_ratio);
-	int32_t getEnvelopeMagnitude(FFB_Effect *effect);
+	int32_t getEnvelopeMagnitude(FFB_Effect *effect, uint32_t now_ms);
 	std::string listEffectsUsed(bool details = false,uint8_t axis = 0);
 	//std::string listForceEffects();
 	void checkFilterCoeff(biquad_constant_t *filter, uint32_t freq,uint8_t q);

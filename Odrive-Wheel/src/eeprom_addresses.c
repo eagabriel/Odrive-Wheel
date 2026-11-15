@@ -25,4 +25,9 @@ const uint16_t VirtAddVarTab[NB_OF_VAR] = {
     ADR_GPIO_AXIS_FREQ_X10,
     // EQ por banda (gains em décimos de dB)
     ADR_AXIS_EQ_WEIGHT, ADR_AXIS_EQ_CHASSIS, ADR_AXIS_EQ_ROAD,
+    // Malha de corrente — knobs FFB (R*I FF, bEMF FF filtrado, deadband soft)
+    ADR_MOTOR_FF_FLAGS, ADR_MOTOR_BEMF_HZ_X10,
+    // Proteção anti-oscilação (volante solto)
+    ADR_AXIS1_OSC_GUARD, ADR_AXIS1_OSC_RANGE, ADR_AXIS1_OSC_MAX_NM,
+    ADR_AXIS1_OSC_CUT, ADR_AXIS1_OSC_J_E5,
 };

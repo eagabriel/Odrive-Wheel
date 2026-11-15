@@ -346,15 +346,21 @@ typedef struct
 	float axisMagnitudes[MAX_AXIS] = {0}; // 0=0,100%=1
 
 	FFB_Effect_Condition conditions[MAX_AXIS];
-	int16_t phase = 0;
-	uint16_t period = 0;
+	uint16_t phase = 0;             // HID phase in centidegrees [0, 36000).
+	uint16_t period = 1;            // Nonzero even before the first Periodic report.
 	uint32_t duration = FFB_EFFECT_DURATION_INFINITE;					 // Duration in ms
 	uint16_t attackLevel = 0, fadeLevel = 0; // Envelope effect
 	uint32_t attackTime = 0, fadeTime = 0;	 // Envelope effect
 
 	std::unique_ptr<Biquad> filter[MAX_AXIS] = { nullptr };  // Optional filter
 	uint16_t startDelay = 0;
-	uint32_t startTime = 0;	  // Elapsed time in ms before effect starts
+	uint32_t startTime = 0;          // Base tick of Start/duration, not a future deadline.
+	bool startDelayPending = false;
+	uint16_t pendingStartDelay = 0;  // Captured once per Start, unaffected by Set Effect.
+	uint32_t pauseStartTime = 0;
+	bool pauseClockPending = false;
+	uint16_t phaseElapsedMs = 0;
+	uint32_t phaseLastTick = 0;
 	uint16_t samplePeriod = 0;
 	bool useEnvelope = false;
 	bool useSingleCondition = true;

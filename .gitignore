@@ -86,6 +86,8 @@ ODrive.GUI.Configurador.exe
 OpenFFBoard-configurator/
 Firmware-Merged/
 .claude/
+# Notas locais (nunca enviar)
+docs/private/
 
 # =============================================================================
 # ODrive Python tooling (unused — our HTML config tool replaces it)

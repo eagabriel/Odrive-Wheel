@@ -15,6 +15,7 @@
 #include "EffectsCalculator.h"
 #include "UsbHidHandler.h"
 #include "Axis.h"          // stub interface com metric_t
+#include "AxisSafety.h"
 #include "Filters.h"       // Biquad — post-filter do axisInertia (parity upstream)
 #include "ffb_defs.h"
 #include "cmsis_os.h"
@@ -24,6 +25,7 @@
 
 extern "C" {
 #include "gpio_inputs.h"
+#include "OscillationGuard.h"
 }
 
 // -------------------- Forward decls dos globals --------------------
@@ -104,6 +106,11 @@ public:
         // de axisInverted_ — permite casos onde pos está correta mas FFB
         // veio invertido pela stack do jogo).
         if (ffbInverted_) torque = -torque;
+
+        // Parcela do jogo em N·m (referência do encoder, já com ffbinvert) —
+        // a proteção anti-oscilação pode cortá-la em update(). Chamado primeiro
+        // com 0 a cada tick (EffectsCalculator), então sem jogo fica 0.
+        lastGameNm_ = (float)torque / (float)0x7FFF * maxTorque_Nm_ * fxRatio_;
 
         // EffectsCalculator entrega torque clipado em [-0x7FFF, +0x7FFF].
         // Soma os axis effects calculados em calculateAxisEffects (sempre ativos).
@@ -278,7 +285,10 @@ public:
         // low-pass de 1ª ordem (~100 Hz @ 1 kHz) pra suavizar os degraus
         // residuais da PLL antes de multiplicar pelos gains de inertia.
         const float ACCEL_LPF_ALPHA = 0.386f;  // dt/(dt + 1/(2π·100Hz))
-        float raw_accel = (new_speed - metrics_.speed) / dt;
+        // The first measurement establishes a reference, not an acceleration
+        // from an assumed stationary wheel (Forge v1.0.8, fd664a1).
+        float raw_accel = hasPreviousSpeed_ ? (new_speed - metrics_.speed) / dt : 0.0f;
+        hasPreviousSpeed_ = true;
         accelLpf_ += ACCEL_LPF_ALPHA * (raw_accel - accelLpf_);
 
         metrics_.posDegrees = degrees;
@@ -299,7 +309,18 @@ public:
         // pending_torque_ vira `force + axisEffectTorque_`.
         // Segurança: input_torque_ só é consumido pelo motor em CLOSED_LOOP_CONTROL
         // (state=8); em IDLE é no-op. Sem risco de pulso ao chamar incondicionalmente.
-        odrive_bridge_set_input_torque(pending_torque_);
+        //
+        // Proteção anti-oscilação (volante solto) — ver OscillationGuard.h.
+        // Desligada (strength 0) devolve {0, 1}: torque idêntico ao de antes.
+        // O torque dela é passivo (sempre contra a velocidade) e limitado pelo
+        // maxtorque; o corte atua só na parcela do jogo.
+        const OscillationGuard::Output og = oscGuard_.tick(
+            metrics_.posDegrees, metrics_.speed, lastAppliedNm_, maxTorque_Nm_, dt);
+        float out = pending_torque_ - lastGameNm_ * (1.0f - og.gameScale) + og.torqueNm;
+        if (out >  maxTorque_Nm_) out =  maxTorque_Nm_;
+        if (out < -maxTorque_Nm_) out = -maxTorque_Nm_;
+        lastAppliedNm_ = out;
+        odrive_bridge_set_input_torque(out);
     }
 
     void zeroEncoder() {
@@ -324,9 +345,12 @@ public:
 private:
     metric_t metrics_{};
     float pending_torque_     = 0.0f;
+    float lastGameNm_         = 0.0f;    // parcela do jogo em N·m (setEffectTorque)
+    float lastAppliedNm_      = 0.0f;    // torque enviado ao motor no ciclo anterior
     int32_t axisEffectTorque_ = 0;       // calculado em calculateAxisEffects
     int32_t lastTorque_       = 0;       // pra slew rate limit
     float accelLpf_           = 0.0f;    // LPF 1ª ordem ~100 Hz sobre d(speed)/dt
+    bool hasPreviousSpeed_   = false;
     // Post-filters dos axis effects sempre-ativos, valores 100% clonados do
     // OpenFFBoard upstream (Axis.h::filterDamperCst / filterFrictionCst /
     // filterInertiaCst). Fc é normalizado por 1 kHz (sample rate da task FFB).
@@ -337,8 +361,13 @@ private:
     Biquad inertiaFilter_ {BiquadType::lowpass, 0.020f, 0.20f, 0.0f};  // {20 Hz, Q=0.20}
 
 public:
+    // Proteção anti-oscilação com o volante solto (config + diagnóstico).
+    OscillationGuard oscGuard_;
+
     void reset_ffb_state() {
         pending_torque_ = 0.0f;
+        lastGameNm_ = 0.0f;
+        oscGuard_.reset();
     }
 };
 
@@ -437,7 +466,10 @@ static void ffb_thread(void *arg) {
             rpt.FetTempC   = satTemp(odrive_bridge_get_fet_temp());
             rpt.MotorTempC = satTemp(odrive_bridge_get_motor_temp());
             // Estado + 4 errors do ODrive — cast direto, enums já são int32.
-            rpt.AxisState       = (int8_t) odrive_bridge_get_axis_state();
+            // bit 6 (0x40) = proteção anti-oscilação ativa. Estados do ODrive
+            // vão até 13, então os bits altos estão livres; o HTML mascara 0x3F.
+            rpt.AxisState       = (int8_t)(odrive_bridge_get_axis_state()
+                                  | ((s_axis_raw && s_axis_raw->oscGuard_.active) ? 0x40 : 0x00));
             rpt.AxisError       = (int32_t)odrive_bridge_get_axis_error();
             rpt.MotorError      = (int32_t)odrive_bridge_get_motor_error();
             rpt.EncoderError    = (int32_t)odrive_bridge_get_encoder_error();
@@ -544,6 +576,20 @@ extern "C" void ffb_init_storage_early(void) {
         }
     }
 
+    // Malha de corrente — knobs FFB (R*I FF / bEMF FF filtrado / deadband
+    // soft). Vão direto pro Motor via bridge; axes[] é estático, já existe.
+    {
+        uint16_t flags = 0xFFFF;
+        if (Flash_Read(ADR_MOTOR_FF_FLAGS, &flags, false) && flags != 0xFFFF) {
+            odrive_bridge_set_ff_r((flags & 0x01) ? 1 : 0);
+            odrive_bridge_set_deadband_soft((flags & 0x02) ? 1 : 0);
+        }
+        uint16_t hz_x10 = 0xFFFF;
+        if (Flash_Read(ADR_MOTOR_BEMF_HZ_X10, &hz_x10, false) && hz_x10 != 0xFFFF && hz_x10 <= 5000) {
+            odrive_bridge_set_bemf_ff_hz((float)hz_x10 / 10.0f);
+        }
+    }
+
     // NOTA: o load do EQ (WEIGHT/CHASSIS/ROAD) foi MOVIDO daqui pra
     // ffb_task_init(), depois do s_effects_calc ser criado. Quando
     // ffb_init_storage_early() é chamado do main.cpp antes do ADC iniciar
@@ -638,13 +684,13 @@ static void ffb_load_axis_params_internal(void) {
     if (!s_axis_raw) return;
     uint16_t v;
     if (Flash_Read(ADR_AXIS1_DEGREES, &v, false) && v != 0xFFFF && v > 0) {
-        s_axis_raw->rangeDegrees_ = (float)v;
+        s_axis_raw->rangeDegrees_ = sanitize_axis_range((float)v);
     }
     if (Flash_Read(ADR_AXIS1_POWER, &v, false) && v != 0xFFFF && v > 0) {
-        s_axis_raw->maxTorque_Nm_ = (float)v / 100.0f;
+        s_axis_raw->maxTorque_Nm_ = sanitize_axis_torque((float)v / 100.0f);
     }
     if (Flash_Read(ADR_AXIS1_EFFECTS1, &v, false) && v != 0xFFFF) {
-        s_axis_raw->fxRatio_ = (float)v / 1000.0f;
+        s_axis_raw->fxRatio_ = sanitize_axis_fxratio((float)v / 1000.0f);
     }
     if (Flash_Read(ADR_AXIS1_EFFECTS2, &v, false) && v != 0xFFFF) {
         s_axis_raw->idleSpring_ = (uint8_t)((v >> 8) & 0xFF);
@@ -682,6 +728,14 @@ static void ffb_load_axis_params_internal(void) {
     if (Flash_Read(ADR_AXIS1_CONFIG, &v, false) && v != 0xFFFF) {
         s_axis_raw->axisInverted_ = (v & 0x0001) != 0;
         s_axis_raw->ffbInverted_  = (v & 0x0002) != 0;
+    }
+    // Proteção anti-oscilação (sentinel 0xFFFF = mantém default: desligada).
+    {
+        OscillationGuard::Config& oc = s_axis_raw->oscGuard_.cfg;
+        if (Flash_Read(ADR_AXIS1_OSC_GUARD, &v, false) && v != 0xFFFF && v <= 255)
+            oc.strength = (uint8_t)v;
+        if (Flash_Read(ADR_AXIS1_OSC_J_E5, &v, false) && v != 0xFFFF)
+            oc.inertiaKgm2 = (float)v / 100000.0f;
     }
     // zeroOffset_ — split em 2 slots uint16 reconstruindo um float32.
     // Inicial 0.0f no construtor é o default seguro (sem offset).
@@ -1047,6 +1101,18 @@ extern "C" int ffb_save_flash(void) {
         }
     }
 
+    // Malha de corrente — knobs FFB (bitmap + fc em décimos de Hz)
+    {
+        uint16_t flags = 0;
+        if (odrive_bridge_get_ff_r())          flags |= 0x01;
+        if (odrive_bridge_get_deadband_soft()) flags |= 0x02;
+        uint16_t hz_x10 = (uint16_t)(odrive_bridge_get_bemf_ff_hz() * 10.0f + 0.5f);
+        if (!Flash_Write(ADR_MOTOR_FF_FLAGS,    flags))  s_last_save_errors++;
+        s_last_save_writes++;
+        if (!Flash_Write(ADR_MOTOR_BEMF_HZ_X10, hz_x10)) s_last_save_errors++;
+        s_last_save_writes++;
+    }
+
     if (s_axis_raw) {
         // Escala básica
         uint16_t r  = (uint16_t)(s_axis_raw->rangeDegrees_ < 65535.0f ? s_axis_raw->rangeDegrees_ : 65535.0f);
@@ -1069,6 +1135,16 @@ extern "C" int ffb_save_flash(void) {
         uint16_t esPack = ((uint16_t)s_axis_raw->endstopDamper_ << 8) | s_axis_raw->endstopStrength_;
         if (!Flash_Write(ADR_AXIS1_ENC_RATIO, esPack)) s_last_save_errors++;
         s_last_save_writes += 6;
+
+        // Proteção anti-oscilação
+        {
+            const OscillationGuard::Config& oc = s_axis_raw->oscGuard_.cfg;
+            float jE5 = oc.inertiaKgm2 * 100000.0f + 0.5f;
+            if (jE5 > 65534.0f) jE5 = 65534.0f;
+            if (!Flash_Write(ADR_AXIS1_OSC_GUARD,  (uint16_t)oc.strength)) s_last_save_errors++;
+            if (!Flash_Write(ADR_AXIS1_OSC_J_E5,   (uint16_t)jE5)) s_last_save_errors++;
+            s_last_save_writes += 2;
+        }
 
         // Phase 4.x — bitfield de flags do axis.
         //   bit 0 = axisInverted_ (posição HID)
@@ -1238,16 +1314,14 @@ extern "C" void ffb_set_vbus_divider(int v) {
 extern "C" float ffb_get_axis_range(void)  { return s_axis_raw ? s_axis_raw->rangeDegrees_ : 900.0f; }
 extern "C" float ffb_get_axis_maxtq(void)  { return s_axis_raw ? s_axis_raw->maxTorque_Nm_ : 5.0f;   }
 extern "C" float ffb_get_axis_fxratio(void){ return s_axis_raw ? s_axis_raw->fxRatio_      : 0.80f;  }
-extern "C" void  ffb_set_axis_range(float v)  { if (s_axis_raw) s_axis_raw->rangeDegrees_ = v; }
+extern "C" void  ffb_set_axis_range(float v)  { if (s_axis_raw) s_axis_raw->rangeDegrees_ = sanitize_axis_range(v); }
 extern "C" void  ffb_set_axis_maxtq(float v)  {
     if (!s_axis_raw) return;
-    if (v < 0.1f) v = 0.1f; if (v > 40.0f) v = 40.0f;  // hard cap de seguranca (40 Nm)
-    s_axis_raw->maxTorque_Nm_ = v;
+    s_axis_raw->maxTorque_Nm_ = sanitize_axis_torque(v);
 }
 extern "C" void  ffb_set_axis_fxratio(float v){
     if (!s_axis_raw) return;
-    if (v < 0.0f) v = 0.0f; if (v > 1.0f) v = 1.0f;
-    s_axis_raw->fxRatio_ = v;
+    s_axis_raw->fxRatio_ = sanitize_axis_fxratio(v);
 }
 
 // Phase 3.12 — params extras do Axis (idlespring, damper, inertia, friction,
@@ -1266,13 +1340,39 @@ extern "C" int  ffb_get_axis_esdamp(void)       { return s_axis_raw ? (int)s_axi
 extern "C" void ffb_set_axis_esdamp(int v)      { if (s_axis_raw) s_axis_raw->endstopDamper_ = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); }
 extern "C" int  ffb_get_axis_maxtorquerate(void){ return s_axis_raw ? (int)s_axis_raw->maxTorqueRate_: 0; }
 extern "C" void ffb_set_axis_maxtorquerate(int v){ if (s_axis_raw) s_axis_raw->maxTorqueRate_= (uint16_t)(v < 0 ? 0 : v > 65535 ? 65535 : v); }
+// Proteção anti-oscilação (axis.osc*) — clamps nas mesmas faixas da EEPROM.
+static float osc_clampf(float v, float lo, float hi) { return !(v >= lo) ? lo : v > hi ? hi : v; }
+extern "C" int   ffb_get_axis_oscguard(void)    { return s_axis_raw ? (int)s_axis_raw->oscGuard_.cfg.strength : 0; }
+extern "C" void  ffb_set_axis_oscguard(int v)   {
+    if (!s_axis_raw) return;
+    s_axis_raw->oscGuard_.cfg.strength = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
+    if (s_axis_raw->oscGuard_.cfg.strength == 0) s_axis_raw->oscGuard_.reset();
+}
+extern "C" float ffb_get_axis_oscj(void)        { return s_axis_raw ? s_axis_raw->oscGuard_.cfg.inertiaKgm2 : 0.0f; }
+extern "C" void  ffb_set_axis_oscj(float v)     { if (s_axis_raw) s_axis_raw->oscGuard_.cfg.inertiaKgm2 = osc_clampf(v, 0.0f, 0.6f); }
+extern "C" void  ffb_get_axis_oscdiag(char* buf, int size) {
+    if (!buf || size <= 0) return;
+    if (!s_axis_raw) { buf[0] = 0; return; }
+    const OscillationGuard& g = s_axis_raw->oscGuard_;
+    // ratio = -1: sem J ou sem torque suficiente na última meia oscilação.
+    snprintf(buf, size, "active=%d count=%lu conf=%u halfs=%lu amp=%.1f freq=%.2f peakspd=%.0f nm=%.2f peaknm=%.2f ratio=%.2f j=%.5f",
+             g.active ? 1 : 0, (unsigned long)g.activations, (unsigned)g.confidence(),
+             (unsigned long)g.halfCount,
+             (double)g.lastAmplitudeDeg, (double)g.lastFreqHz, (double)g.lastPeakSpeed,
+             (double)g.currentNm, (double)g.peakNm,
+             (double)(std::isfinite(g.lastFreeRatio) ? g.lastFreeRatio : -1.0f),
+             (double)g.cfg.inertiaKgm2);
+}
+extern "C" unsigned long ffb_get_axis_osccount(void) { return s_axis_raw ? (unsigned long)s_axis_raw->oscGuard_.activations : 0; }
+extern "C" void  ffb_reset_axis_oscdiag(void)   { if (s_axis_raw) s_axis_raw->oscGuard_.reset(/*clearDiag=*/true); }
+
 extern "C" int  ffb_get_axis_expo(void)         { return s_axis_raw ? (int)s_axis_raw->expo_         : 0; }
 extern "C" void ffb_set_axis_expo(int v)        { if (s_axis_raw) s_axis_raw->expo_         = (int16_t)(v < -32767 ? -32767 : v > 32767 ? 32767 : v); }
 extern "C" int  ffb_get_axis_exposcale(void)    { return s_axis_raw ? (int)s_axis_raw->exposcale_    : 100; }
 extern "C" void ffb_set_axis_exposcale(int v)   { if (s_axis_raw) s_axis_raw->exposcale_    = (uint8_t)(v < 1 ? 1 : v > 255 ? 255 : v); }
 extern "C" void ffb_axis_zeroenc(void)          { if (s_axis_raw) s_axis_raw->zeroEncoder(); }
 extern "C" float ffb_get_axis_zeroofs(void)     { return s_axis_raw ? s_axis_raw->zeroOffset_ : 0.0f; }
-extern "C" void  ffb_set_axis_zeroofs(float v)  { if (s_axis_raw) s_axis_raw->zeroOffset_ = v; }
+extern "C" void  ffb_set_axis_zeroofs(float v)  { if (s_axis_raw && std::isfinite(v)) s_axis_raw->zeroOffset_ = v; }
 
 // Contadores de diagnostico do callback do Z do encoder (definidos em
 // encoder.cpp do ODrive, instrumentados pelo nosso patch). Expostos via

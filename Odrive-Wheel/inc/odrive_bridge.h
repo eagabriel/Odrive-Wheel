@@ -35,6 +35,16 @@ float odrive_bridge_get_vel_estimate(void);
 float odrive_bridge_get_iq_measured(void);
 float odrive_bridge_get_torque_output(void);
 
+// ==== Malha de corrente — knobs FFB (persistidos na EEPROM do FFB) ==========
+// Vivem fora de Motor::Config_t de propósito (ver motor.hpp): a config do
+// ODrive é um blob com CRC e crescer o struct zeraria a config de todo mundo.
+int   odrive_bridge_get_ff_r(void);              // 1 = R*I feedforward do setpoint ativo
+void  odrive_bridge_set_ff_r(int en);
+float odrive_bridge_get_bemf_ff_hz(void);        // 0 = off; >0 = bEMF FF com LPF neste fc
+void  odrive_bridge_set_bemf_ff_hz(float hz);
+int   odrive_bridge_get_deadband_soft(void);     // 1 = deadband contínuo (subtrai a banda)
+void  odrive_bridge_set_deadband_soft(int en);
+
 // Corrente no resistor de freio (regen). Já existe vbus/ibus acima — esta
 // completa a tríade pro overlay HID-only computar P_brake real a 1 kHz.
 float odrive_bridge_get_brake_resistor_current(void);

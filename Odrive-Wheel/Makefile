@@ -64,7 +64,24 @@ MCU       = $(CPU) -mthumb $(FPU) $(FLOAT_ABI)
 # com layouts incompatíveis. S1+S2 (16K cada) ficavam livres no linker
 # (.text começa em S3). 16K dá ~4095 entries antes de page swap; erase
 # de 16K = ~250ms (vs ~1.5s do setor 128K).
+#
+# DRV_GATE_CURRENT — DRV8301 gate-drive peak current: 0 = 1.7 A (stock, default),
+# 1 = 0.7 A, 2 = 0.25 A. Uso: `make DRV_GATE_CURRENT=2`.
+# ATENÇÃO: make não rastreia mudança de -D; ao trocar o valor apague o objeto
+# (ODrive-fw-v0.5.6/.../Drivers/DRV8301/drv8301.o, que fica ao lado da fonte)
+# ou faça `make clean`, senão o binário sai com o valor anterior.
+DRV_GATE_CURRENT ?= 0
+
+# BOOT_DELAY_MS — espera no PRIMEIRO instante do Reset_Handler (antes de .data,
+# SystemInit, GPIO, EXTI do Z, ADC, flash) após reset de power-on, brown-out
+# ou botão de reset (NRST). 0 desliga. Não se aplica a reboot por software
+# (ss, sys.reboot, DFU) nem a reset de watchdog.
+# Mesma ressalva do gate: make não rastreia -D; ao mudar, apague
+# ODrive-fw-v0.5.6/.../Board/v3/startup_stm32f405xx.o ou faça `make clean`.
+BOOT_DELAY_MS ?= 2000
+
 DEFS = -DSTM32F405xx \
+       -DDRV8301_GATE_CURRENT_SETTING=$(DRV_GATE_CURRENT) \
        -DUSE_HAL_DRIVER \
        -DHSE_VALUE=8000000 \
        -DARM_MATH_CM4 \
@@ -293,7 +310,7 @@ COMMON_FLAGS = $(MCU) $(DEFS) $(INCLUDES) $(OPT) \
 
 CFLAGS   = $(COMMON_FLAGS) -std=gnu11 -MMD -MP -MF"$(@:%.o=%.d)"
 CXXFLAGS = $(COMMON_FLAGS) -std=gnu++17 -Wno-register -fno-use-cxa-atexit -MMD -MP -MF"$(@:%.o=%.d)"
-ASFLAGS  = $(MCU) -Wall -fdata-sections -ffunction-sections
+ASFLAGS  = $(MCU) -DBOOT_DELAY_MS=$(BOOT_DELAY_MS) -Wall -fdata-sections -ffunction-sections
 
 LDSCRIPT = linker/STM32F405RGTx_FLASH.ld
 LDFLAGS  = $(MCU) -specs=nosys.specs -specs=nano.specs \

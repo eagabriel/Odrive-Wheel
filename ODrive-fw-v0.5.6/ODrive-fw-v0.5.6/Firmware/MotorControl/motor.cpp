@@ -631,13 +631,37 @@ void Motor::update(uint32_t timestamp) {
         vq += config_.phase_resistance * iq;
     }
 
-    if (config_.bEMF_FF_enable) {
+    // Odrive-Wheel: setpoint-only resistive feedforward (see motor.hpp).
+    // Skipped when the stock R_wL_FF is on — that path already adds R*I.
+    if (ff_r_enable_ && !config_.R_wL_FF_enable) {
+        vd += config_.phase_resistance * id;
+        vq += config_.phase_resistance * iq;
+    }
+
+    const bool bemf_ff_filtered = bemf_ff_filter_hz_ > 0.0f;
+
+    if (config_.bEMF_FF_enable && !bemf_ff_filtered) {
         if (!phase_vel.has_value()) {
             error_ |= ERROR_UNKNOWN_PHASE_VEL;
             return;
         }
 
         vq += *phase_vel * (2.0f/3.0f) * (config_.torque_constant / config_.pole_pairs);
+    }
+
+    // Odrive-Wheel: bEMF feedforward from a low-passed phase_vel. Takes over
+    // from the stock term above when enabled so the bEMF is never added twice.
+    if (bemf_ff_filtered) {
+        if (!phase_vel.has_value()) {
+            error_ |= ERROR_UNKNOWN_PHASE_VEL;
+            return;
+        }
+        const float rc    = 1.0f / (2.0f * (float)M_PI * bemf_ff_filter_hz_);
+        const float alpha = current_meas_period / (current_meas_period + rc);
+        bemf_ff_vel_filt_ += alpha * (*phase_vel - bemf_ff_vel_filt_);
+        vq += bemf_ff_vel_filt_ * (2.0f/3.0f) * (config_.torque_constant / config_.pole_pairs);
+    } else {
+        bemf_ff_vel_filt_ = phase_vel.value_or(0.0f); // track so enabling later has no step
     }
     
     if (axis_->motor_.config_.motor_type == Motor::MOTOR_TYPE_GIMBAL) {

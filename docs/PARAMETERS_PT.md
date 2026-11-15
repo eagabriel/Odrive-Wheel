@@ -138,15 +138,16 @@ deve ficar sempre ligado.
 
 Abaixo desta tensão a placa desarma com `DC_BUS_UNDER_VOLTAGE`. Protege contra
 fonte caindo ou cabo com resistência alta, situações em que o controle de
-corrente perde precisão. O Quick Start usa tensão medida − 5 V: folga suficiente
-para quedas momentâneas em picos de torque, mas detecta fonte realmente fraca.
+corrente perde precisão. O Quick Start usa tensão medida − 8 V: folga larga
+para quedas momentâneas em picos de torque, mas ainda detecta fonte realmente
+fraca.
 
 ### `config.dc_bus_overvoltage_trip_level`
 
 Acima desta tensão a placa desarma com `DC_BUS_OVER_VOLTAGE`. É a última proteção
 contra regeneração que o freio não conseguiu absorver. Deve ficar acima do fim
 da rampa de freio (senão o freio nunca atua antes do desarme) e abaixo da tensão
-máxima dos capacitores e MOSFETs da placa.
+máxima dos capacitores e MOSFETs da placa. O Quick Start usa tensão medida + 2 V.
 
 ### `config.enable_dc_bus_overvoltage_ramp`
 
@@ -159,13 +160,15 @@ subindo). Recomendado ligado.
 
 Tensão em que a rampa começa (duty 0 %). Precisa ficar acima da tensão normal da
 fonte, senão o freio fica dissipando o tempo todo e esquenta o resistor à toa. O
-Quick Start usa tensão medida + 0,5 V.
+Quick Start usa tensão medida + 0,1 V: o freio atua logo que a tensão passa do
+nominal. Se a sua fonte oscila mais que isso, o resistor pode aquecer em
+repouso; nesse caso suba este valor.
 
 ### `config.dc_bus_overvoltage_ramp_end`
 
 Tensão em que o freio chega a 100 %. Precisa ficar abaixo do limite de
-sobretensão. O Quick Start usa tensão medida + 3 V, deixando 2 V entre freio
-total e desarme.
+sobretensão. O Quick Start usa o início da rampa + 1 V (tensão medida + 1,1 V),
+deixando 0,9 V entre freio total e desarme.
 
 ### `config.dc_max_positive_current`
 
@@ -186,7 +189,7 @@ ligado, o Quick Start usa −7 A porque o resistor absorve a regeneração.
 
 Apesar do nome, é o **limiar** a partir do qual o freio atua. Regeneração até
 esse valor vai para a fonte; acima dele, o excesso vai para o resistor. 0 faz o
-freio absorver toda regeneração. O Quick Start usa 0,1 A: praticamente tudo vai
+freio absorver toda regeneração. O Quick Start usa 0,05 A: praticamente tudo vai
 para o resistor, sem o freio ficar pulsando por ruído de medição.
 
 ### `sys.vbusdiv` (vbus_divider)
@@ -403,6 +406,22 @@ morta o controle ignora o erro. Fora dela o comportamento é idêntico ao origin
 O erro estático introduzido é o valor × `torque_constant` (poucos mNm,
 imperceptível). Faixa útil 0,02–0,20 A; 0 desliga.
 
+Uma banda maior que o ruído tira a vibração, mas tem um custo no feeling: dentro
+da banda o controle não age, o inversor vira um curto para a força
+contraeletromotriz e aparece um arrasto ao girar o volante, sentido como inércia.
+Por isso, em geral, vale manter a banda pequena e atacar o ruído na origem.
+
+### `deadband_soft` (`sys.dbsoft`, modificação Odrive-Wheel)
+
+Forma da zona morta acima. Desligado (original): o erro é zerado dentro da banda
+e usado **inteiro** fora dela. Isso é descontínuo na borda: um pico de ruído pouco
+acima da banda entra como um impulso de tamanho cheio, e com a banda perto do
+nível de ruído o motor produz "cliques". Ligado: erro = sinal × (|erro| − banda),
+contínuo. Permite usar uma banda pequena (20–50 mA) como piso suave.
+
+Não tem efeito se `current_control_deadband` for 0. Fica na EEPROM do FFB e é
+salvo pelo botão Salvar (não pelo `ss` do ODrive).
+
 ### `dc_calib_tau`
 
 Constante de tempo do filtro que mede o offset dos sensores de corrente no boot.
@@ -486,17 +505,53 @@ partir do valor nominal, do beta do NTC e do pull-up.
 
 ## Motor — Feed-forward
 
-### `R_wL_FF_enable`
+O controle de corrente do ODrive usa um único ajuste, `current_control_bandwidth`,
+tanto para a velocidade de resposta quanto para a rejeição de ruído de medição.
+Subir a banda deixa o FFB mais rápido e o motor mais ruidoso em repouso; baixar
+faz o contrário. Os feed-forwards quebram esse compromisso: aplicam a tensão que
+o motor vai precisar antes de o erro aparecer, e a malha só corrige o resto. Com
+eles ligados dá para manter a banda baixa (60–100 rad/s, silenciosa) com resposta
+parecida ou melhor do que a banda alta.
 
-Compensa antecipadamente a queda na resistência e o acoplamento entre eixos da
-indutância. Melhora o controle de corrente em rotação alta. Num volante, que gira
-devagar, o efeito é pequeno. Depende de R e L corretos.
+Os três primeiros parâmetros são modificações Odrive-Wheel e ficam na EEPROM do
+FFB (salvos pelo botão Salvar, não pelo `ss`). Os dois últimos são do ODrive
+original.
 
-### `bEMF_FF_enable`
+### `ff_r_setpoint` (`sys.ffr`)
 
-Compensa antecipadamente a força contraeletromotriz. Ajuda a manter o torque
-pedido em movimentos rápidos (contraesterço brusco). Depende de
-`torque_constant` correto; se estiver errado, piora em vez de ajudar.
+Feed-forward resistivo calculado a partir do **setpoint** de corrente, que é o
+próprio torque do jogo: a tensão `R × I` entra no mesmo ciclo em que o torque
+muda, sem esperar o integrador. Não usa a velocidade do encoder, então não injeta
+ruído com o volante parado. É o primeiro a ligar quando se quer baixar
+`current_control_bandwidth`.
+
+Depende de `phase_resistance` correta (vem da calibração do motor). Um erro em R
+vira um transitório que o integrador corrige na banda da malha.
+
+### `bemf_ff_filter_hz` (`sys.bemfhz`)
+
+Feed-forward da força contraeletromotriz usando a velocidade do PLL **filtrada**
+por um passa-baixa de 1ª ordem neste cutoff. Ao girar o volante, a bEMF precisa
+ser cancelada pela malha; com a banda baixa isso atrasa e sobra uma corrente de
+frenagem proporcional à aceleração, sentida como inércia. O feed-forward cancela
+a bEMF na hora. O filtro remove o jitter de contagem do encoder que faz o
+`bEMF_FF_enable` original zumbir.
+
+10–20 Hz basta: a mão não acelera o volante mais rápido que isso. 0 desliga.
+Quando ligado substitui o `bEMF_FF_enable` original (não soma os dois). Depende
+de `torque_constant` e `pole_pairs` corretos.
+
+### `R_wL_FF_enable` (original)
+
+Compensa a queda na resistência e o acoplamento entre eixos da indutância. Os
+termos de acoplamento usam a velocidade **crua** do PLL, que com o volante parado
+oscila a cada contagem do encoder, e isso vira ruído de tensão. Prefira
+`ff_r_setpoint`, que faz a parte útil sem esse efeito.
+
+### `bEMF_FF_enable` (original)
+
+Compensa a força contraeletromotriz com a velocidade crua do PLL. Mesmo
+problema: amplifica a vibração em repouso. Prefira `bemf_ff_filter_hz`.
 
 ## Motor — ACIM (não usado em volante)
 
@@ -747,7 +802,13 @@ eixo. Sem uso num eixo único de volante.
 ### `electrical_power_bandwidth` e `mechanical_power_bandwidth`
 
 Filtros das estimativas de potência elétrica e mecânica, em rad/s (a ferramenta
-mostra o equivalente em Hz ao lado). Valores menores ignoram picos curtos. Essas estimativas alimentam a detecção de spinout.
+mostra o equivalente em Hz ao lado). Valores menores ignoram picos curtos. Essas
+estimativas alimentam a detecção de spinout.
+
+O padrão do firmware e o Quick Start usam 10 rad/s (o ODrive original usa 20).
+Com constante de tempo de ~100 ms, um impacto de batente, que dura dezenas de ms,
+não chega a disparar a proteção; um disparo real por comutação errada dura
+segundos e continua sendo detectado em ~0,1–0,2 s.
 
 ### `spinout_electrical_power_threshold` e `spinout_mechanical_power_threshold`
 
@@ -756,9 +817,18 @@ negativa: sinal de que o encoder escorregou ou o offset está errado, e o motor
 está "brigando" com o próprio campo. Ultrapassar os dois limiares dispara
 `SPINOUT_DETECTED`.
 
-O original do ODrive usa 10 W / −10 W, que disparava com FFB forte. Este firmware
-usa 50 W / −50 W. Se ainda disparar em uso normal pesado, aumente com cuidado.
-Se disparar em uso leve, suspeite do encoder.
+A potência mecânica usa o torque **comandado** e a elétrica desconta as perdas no
+cobre (1,5 × R × I²). Num impacto de batente ou contra-esterço forte, a frenagem
+legítima chega a centenas de W (22 Nm a 2 voltas/s ≈ −270 W), e erros no
+`phase_resistance` ou perdas do inversor aparecem como potência elétrica
+positiva falsa. Por isso o original do ODrive (10 W / −10 W) dispara com FFB
+forte.
+
+O padrão do firmware e o Quick Start usam **150 W / −150 W**. O custo é que um
+disparo fraco, abaixo de ~150 W nas duas grandezas (pouco torque ou baixa
+velocidade), deixa de ser detectado. Com torque máximo baixo a proteção fica
+praticamente inativa. Se disparar em uso leve, suspeite do encoder ou do
+`phase_offset`.
 
 ## Controller — Anticogging
 
@@ -915,6 +985,65 @@ Amortecimento do batente, independente da mola. Absorve a energia da batida para
 o volante não ricochetear para o outro lado. Mola forte com amortecimento fraco
 = batente duro que rebate. Mola fraca com amortecimento forte = batente macio
 que "segura".
+
+## FFB Wheel — Anti-oscilação (volante solto)
+
+Quando você solta o volante com o carro andando, o torque de alinhamento do jogo
+chega com atraso e passa a empurrar o aro no tempo errado: ele começa a
+chacoalhar de um lado para o outro, cada vez mais forte. Esta proteção reconhece
+esse padrão e amortece só enquanto ele acontece. Na pilotagem normal ela fica em
+zero e não muda o feeling. Baseada na rotina do fork Gargul, com mudanças:
+confirmação de "volante solto" pela inércia, saída quando você pega o volante,
+torque limitado pelo `maxtorque` e freio calibrado pela inércia, que só retira
+energia.
+
+**Como detecta.** Cada inversão de sentido fecha meia oscilação. Ela conta como
+perigosa se durar 30–320 ms, tiver pelo menos 6° de pico a pico e 220 °/s de
+pico, durar parecido com a anterior e estiver crescendo (ou já for grande). Com
+`axis.oscj` configurado, exige também que o volante esteja **solto**: sem as
+mãos, o aro obedece só ao motor (J·Δω ≈ impulso do torque); com as mãos, o
+torque do piloto aparece como diferença. Três meias oscilações perigosas
+seguidas armam a proteção.
+
+**O que faz.** Enquanto armada:
+- **Corta 80 % do FFB do jogo**, por igual. É o FFB atrasado do jogo que alimenta
+  a oscilação, e como ninguém está segurando o volante, não se perde feeling.
+- **Amortece** com uma força proporcional à velocidade e sempre contra ela. A
+  intensidade é calibrada pelo J (`oscj`): o freio nunca fica mais rápido que
+  ~25 ms (J ÷ força do freio), porque um freio mais rápido que os atrasos da
+  malha (encoder, task, malha de corrente) vibra sozinho em frequência alta.
+  Sem J configurado, assume 0,02 kg·m².
+
+A força não depende da posição e não tem degraus, então o balanço morre de forma
+suave em vez de virar uma oscilação menor e mais rápida.
+
+**Quando sai.** Quando você pega o volante (~0,1–0,2 s depois, se J estiver
+configurado) ou quando gira continuamente por 0,8 s. Volante parado não desarma:
+com o volante solto, devolver o FFB do jogo recria a oscilação e o ciclo
+liga-desliga. A volta do FFB é gradual (~0,3 s).
+
+Os testes de Motor Cal (coastdown e varredura de frequência) desligam a proteção
+durante a medição e a religam no final. O overlay tem um selo opcional que
+mostra quando ela está agindo, e o logger grava uma coluna `osc_guard`.
+
+### `axis.oscguard`
+
+Força do freio, 0–255. **0 = desligada (padrão).** Escala o amortecimento:
+em 255 o freio tem constante de tempo de 25 ms (J ÷ força do freio); em 150, ~42 ms.
+O torque do freio nunca passa de 80 % do `maxtorque` × `oscguard`/255. O corte
+de 80 % do FFB do jogo não depende desse valor. **Recomendado: 150** (é o que o
+botão "Ativar proteção" do painel de teste aplica); na simulação com um jogo de
+FFB forte, valores abaixo disso não seguraram o balanço.
+
+### `axis.oscj`
+
+Inércia do conjunto motor + aro em kg·m². **Recomendado.** Com ela a proteção só
+age com o volante realmente solto e percebe quando você pega o volante. Sem ela
+(0), a detecção é só pelo movimento e pode agir em contra-esterços rápidos e
+regulares, como num drift. Meça no Performance Test, no **Teste de aceleração
+e RPM** (o link ao lado do campo na aba FFB Wheel leva direto até ele), e use o
+botão "Usar na proteção anti-oscilação" no resultado da inércia. Um erro de
+±25 % no J ainda funciona.
 
 ## FFB Wheel — Slew rate / curva
 

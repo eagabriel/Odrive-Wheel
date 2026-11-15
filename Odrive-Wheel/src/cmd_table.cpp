@@ -229,6 +229,60 @@ static int h_sys_vbusdiv(uint8_t, CmdType t, const char *v, char *r, size_t s) {
     return 0;
 }
 
+// Malha de corrente — knobs FFB (ver motor.hpp). Persistem via sys.save!.
+//   sys.ffr     0/1   R*I feedforward a partir do SETPOINT (sem PLL)
+//   sys.bemfhz  float bEMF feedforward com LPF neste cutoff em Hz; 0 = off
+//   sys.dbsoft  0/1   deadband contínuo (subtrai a banda) em vez de hard
+static int h_sys_ffr(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) odrive_bridge_set_ff_r(parse_long(v, odrive_bridge_get_ff_r()) != 0);
+    snprintf(r, s, "%d", odrive_bridge_get_ff_r());
+    return 0;
+}
+static int h_sys_bemfhz(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) odrive_bridge_set_bemf_ff_hz(parse_float(v, odrive_bridge_get_bemf_ff_hz()));
+    snprintf(r, s, "%.1f", (double)odrive_bridge_get_bemf_ff_hz());
+    return 0;
+}
+static int h_sys_dbsoft(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) odrive_bridge_set_deadband_soft(parse_long(v, odrive_bridge_get_deadband_soft()) != 0);
+    snprintf(r, s, "%d", odrive_bridge_get_deadband_soft());
+    return 0;
+}
+
+// Proteção anti-oscilação (volante solto) — ver inc/OscillationGuard.h.
+//   axis.oscguard   0..255   força (0 = desligada, default); 255 = 80 % do maxtorque
+//   axis.oscj       0..0.6   inércia J do aro (kg·m²); 0 = sem confirmação "solto"
+//   axis.oscdiag?   diagnóstico (active, count, amp, freq, peakspd, nm, peaknm, ratio, j)
+//   axis.osccount   ativações (GET); SET qualquer valor zera o diagnóstico
+extern "C" int   ffb_get_axis_oscguard(void);
+extern "C" void  ffb_set_axis_oscguard(int v);
+extern "C" float ffb_get_axis_oscj(void);
+extern "C" void  ffb_set_axis_oscj(float v);
+extern "C" void  ffb_get_axis_oscdiag(char* buf, int size);
+extern "C" unsigned long ffb_get_axis_osccount(void);
+extern "C" void  ffb_reset_axis_oscdiag(void);
+static int h_axis_oscguard(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) ffb_set_axis_oscguard((int)parse_long(v, ffb_get_axis_oscguard()));
+    snprintf(r, s, "%d", ffb_get_axis_oscguard());
+    return 0;
+}
+static int h_axis_oscj(uint8_t, CmdType t, const char *v, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) ffb_set_axis_oscj(parse_float(v, ffb_get_axis_oscj()));
+    snprintf(r, s, "%.5f", (double)ffb_get_axis_oscj());
+    return 0;
+}
+static int h_axis_oscdiag(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t != CMD_TYPE_GET && t != CMD_TYPE_EXEC) return -1;
+    ffb_get_axis_oscdiag(r, (int)s);
+    return 0;
+}
+static int h_axis_osccount(uint8_t, CmdType t, const char*, char *r, size_t s) {
+    if (t == CMD_TYPE_SET) ffb_reset_axis_oscdiag();
+    else if (t != CMD_TYPE_GET) return -1;
+    snprintf(r, s, "%lu", ffb_get_axis_osccount());
+    return 0;
+}
+
 // sys.eeformat! — escape hatch que força format completo do EE com clear de
 // error flags entre cada operação. Usar quando bootRC != 0 e sys.save! continua
 // falhando (caso típico: flash com flags PGAERR/PGSERR latched de operação
@@ -1045,6 +1099,10 @@ const CmdEntry cmdtable[] = {
     { "axis",  "axisfriction",  h_axis_friction },       // friction sempre ativa (0-255)
     { "axis",  "esgain",        h_axis_esgain },         // batente eletrônico: força da mola (0-255)
     { "axis",  "esdamp",        h_axis_esdamp },         // batente eletrônico: amortecimento, independente da mola (0-255)
+    { "axis",  "oscguard",      h_axis_oscguard },       // anti-oscilação: força (0 = off)
+    { "axis",  "oscj",          h_axis_oscj },           // anti-oscilação: inércia J (kg·m²)
+    { "axis",  "oscdiag",       h_axis_oscdiag },        // anti-oscilação: diagnóstico
+    { "axis",  "osccount",      h_axis_osccount },       // anti-oscilação: ativações (SET zera)
     { "axis",  "maxtorquerate", h_axis_maxtorquerate },  // slew limit (counts/ms, 0=off)
     { "axis",  "expo",          h_axis_expo },           // curva exponencial (-32767..32767)
     { "axis",  "exposcale",     h_axis_exposcale },      // divisor pro expo (1-255)
@@ -1094,6 +1152,9 @@ const CmdEntry cmdtable[] = {
     { "sys",   "eedump",       h_sys_eedump },        // EEPROM raw status
     { "sys",   "eeformat",     h_sys_eeformat },      // EEPROM force format (escape hatch)
     { "sys",   "vbusdiv",      h_sys_vbusdiv },       // VBUS voltage divider (1-50)
+    { "sys",   "ffr",          h_sys_ffr },           // R*I feedforward do setpoint (0/1)
+    { "sys",   "bemfhz",       h_sys_bemfhz },        // bEMF FF filtrado, cutoff Hz (0 = off)
+    { "sys",   "dbsoft",       h_sys_dbsoft },        // deadband soft (0/1)
     // GPIO inputs (1-4) — sintaxe: gpio.<inst>.<field>
     { "gpio",  "mode",         h_gpio_mode },         // 0/1/2/3 = off/button/axis/zerowheel
     { "gpio",  "idx",          h_gpio_idx },          // 0-63 botão, 0-3 eixo

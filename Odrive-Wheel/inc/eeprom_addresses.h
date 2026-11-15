@@ -16,6 +16,11 @@
 //   0x0002 — layout movido pra S1/S2 (16K pages) após colisão com ODrive NVM
 //   0x0003 — adicionados ADR_GPIO_AXIS_FLAGS + ADR_GPIO_AXIS_FREQ_X10 (NB_OF_VAR 45→47)
 //   0x0004 — adicionados ADR_AXIS_EQ_WEIGHT/CHASSIS/ROAD (NB_OF_VAR 47→50)
+//   0x0004 (sem bump) — adicionados ADR_MOTOR_FF_FLAGS + ADR_MOTOR_BEMF_HZ_X10
+//            (NB_OF_VAR 50→52). Endereços novos lidos com sentinel 0xFFFF →
+//            default; dados antigos continuam válidos, então não reformata.
+//   0x0004 (sem bump) — adicionados ADR_AXIS1_OSC_* (NB_OF_VAR 52→57), mesmo
+//            critério (sentinel 0xFFFF = proteção desligada).
 #define EE_LAYOUT_VERSION       0x0004
 
 // System / meta
@@ -50,6 +55,19 @@
 // corrigindo o pequeno deslocamento residual após encoder_offset_calibration.
 #define ADR_AXIS1_ZEROOFS_LO    0x020B   // 16 LSB do float32
 #define ADR_AXIS1_ZEROOFS_HI    0x020C   // 16 MSB do float32
+// Proteção anti-oscilação (volante solto) — ver OscillationGuard.h.
+// 0x020D..0x020F seguem o mesmo layout do fork Gargul (força, amplitude ×10,
+// teto ×100), então quem migra mantém o ajuste. 0x0210 fica livre de
+// propósito: no fork é o speeddamper, que não existe aqui.
+#define ADR_AXIS1_OSC_GUARD     0x020D   // força 0..255 (0 = desligado)
+#define ADR_AXIS1_OSC_RANGE     0x020E   // reservado: era a amplitude tolerada;
+                                         // hoje fixa em 8° no firmware.
+#define ADR_AXIS1_OSC_MAX_NM    0x020F   // reservado: era o teto em N·m; hoje o teto
+                                         // é 80 % do maxtorque. Fica na tabela só
+                                         // pra não mexer no layout.
+#define ADR_AXIS1_OSC_CUT       0x0211   // reservado: era o corte do FFB do jogo;
+                                         // hoje fixo em 30 % no firmware.
+#define ADR_AXIS1_OSC_J_E5      0x0212   // inércia J × 100000 (kg·m²), 0 = sem J
 
 // ODrive (config retrieval pela ODriveCAN do OpenFFBoard, ainda referenciada)
 #define ADR_ODRIVE_CANID        0x0300
@@ -98,10 +116,17 @@
 #define ADR_AXIS_EQ_CHASSIS     0x0273
 #define ADR_AXIS_EQ_ROAD        0x0274
 
-// 50 entradas: 4 system + 7 ffb + 12 axis (10 + 2 ZEROOFS) + 5 odrive
+// Malha de corrente — knobs FFB (ver motor.hpp / odrive_bridge.h).
+// FLAGS bitmap: bit0 = R*I feedforward do setpoint, bit1 = deadband soft.
+// BEMF_HZ_X10: cutoff do LPF do bEMF feedforward em décimos de Hz; 0 = off.
+// Sentinel 0xFFFF = nunca escrito (defaults: tudo off).
+#define ADR_MOTOR_FF_FLAGS      0x0275
+#define ADR_MOTOR_BEMF_HZ_X10   0x0276
+
+// 57 entradas: 4 system + 7 ffb + 12 axis (10 + 2 ZEROOFS) + 5 odrive
 //             + 15 gpio (5 pinos × 3 campos) + 1 vbus_divider + 2 axis_proc
-//             + 3 axis_eq
-#define NB_OF_VAR 50
+//             + 3 axis_eq + 2 motor_ff + 5 osc_guard
+#define NB_OF_VAR 57
 extern const uint16_t VirtAddVarTab[NB_OF_VAR];
 
 #endif

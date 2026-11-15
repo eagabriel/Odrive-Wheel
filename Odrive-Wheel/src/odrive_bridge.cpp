@@ -3,6 +3,7 @@
 // colisão entre nomes "Axis" (ODrive) e "Axis" (OpenFFBoard FFB stack).
 
 #include "odrive_bridge.h"
+#include "AxisSafety.h"
 #include "odrive_main.h"
 #include <cmsis_os.h>
 
@@ -71,7 +72,7 @@ extern "C" void odrive_bridge_set_input_torque(float nm) {
     // + input_mode=PASSTHROUGH. Fora desses estados, escrita é ignorada pelo
     // Controller::update(). Defaults bakados no firmware atendem (control_mode=1,
     // input_mode=1) mas state precisa ser setado via ASCII ou pela UI HTML.
-    axes[0].controller_.input_torque_ = nm;
+    axes[0].controller_.input_torque_ = sanitize_input_torque(nm);
 }
 
 // Bus current/voltage readouts — usados pelo peak tracker do ffb_task.
@@ -100,6 +101,20 @@ extern "C" float odrive_bridge_get_torque_output(void) {
 extern "C" float odrive_bridge_get_brake_resistor_current(void) {
     return odrv.brake_resistor_current_;
 }
+
+// Knobs da malha de corrente (ver odrive_bridge.h / motor.hpp). Escritas de
+// bool/float alinhados são atômicas no Cortex-M4 — o control loop pode ler
+// no meio sem risco.
+extern "C" int   odrive_bridge_get_ff_r(void)         { return axes[0].motor_.ff_r_enable_ ? 1 : 0; }
+extern "C" void  odrive_bridge_set_ff_r(int en)       { axes[0].motor_.ff_r_enable_ = (en != 0); }
+extern "C" float odrive_bridge_get_bemf_ff_hz(void)   { return axes[0].motor_.bemf_ff_filter_hz_; }
+extern "C" void  odrive_bridge_set_bemf_ff_hz(float hz) {
+    if (!(hz >= 0.0f)) hz = 0.0f;          // NaN/negativo → off
+    if (hz > 500.0f) hz = 500.0f;
+    axes[0].motor_.bemf_ff_filter_hz_ = hz;
+}
+extern "C" int   odrive_bridge_get_deadband_soft(void) { return axes[0].motor_.current_control_.deadband_soft_ ? 1 : 0; }
+extern "C" void  odrive_bridge_set_deadband_soft(int en) { axes[0].motor_.current_control_.deadband_soft_ = (en != 0); }
 
 extern "C" float odrive_bridge_get_fet_temp(void) {
     return axes[0].motor_.fet_thermistor_.temperature_;
