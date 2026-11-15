@@ -43,6 +43,14 @@ full **HID Force Feedback** support to use the motor as a sim racing wheel.
 </table>
 
 <p align="center">
+  <b>Hands-off oscillation protection — demo</b><br>
+  <a href="docs/screenshots/Handsoff.mp4">
+    <img src="docs/screenshots/Handsoff-preview.jpg" alt="Watch the hands-off oscillation protection demo" width="420">
+  </a><br>
+  <a href="docs/screenshots/Handsoff.mp4">▶ Watch the demo (21 seconds)</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/sponsors/eagabriel" target="_blank">
     <img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=EA4AAA"
          alt="Sponsor on GitHub" height="80">
